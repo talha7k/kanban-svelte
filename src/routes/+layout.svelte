@@ -2,11 +2,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { currentUser, authLoading } from '$lib/stores/auth';
+	import { currentUser, authLoading, authStore } from '$lib/stores/auth';
 	import { selectedTeamId, setSelectedTeamId } from '$lib/stores/team';
 	import { browser } from '$app/environment';
 	import { Toaster } from 'svelte-sonner';
 	import AppHeader from '$lib/components/layout/AppHeader.svelte';
+	import LandingPage from '$lib/components/landing/LandingPage.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { TeamId } from '$lib/types/types';
 	import { QueryClientProvider } from '@tanstack/svelte-query';
@@ -33,8 +34,11 @@
 
 	// Handle authentication and team selection navigation
 	$effect(() => {
-		if (!$authLoading && !$currentUser) {
-			goto('/login');
+		if (!$authLoading && !$currentUser && $page.url.pathname !== '/') {
+			// Only redirect to login if not on home page
+			if ($page.url.pathname !== '/login' && $page.url.pathname !== '/signup') {
+				goto('/login');
+			}
 		} else if ($currentUser && teamLoading) {
 			loadSelectedTeam();
 		}
@@ -51,6 +55,9 @@
 	});
 
 	onMount(() => {
+		// Initialize auth store
+		authStore.init();
+		
 		if ($currentUser) {
 			loadSelectedTeam();
 		}
@@ -58,7 +65,9 @@
 
 	let isLoading = $derived($authLoading || teamLoading);
 	let isTeamsPage = $derived($page.url.pathname === '/teams');
+	let isHomePage = $derived($page.url.pathname === '/');
 	let shouldShowContent = $derived($currentUser && ($selectedTeamId || isTeamsPage));
+	let shouldShowLanding = $derived(!$currentUser && isHomePage && !$authLoading);
 </script>
 
 {#if isLoading}
@@ -70,6 +79,10 @@
 			<Skeleton class="h-32 w-full" />
 		</div>
 	</div>
+{:else if shouldShowLanding}
+	<!-- Show landing page for unauthenticated users on home page -->
+	<LandingPage />
+	<Toaster />
 {:else if !$currentUser}
 	<!-- Authentication redirect handled by effect -->
 	<div class="min-h-screen flex items-center justify-center">
