@@ -135,6 +135,11 @@ export const deleteTeam = async (teamId: string): Promise<void> => {
 
 export const getTeamMembers = async (teamId: string): Promise<UserProfile[]> => {
   try {
+    if (!db) {
+      console.warn('Firestore not initialized');
+      return [];
+    }
+    
     // Get team data directly without calling getTeam to avoid circular dependency
     const teamRef = doc(db, 'teams', teamId);
     const teamSnap = await getDoc(teamRef);
@@ -157,7 +162,7 @@ export const getTeamMembers = async (teamId: string): Promise<UserProfile[]> => 
     for (let i = 0; i < memberIds.length; i += batchSize) {
       const batch = memberIds.slice(i, i + batchSize);
       const usersQuery = query(
-        collection(db, 'users'),
+        collection(db!, 'users'),
         where(documentId(), 'in', batch)
       );
       

@@ -28,7 +28,7 @@
 	export let formData: TaskFormData;
 	export let assignableUsers: UserProfile[];
 	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
-	export let isEditing: boolean = false;
+	export const isEditing: boolean = false;
 	export let formErrors: Record<string, string> = {};
 	export let updateFormData: (field: keyof TaskFormData, value: any) => void;
 

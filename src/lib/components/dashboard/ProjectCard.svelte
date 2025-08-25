@@ -31,10 +31,10 @@
 	export let project: Project;
 	export let currentUserUid: string | undefined;
 	export let allUsers: UserProfile[];
-	export let openEditProjectDialog: (project: Project) => void;
-	export let openManageMembersDialog: (project: Project) => void;
-	export let openDeleteProjectDialog: (project: Project) => void;
-	export let openViewMembersDialog: (project: Project) => void;
+	export const openEditProjectDialog: (project: Project) => void = () => {};
+	export const openManageMembersDialog: (project: Project) => void = () => {};
+	export const openDeleteProjectDialog: (project: Project) => void = () => {};
+	export const openViewMembersDialog: (project: Project) => void = () => {};
 
 	let isPending = false;
 

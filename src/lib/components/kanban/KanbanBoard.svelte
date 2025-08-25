@@ -5,7 +5,7 @@
 	import { Plus, Loader2 } from '@lucide/svelte';
 
 	export let project: Project;
-	export let users: UserProfile[];
+	export const users: UserProfile[] = [];
 
 	let isLoading = false;
 

@@ -14,6 +14,9 @@
 		ArrowLeftCircle,
 		Eye,
 		Clock as Clock2Icon,
+		AlertTriangle,
+		AlertCircle,
+		ArrowDown,
 	} from '@lucide/svelte';
 	import {
 		format,
@@ -36,7 +39,7 @@
 	export let onMoveToNextColumn: (task: Task) => void;
 	export let onMoveToPreviousColumn: (task: Task) => void;
 	export let isSubmitting: boolean = false;
-	export let onUpdateTask: (taskId: string, updatedFields: Partial<Task>) => void;
+	export const onUpdateTask: (taskId: string, updatedFields: Partial<Task>) => void = () => {};
 
 	$: assignees = (task.assigneeUids
 		?.map((uid) => users.find((u) => u.id === uid))
@@ -52,6 +55,32 @@
 				return 'outline';
 			default:
 				return 'default';
+		}
+	}
+
+	function getPriorityIcon(priority: Task['priority']) {
+		switch (priority) {
+			case 'HIGH':
+				return AlertTriangle;
+			case 'MEDIUM':
+				return AlertCircle;
+			case 'LOW':
+				return ArrowDown;
+			default:
+				return null;
+		}
+	}
+
+	function getPriorityTooltip(priority: Task['priority']) {
+		switch (priority) {
+			case 'HIGH':
+				return 'High Priority';
+			case 'MEDIUM':
+				return 'Medium Priority';
+			case 'LOW':
+				return 'Low Priority';
+			default:
+				return 'No Priority';
 		}
 	}
 
@@ -122,8 +151,9 @@
 				<Badge
 					variant={getPriorityBadgeVariant(task.priority)}
 					class={task.priority === 'MEDIUM' ? 'bg-accent text-accent-foreground' : ''}
+					title={getPriorityTooltip(task.priority)}
 				>
-					{task.priority}
+					<svelte:component this={getPriorityIcon(task.priority)} class="h-3 w-3" />
 				</Badge>
 			{/if}
 		</div>

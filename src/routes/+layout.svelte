@@ -11,6 +11,7 @@
 	import type { TeamId } from '$lib/types/types';
 
 	let teamLoading = $state(true);
+	let children: any;
 
 	// Load selected team from localStorage
 	async function loadSelectedTeam() {
