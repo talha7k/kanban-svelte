@@ -39,8 +39,11 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"@genkit-ai/googleai": "^1.17.1",
 		"date-fns": "^4.1.0",
+		"dotenv": "^17.2.1",
 		"firebase": "^12.1.0",
+		"genkit": "^1.17.1",
 		"uuid": "^11.1.0"
 	}
 }

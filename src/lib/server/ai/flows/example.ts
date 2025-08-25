@@ -8,7 +8,7 @@
  * - SuggestTaskPriorityOutput - The return type for the suggestTaskPriority function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '$lib/server/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestTaskPriorityInputSchema = z.object({

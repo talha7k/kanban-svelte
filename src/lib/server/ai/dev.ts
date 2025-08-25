@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
-import { generateTaskDetails } from '@/ai/flows/generate-task-details';
-import { generateProjectTasksFlow } from '@/ai/flows/generate-project-tasks';
+import { generateTaskDetails } from '$lib/server/ai/flows/generate-task-details';
+import { generateProjectTasksFlow } from '$lib/server/ai/flows/generate-project-tasks';
 config();
 // Genkit AI flows are defined and registered within their respective files.
 // The 'configure' function is not directly exported or used in this manner for flow registration.

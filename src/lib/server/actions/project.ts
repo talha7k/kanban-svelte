@@ -1,10 +1,10 @@
 "use server";
 
-import { generateProjectTasks } from '@/ai/flows/generate-project-tasks';
-import { addTaskToProject } from '@/lib/firebaseTask';
-import { getProjectById } from '@/lib/firebaseProject';
-import type { NewTaskData, Task } from '@/lib/types';
-import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDetailsOutput } from '@/ai/flows/generate-task-details';
+import { generateProjectTasks } from '$lib/server/ai/flows/generate-project-tasks';
+import { addTaskToProject } from '$lib/api/firebaseTask';
+import { getProjectById } from '$lib/api/firebaseProject';
+import type { NewTaskData, Task } from '$lib/types/types';
+import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDetailsOutput } from '$lib/server/ai/flows/generate-task-details';
 
 export async function generateTasksAction(projectId: string, brief: string, currentUserUid: string, taskCount: number = 3) {
   try {

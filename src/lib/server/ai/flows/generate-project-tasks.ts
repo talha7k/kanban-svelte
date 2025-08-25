@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'genkit';
-import { ai } from '@/ai/genkit';
+import { ai } from '$lib/server/ai/genkit';
 
 const GenerateProjectTasksInputSchema = z.object({
   brief: z.string().describe('A brief description or list of requirements for the project tasks.'),

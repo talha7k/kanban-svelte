@@ -1,6 +1,6 @@
 "use server";
 
-import { ai } from "@/ai/genkit";
+import { ai } from "$lib/server/ai/genkit";
 import { z } from "genkit";
 
 const GenerateTaskDetailsInputSchema = z.object({
