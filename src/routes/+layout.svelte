@@ -45,7 +45,7 @@
 				goto('/login');
 			} else if (currentUser && isAuthRoute) {
 				goto('/teams');
-			} else if (currentUser && !selectedTeamId && $page.url.pathname !== '/teams') {
+			} else if (currentUser && !selectedTeamId && !$page.url.pathname.includes('/teams')) {
 				goto('/teams');
 			}
 		}
@@ -70,7 +70,7 @@
 	{@render children?.()}
 {:else if currentUser}
 	<div class="min-h-screen flex flex-col bg-background">
-		<AppHeader />
+		<!-- <AppHeader /> TODO: Convert AppHeader from TSX to Svelte -->
 		<main class="flex-1">
 			{@render children?.()}
 		</main>

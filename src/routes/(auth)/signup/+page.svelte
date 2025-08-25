@@ -1,0 +1,163 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
+	import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { toast } from 'svelte-sonner';
+	
+	// Form state
+	let email = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let isSubmitting = $state(false);
+	let formError = $state<string | null>(null);
+	let currentUser = $state<any>(null);
+	let loading = $state(true);
+	
+	// Form validation
+	let emailError = $derived(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Invalid email address' : '');
+	let passwordError = $derived(password && password.length < 6 ? 'Password must be at least 6 characters' : '');
+	let confirmPasswordError = $derived(
+		confirmPassword && password !== confirmPassword ? "Passwords don't match" : ''
+	);
+	let isFormValid = $derived(
+		email && password && confirmPassword && 
+		!emailError && !passwordError && !confirmPasswordError
+	);
+	
+	onMount(() => {
+		if (browser) {
+			// Check if user is already logged in
+			try {
+				const storedUser = localStorage.getItem('currentUser');
+				if (storedUser) {
+					currentUser = JSON.parse(storedUser);
+					goto('/teams');
+					return;
+				}
+			} catch (e) {
+				console.error('Failed to load user state', e);
+			} finally {
+				loading = false;
+			}
+		}
+	});
+	
+	async function handleSubmit(event: Event) {
+		event.preventDefault();
+		if (!isFormValid || isSubmitting) return;
+		
+		isSubmitting = true;
+		formError = null;
+		
+		try {
+			// TODO: Implement actual signup logic
+			// For now, simulate signup
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			
+			toast.success('Signup Successful!', {
+				description: 'You can now log in.'
+			});
+			
+			goto('/login');
+		} catch (error: any) {
+			const errorMessage = error.message || 'Failed to sign up. Please try again.';
+			formError = errorMessage;
+			toast.error('Signup Failed', {
+				description: errorMessage
+			});
+			console.error('Signup error:', error);
+		} finally {
+			isSubmitting = false;
+		}
+	}
+</script>
+
+{#if loading}
+	<div class="w-full max-w-md">
+		<div class="animate-pulse space-y-4">
+			<div class="h-32 bg-muted rounded-lg"></div>
+			<div class="h-8 bg-muted rounded"></div>
+			<div class="h-8 bg-muted rounded"></div>
+			<div class="h-8 bg-muted rounded"></div>
+		</div>
+	</div>
+{:else}
+	<Card class="w-full max-w-md shadow-2xl p-4">
+		<CardHeader class="items-center text-center">
+			<!-- TODO: Add KanbanIcon component -->
+			<div class="w-12 h-12 bg-primary rounded-lg mb-2 flex items-center justify-center">
+				<span class="text-primary-foreground font-bold text-xl">K</span>
+			</div>
+			<CardTitle class="text-2xl">Create an Account</CardTitle>
+			<CardDescription>Join DijiKanban to manage your projects efficiently.</CardDescription>
+		</CardHeader>
+		<CardContent>
+			<form on:submit={handleSubmit} class="space-y-4">
+				{#if formError}
+					<p class="text-sm text-destructive text-center">{formError}</p>
+				{/if}
+				<div class="space-y-1.5">
+					<Label for="email">Email</Label>
+					<Input 
+						id="email" 
+						type="email" 
+						bind:value={email} 
+						placeholder="you@example.com"
+						required
+					/>
+					{#if emailError}
+						<p class="text-xs text-destructive">{emailError}</p>
+					{/if}
+				</div>
+				<div class="space-y-1.5">
+					<Label for="password">Password</Label>
+					<Input 
+						id="password" 
+						type="password" 
+						bind:value={password} 
+						placeholder="••••••••"
+						required
+					/>
+					{#if passwordError}
+						<p class="text-xs text-destructive">{passwordError}</p>
+					{/if}
+				</div>
+				<div class="space-y-1.5">
+					<Label for="confirmPassword">Confirm Password</Label>
+					<Input 
+						id="confirmPassword" 
+						type="password" 
+						bind:value={confirmPassword} 
+						placeholder="••••••••"
+						required
+					/>
+					{#if confirmPasswordError}
+						<p class="text-xs text-destructive">{confirmPasswordError}</p>
+					{/if}
+				</div>
+				<Button 
+					type="submit" 
+					class="w-full" 
+					disabled={!isFormValid || isSubmitting}
+				>
+					{isSubmitting ? 'Creating Account...' : 'Sign Up'}
+				</Button>
+			</form>
+		</CardContent>
+		<CardFooter class="flex flex-col items-center space-y-2 text-sm">
+			<p>
+				Already have an account?
+				<Button variant="link" class="p-0 h-auto">
+					<a href="/login">Log in</a>
+				</Button>
+			</p>
+			<Button variant="link" class="p-0 h-auto text-xs">
+				<a href="/">Back to Home</a>
+			</Button>
+		</CardFooter>
+	</Card>
+{/if}
