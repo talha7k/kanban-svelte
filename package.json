@@ -39,6 +39,7 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"@atlaskit/pragmatic-drag-and-drop": "^1.7.4",
 		"@genkit-ai/googleai": "^1.17.1",
 		"@tanstack/svelte-query": "^5.85.5",
 		"date-fns": "^4.1.0",

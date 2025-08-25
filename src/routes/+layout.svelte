@@ -9,6 +9,8 @@
 	import AppHeader from '$lib/components/layout/AppHeader.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { TeamId } from '$lib/types/types';
+	import { QueryClientProvider } from '@tanstack/svelte-query';
+	import { queryClient } from '$lib/queryClient';
 
 	let teamLoading = $state(true);
 	let children: any;
@@ -79,11 +81,13 @@
 		<p>Redirecting to team selection...</p>
 	</div>
 {:else}
-	<div class="min-h-screen flex flex-col bg-background">
-		<AppHeader />
-		<main class="flex-1">
-			{@render children()}
-		</main>
-		<Toaster />
-	</div>
+	<QueryClientProvider client={queryClient}>
+		<div class="min-h-screen flex flex-col bg-background">
+			<AppHeader />
+			<main class="flex-1">
+				{@render children()}
+			</main>
+			<Toaster />
+		</div>
+	</QueryClientProvider>
 {/if}

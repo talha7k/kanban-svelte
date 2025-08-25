@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import type { Task, TaskId, NewTaskData, NewCommentData } from '@/lib/types';
-import type { TaskFormData } from '@/components/kanban/TaskFormFields';
+import { writable } from 'svelte/store';
+import { useMutation, useQueryClient } from '@tanstack/svelte-query';
+import type { Task, TaskId, NewTaskData, NewCommentData } from '$lib/types/types';
+import type { TaskFormData } from '$lib/components/kanban/TaskFormFields';
 import {
   addTaskToProject,
   updateTaskInProject,
   deleteTaskFromProject,
   addCommentToTask,
-} from '@/lib/firebaseTask';
-import { useToast } from '@/hooks/use-toast';
+} from '$lib/api/firebaseTask';
+import { toast } from 'svelte-sonner';
 
 export function useTaskManagement(
   tasks: Task[],
@@ -15,63 +16,84 @@ export function useTaskManagement(
   projectId: string,
   currentUserId: string
 ) {
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [taskToView, setTaskToView] = useState<Task | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [taskToDeleteId, setTaskToDeleteId] = useState<TaskId | null>(null);
-  const { toast } = useToast();
+  const taskToEdit = writable<Task | null>(null);
+  const taskToView = writable<Task | null>(null);
+  const showDeleteConfirm = writable(false);
+  const taskToDeleteId = writable<TaskId | null>(null);
+  const queryClient = useQueryClient();
 
-  const handleAddTask = async (taskData: TaskFormData, columnId: string) => {
-    try {
+  const addTaskMutation = useMutation<Task, Error, { taskData: TaskFormData; columnId: string }>({
+    mutationFn: (variables: { taskData: TaskFormData; columnId: string }) => {
       const newTaskPayload: NewTaskData = {
-        ...taskData,
+        ...variables.taskData,
         reporterId: currentUserId,
-        order: tasks.filter(task => task.columnId === columnId).length,
+        order: tasks.filter(task => task.columnId === variables.columnId).length,
         projectId,
         createdAt: new Date().toISOString(),
       };
-
-      const newTask = await addTaskToProject(projectId, newTaskPayload, columnId);
+      return addTaskToProject(projectId, newTaskPayload, variables.columnId);
+    },
+    onSuccess: (newTask: Task) => {
       setTasks([...tasks, newTask]);
-      toast({ title: "Task Added", description: `"${newTask.title}" has been added.` });
-    } catch (error) {
+      toast.success(`"${newTask.title}" has been added.`);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: Error) => {
       console.error("Error adding task:", error);
-      toast({ variant: "destructive", title: "Error Adding Task", description: error instanceof Error ? error.message : "Could not add task." });
+      toast.error(error instanceof Error ? error.message : "Could not add task.");
     }
+  });
+
+  const handleAddTask = async (taskData: TaskFormData, columnId: string) => {
+    await addTaskMutation.mutateAsync({ taskData, columnId });
   };
 
-  const handleEditTask = async (taskId: string, taskData: TaskFormData) => {
-    try {
-      const updatedTask = await updateTaskInProject(projectId, taskId, taskData);
-      setTasks(tasks.map(task => task.id === taskId ? { ...task, ...updatedTask } : task));
-      toast({ title: "Task Updated", description: `"${updatedTask.title}" has been updated.` });
-    } catch (error) {
+  const editTaskMutation = useMutation<Task, Error, { taskId: string; taskData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>> }>({
+    mutationFn: ({ taskId, taskData }: { taskId: string; taskData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>> }) => 
+      updateTaskInProject(projectId, taskId, taskData),
+    onSuccess: (updatedTask: Task, variables: { taskId: string; taskData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>> }) => {
+      setTasks(tasks.map(task => task.id === variables.taskId ? { ...task, ...updatedTask } : task));
+      taskToEdit.set(null);
+      toast.success(`"${updatedTask.title}" has been updated.`);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: Error) => {
       console.error("Error updating task:", error);
-      toast({ variant: "destructive", title: "Error Updating Task", description: error instanceof Error ? error.message : "Could not update task." });
+      toast.error(error instanceof Error ? error.message : "Could not update task.");
     }
+  });
+
+  const handleEditTask = async (taskId: string, taskData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => {
+    await editTaskMutation.mutateAsync({ taskId, taskData });
   };
 
   const handleUpdateTask = async (taskId: string, updatedFields: Partial<Task>) => {
     try {
       const updatedTask = await updateTaskInProject(projectId, taskId, updatedFields);
       setTasks(tasks.map(task => task.id === taskId ? { ...task, ...updatedTask } : task));
-      toast({ title: "Task Updated", description: `Task updated.` });
+      toast.success(`Task updated.`);
     } catch (error) {
       console.error("Error updating task:", error);
-      toast({ variant: "destructive", title: "Error Updating Task", description: error instanceof Error ? error.message : "Could not update task." });
+      toast.error(error instanceof Error ? error.message : "Could not update task.");
     }
   };
 
-  const handleDeleteTask = async (taskId: TaskId) => {
-    try {
+  const deleteTaskMutation = useMutation<void, Error, TaskId>({
+    mutationFn: (taskId: TaskId) => deleteTaskFromProject(projectId, taskId),
+    onSuccess: (_: void, taskId: TaskId) => {
       const task = tasks.find(t => t.id === taskId);
-      await deleteTaskFromProject(projectId, taskId);
       setTasks(tasks.filter(t => t.id !== taskId));
-      if (task) toast({ title: "Task Deleted", description: `"${task.title}" has been deleted.` });
-    } catch (error) {
+      if (task) toast.success(`"${task.title}" has been deleted.`);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: Error) => {
       console.error("Error deleting task:", error);
-      toast({ variant: "destructive", title: "Error Deleting Task", description: error instanceof Error ? error.message : "Could not delete task." });
+      toast.error(error instanceof Error ? error.message : "Could not delete task.");
     }
+  });
+
+  const handleDeleteTask = async (taskId: TaskId) => {
+    await deleteTaskMutation.mutateAsync(taskId);
   };
 
   const handleAddComment = async (taskId: string, commentData: NewCommentData) => {
@@ -83,22 +105,22 @@ export function useTaskManagement(
         }
         return task;
       }));
-      toast({ title: "Comment Added" });
+      toast.success("Comment Added");
     } catch (error) {
       console.error("Error adding comment:", error);
-      toast({ variant: "destructive", title: "Error Adding Comment", description: error instanceof Error ? error.message : "Could not add comment." });
+      toast.error(error instanceof Error ? error.message : "Could not add comment.");
     }
   };
 
   return {
     taskToEdit,
-    setTaskToEdit,
+    setTaskToEdit: taskToEdit.set,
     taskToView,
-    setTaskToView,
+    setTaskToView: taskToView.set,
     showDeleteConfirm,
-    setShowDeleteConfirm,
+    setShowDeleteConfirm: showDeleteConfirm.set,
     taskToDeleteId,
-    setTaskToDeleteId,
+    setTaskToDeleteId: taskToDeleteId.set,
     handleAddTask,
     handleEditTask,
     handleUpdateTask,
