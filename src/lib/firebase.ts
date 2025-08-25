@@ -40,10 +40,7 @@ if (browser) {
 	}
 }
 
-if (!authInstance || !dbInstance) {
-	throw new Error('Firebase not properly initialized. Make sure you are running this on the client side.');
-}
-
-export const auth = authInstance;
-export const db = dbInstance;
+// Export null values when not in browser context to prevent SSR errors
+export const auth = authInstance || null;
+export const db = dbInstance || null;
 export { app };

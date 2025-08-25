@@ -1,9 +1,10 @@
-import { db } from './firebase';
+import { db } from '$lib/firebase';
 import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where, arrayUnion, arrayRemove, deleteDoc, documentId } from 'firebase/firestore';
-import { auth } from './firebase';
+import { auth } from '$lib/firebase';
 import type { Team, UserId, UserProfile } from '../types/types';
 
 export async function createTeam(teamName: string, creatorId: UserId, teamDescription: string): Promise<Team> {
+  if (!db) throw new Error('Database not initialized');
   try {
     const newTeamData = {
       name: teamName,
@@ -23,6 +24,7 @@ export async function createTeam(teamName: string, creatorId: UserId, teamDescri
 }
 
 export async function getTeamsForUser(userId: UserId): Promise<Team[]> {
+  if (!db) return [];
   try {
     const teamsCollectionRef = collection(db, 'teams');
     const q = query(teamsCollectionRef, where('memberIds', 'array-contains', userId));
@@ -39,27 +41,39 @@ export async function getTeamsForUser(userId: UserId): Promise<Team[]> {
 }
 
 export const getTeam = async (teamId: string): Promise<Team | null> => {
-  const teamRef = doc(db, 'teams', teamId);
-  const teamSnap = await getDoc(teamRef);
+  if (!db) return null;
+  try {
+    const teamRef = doc(db, `teams/${teamId}`);
+    const teamSnap = await getDoc(teamRef);
 
-  if (teamSnap.exists()) {
-    const teamData = { id: teamSnap.id, ...teamSnap.data() } as Team;
-    if (teamData.memberIds && teamData.memberIds.length > 0) {
-      const members = await getTeamMembers(teamId);
-      teamData.members = members;
+    if (teamSnap.exists()) {
+      const teamData = { id: teamSnap.id, ...teamSnap.data() } as Team;
+      if (teamData.memberIds && teamData.memberIds.length > 0) {
+        const members = await getTeamMembers(teamId);
+        teamData.members = members;
+      }
+      return teamData;
+    } else {
+      return null;
     }
-    return teamData;
-  } else {
+  } catch (error) {
+    console.error('Error getting team:', error);
     return null;
   }
 };
 
 export const updateTeam = async (teamId: string, data: Partial<Team>) => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   const teamRef = doc(db, 'teams', teamId);
   await updateDoc(teamRef, data);
 };
 
 export const addMemberToTeam = async (teamId: string, userId: UserId) => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   try {
     const teamRef = doc(db, 'teams', teamId);
     await updateDoc(teamRef, {
@@ -72,6 +86,9 @@ export const addMemberToTeam = async (teamId: string, userId: UserId) => {
 }
 
 export const removeMemberFromTeam = async (teamId: string, userId: UserId) => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   try {
     const teamRef = doc(db, 'teams', teamId);
     await updateDoc(teamRef, {
@@ -84,6 +101,13 @@ export const removeMemberFromTeam = async (teamId: string, userId: UserId) => {
 }
 
 export const deleteTeam = async (teamId: string): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error('User must be authenticated to delete teams.');

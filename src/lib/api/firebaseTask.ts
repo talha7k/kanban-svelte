@@ -5,8 +5,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Task Functions
 export const addTaskToProject = async (projectId: string, taskData: NewTaskData, columnId: ColumnId, currentUserUid?: string): Promise<Task> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  
   // For server actions, currentUserUid is passed as parameter
   // For client-side calls, use auth.currentUser
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const userUid = currentUserUid || auth.currentUser?.uid;
   if (!userUid) {
     throw new Error("User must be authenticated to add tasks.");
@@ -50,6 +57,13 @@ export const addTaskToProject = async (projectId: string, taskData: NewTaskData,
 };
 
 export const updateTaskInProject = async (projectId: string, taskId: string, taskUpdateData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>): Promise<Task> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to update tasks.");
@@ -109,6 +123,13 @@ export const updateTaskInProject = async (projectId: string, taskId: string, tas
 };
 
 export const deleteTaskFromProject = async (projectId: string, taskId: string): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to delete tasks.");
@@ -133,6 +154,13 @@ export const deleteTaskFromProject = async (projectId: string, taskId: string): 
 
 
 export const moveTaskInProject = async (projectId: string, taskId: string, newColumnId: ColumnId, newOrder: number): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to move tasks.");
@@ -178,6 +206,13 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
 };
 
 export const addCommentToTask = async (projectId: string, taskId: TaskId, commentData: NewCommentData): Promise<Comment> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to add comments.");
@@ -220,6 +255,13 @@ export const addCommentToTask = async (projectId: string, taskId: TaskId, commen
 };
 
 export const updateCommentInTask = async (projectId: string, taskId: TaskId, commentId: string, newContent: string): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to update comments.");
@@ -273,6 +315,13 @@ export const updateCommentInTask = async (projectId: string, taskId: TaskId, com
 };
 
 export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, commentId: string): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
+  
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to delete comments.");

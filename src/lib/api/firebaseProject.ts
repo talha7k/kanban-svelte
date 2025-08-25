@@ -31,11 +31,17 @@ export const createProject = async (
   ownerId: string,
   teamId?: TeamId
 ): Promise<Project> => {
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const user = auth.currentUser;
   if (!user || user.uid !== ownerId) {
     throw new Error(
       "User must be authenticated and match ownerId to create projects."
     );
+  }
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
   }
   try {
     const newProjectId = uuidv4();
@@ -67,9 +73,15 @@ export const updateProjectDetails = async (
   projectId: string,
   data: { name?: string; description?: string; teamId?: TeamId | null }
 ): Promise<Project> => {
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to update project details.");
+  }
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
   }
   const projectRef = doc(db, "projects", projectId);
   const projectSnap = await getDoc(projectRef);
@@ -102,11 +114,16 @@ export const updateProjectDetails = async (
 };
 
 export const deleteProject = async (projectId: string): Promise<void> => {
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to delete projects.");
   }
-
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   const projectRef = doc(db, "projects", projectId);
   const projectSnap = await getDoc(projectRef);
 
@@ -130,6 +147,9 @@ export const deleteProject = async (projectId: string): Promise<void> => {
 export const getProjectById = async (
   projectId: string
 ): Promise<Project | null> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   try {
     const projectRef = doc(db, "projects", projectId);
     const projectSnap = await getDoc(projectRef);
@@ -147,6 +167,9 @@ export const getProjectById = async (
 export const getProjectsForTeam = async (
   teamId: TeamId
 ): Promise<Project[]> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   try {
     const projectsCollectionRef = collection(db, "projects");
     const q = query(
@@ -168,9 +191,15 @@ export const addUserToProject = async (
   projectId: string,
   userId: string
 ): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   const projectRef = doc(db, "projects", projectId);
   const userRef = doc(db, "users", userId);
 
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to manage project members.");
@@ -213,8 +242,14 @@ export const removeUserFromProject = async (
   projectId: string,
   userId: string
 ): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   const projectRef = doc(db, "projects", projectId);
 
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("User must be authenticated to manage project members.");
@@ -259,7 +294,14 @@ export const updateProjectUserRole = async (
   userId: string,
   newRole: UserProjectRole
 ): Promise<void> => {
+  if (!db) {
+    throw new Error("Firebase Firestore not initialized");
+  }
   const projectRef = doc(db, "projects", projectId);
+  
+  if (!auth) {
+    throw new Error("Firebase auth not initialized");
+  }
   const currentUser = auth.currentUser;
 
   if (!currentUser) {

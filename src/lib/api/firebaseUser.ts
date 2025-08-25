@@ -1,11 +1,11 @@
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, documentId } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { auth, db } from '$lib/firebase';
 import type { UserProfile, UserDocument } from '../types/types';
 
 // User Profile Functions
 export const createUserProfileDocument = async (userAuth: FirebaseUser, additionalData?: Partial<Pick<UserProfile, 'name' | 'title' | 'bio'>>) => {
-  if (!userAuth) return;
+  if (!userAuth || !db) return;
   const userRef = doc(db, `users/${userAuth.uid}`);
   const snapshot = await getDoc(userRef);
 
@@ -40,7 +40,8 @@ export const createUserProfileDocument = async (userAuth: FirebaseUser, addition
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  if (!userId) return null;
+  if (!userId || !db) return null;
+  
   const userRef = doc(db, `users/${userId}`);
   const snapshot = await getDoc(userRef);
   if (snapshot.exists()) {
@@ -56,9 +57,10 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 };
 
 export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
+  if (!db) return [];
   try {
-    const usersCollectionRef = collection(db, 'users');
-    const querySnapshot = await getDocs(usersCollectionRef);
+    const usersCollection = collection(db, 'users');
+    const querySnapshot = await getDocs(usersCollection);
     return querySnapshot.docs.map(doc => {
       const data = doc.data() as UserDocument;
       return {
@@ -75,6 +77,8 @@ export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
 };
 
 export const getUserProfilesByIds = async (userIds: string[]): Promise<UserProfile[]> => {
+  if (!db) return [];
+  
   try {
     if (userIds.length === 0) {
       return [];
@@ -112,6 +116,8 @@ export const getUserProfilesByIds = async (userIds: string[]): Promise<UserProfi
 };
 
 export const getProjectRelevantUsers = async (projectId: string): Promise<UserProfile[]> => {
+  if (!db) return [];
+  
   try {
     // Get project to find its members and team
     const projectRef = doc(db, 'projects', projectId);
@@ -156,6 +162,8 @@ export const getProjectRelevantUsers = async (projectId: string): Promise<UserPr
 };
 
 export const getUserProfileByEmail = async (email: string): Promise<UserProfile | null> => {
+  if (!db) return null;
+  
   try {
     const usersCollectionRef = collection(db, 'users');
     const q = query(usersCollectionRef, where('email', '==', email));
@@ -179,6 +187,8 @@ export const getUserProfileByEmail = async (email: string): Promise<UserProfile 
 };
 
 export const updateUserProfile = async (userId: string, data: { name?: string, title?: string, avatarUrl?: string, bio?: string }): Promise<void> => {
+  if (!db || !auth) throw new Error("Firebase not initialized");
+  
   const currentUser = auth.currentUser;
   if (!currentUser || currentUser.uid !== userId) {
     throw new Error("User must be authenticated and can only update their own profile.");

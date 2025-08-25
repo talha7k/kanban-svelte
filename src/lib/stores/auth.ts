@@ -25,7 +25,10 @@ export const isAuthenticated = derived(currentUser, ($currentUser) => !!$current
 export const authStore = {
 	// Initialize auth listener
 	init() {
-		if (!browser || !auth) return;
+		if (!browser || !auth) {
+			authLoading.set(false);
+			return;
+		}
 
 		// Load from localStorage
 		try {
