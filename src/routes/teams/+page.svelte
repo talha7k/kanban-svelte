@@ -12,7 +12,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Plus, Loader2 } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
-	import type { Team, UserId } from '$lib/types/types';
 
 	// Team management queries
 const {

@@ -94,25 +94,21 @@ export function useTaskManagement(
   // --- Handler Functions ---
 
   const handleAddTask = async (taskData: TaskFormData, columnId: string) => {
-    // Use get() to access the store's value because we are in a .ts file
-    await get(addTaskMutation).mutateAsync({ taskData, columnId });
+    get(addTaskMutation).mutate({ taskData, columnId });
   };
 
   const handleEditTask = async (taskId: string, taskData: Partial<Task>) => {
-    // Use get() to access the store's value
-    await get(editTaskMutation).mutateAsync({ taskId, taskData });
+    get(editTaskMutation).mutate({ taskId, taskData });
   };
 
   const handleUpdateTask = handleEditTask;
 
   const handleDeleteTask = async (taskId: TaskId) => {
-    // Use get() to access the store's value
-    await get(deleteTaskMutation).mutateAsync(taskId);
+    get(deleteTaskMutation).mutate(taskId);
   };
 
   const handleAddComment = async (taskId: string, commentData: NewCommentData) => {
-    // Use get() to access the store's value
-    await get(addCommentMutation).mutateAsync({ taskId, commentData });
+    get(addCommentMutation).mutate({ taskId, commentData });
   };
 
   return {
