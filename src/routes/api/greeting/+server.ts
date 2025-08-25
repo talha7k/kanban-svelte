@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 
-export async function GET(event) {
+export async function GET(event: RequestEvent) {
   // You can access request details from the 'event' object
   // e.g., event.params, event.url, event.request
 

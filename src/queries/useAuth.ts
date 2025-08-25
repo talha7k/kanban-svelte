@@ -1,4 +1,5 @@
+// src/lib/stores/authStore.ts
+import { writable } from 'svelte/store';
+import type { User } from 'firebase/auth'; // Or your user type
 
-"use client";
-// This file is a re-export for convenience, actual hook is in AuthContext.
-export { useAuth } from '@/contexts/AuthContext';
+export const authUser = writable<User | null | undefined>(undefined); // undefined = loading

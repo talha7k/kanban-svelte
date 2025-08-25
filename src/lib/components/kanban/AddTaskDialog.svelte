@@ -12,7 +12,7 @@
 	} from '$lib/components/ui/dialog';
 	import type { Task, UserProfile, AIPrioritySuggestion } from '$lib/types/types';
 	import TaskFormFields from './TaskFormFields.svelte';
-	import type { TaskFormData } from './TaskFormFields.svelte';
+	import type { TaskFormData } from '$lib/types/types';
 	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
 	import { Loader2 } from '@lucide/svelte';
 

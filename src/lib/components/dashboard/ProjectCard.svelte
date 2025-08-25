@@ -30,7 +30,7 @@
 
 	export let project: Project;
 	export let currentUserUid: string | undefined;
-	export let allUsers: UserProfile[];
+	export const allUsers: UserProfile[] = [];
 	export const openEditProjectDialog: (project: Project) => void = () => {};
 	export const openManageMembersDialog: (project: Project) => void = () => {};
 	export const openDeleteProjectDialog: (project: Project) => void = () => {};

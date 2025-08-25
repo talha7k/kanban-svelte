@@ -1,16 +1,4 @@
-
-<script context="module" lang="ts">
-	export interface TaskFormData {
-		title: string;
-		description?: string;
-		priority: Task['priority'];
-		assigneeUids?: string[];
-		dueDate?: string; // YYYY-MM-DD string
-		tags?: string[];
-		dependentTaskTitles?: string[];
-	}
-</script>
-
+ 
 <script lang="ts">
 	import type { Task, UserProfile, AIPrioritySuggestion } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
@@ -24,13 +12,14 @@
 	import { Command } from 'bits-ui';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+	import type { TaskFormData } from '$lib/types/types';
 
-	export let formData: TaskFormData;
 	export let assignableUsers: UserProfile[];
 	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
 	export const isEditing: boolean = false;
 	export let formErrors: Record<string, string> = {};
 	export let updateFormData: (field: keyof TaskFormData, value: any) => void;
+	export let formData: TaskFormData;
 
 	$: selectedAssignees = formData.assigneeUids || [];
 	$: selectedDependencies = formData.dependentTaskTitles || [];

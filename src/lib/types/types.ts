@@ -6,6 +6,16 @@ export type TeamId = string;
 
 export type UserProjectRole = "manager" | "member";
 
+export interface TaskFormData {
+  title: string;
+  description?: string;
+  priority: Task["priority"];
+  assigneeUids?: string[];
+  dueDate?: string; // YYYY-MM-DD string
+  tags?: string[];
+  dependentTaskTitles?: string[];
+}
+
 export interface UserProfile {
   id: UserId; // Firebase UID or mock ID
   name: string; // Firebase displayName or mock name
@@ -69,10 +79,7 @@ export interface Task {
 // Used for creating a task, some fields are auto-generated
 export type NewTaskData = Omit<
   Task,
-  | "id" 
-  | "columnId" 
-  | "updatedAt"
-  | "comments" 
+  "id" | "columnId" | "updatedAt" | "comments"
 >;
 
 export interface Column {
