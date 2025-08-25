@@ -14,7 +14,7 @@
 	import { queryClient } from '$lib/queryClient';
 
 	let teamLoading = $state(true);
-	let children: any;
+	let { children } = $props();
 
 	// Load selected team from localStorage
 	async function loadSelectedTeam() {
@@ -34,9 +34,9 @@
 
 	// Handle authentication and team selection navigation
 	$effect(() => {
-		if (!$authLoading && !$currentUser && $page.url.pathname !== '/') {
-			// Only redirect to login if not on home page
-			if ($page.url.pathname !== '/login' && $page.url.pathname !== '/signup') {
+		if (!$authLoading && !$currentUser) {
+			// Only redirect to login if not on home, login, or signup pages
+			if ($page.url.pathname !== '/' && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup') {
 				goto('/login');
 			}
 		} else if ($currentUser && teamLoading) {
@@ -63,14 +63,20 @@
 		}
 	});
 
-	let isLoading = $derived($authLoading || teamLoading);
+	let isLoading = $derived($authLoading || ($currentUser && teamLoading));
 	let isTeamsPage = $derived($page.url.pathname === '/teams');
 	let isHomePage = $derived($page.url.pathname === '/');
 	let shouldShowContent = $derived($currentUser && ($selectedTeamId || isTeamsPage));
 	let shouldShowLanding = $derived(!$currentUser && isHomePage && !$authLoading);
+
+
 </script>
 
-{#if isLoading}
+{#if isHomePage && !$currentUser}
+	<!-- Show landing page for unauthenticated users on home page -->
+	<LandingPage />
+	<Toaster />
+{:else if isLoading}
 	<div class="min-h-screen flex flex-col items-center justify-center bg-background p-4">
 		<div class="space-y-4 w-full max-w-md">
 			<Skeleton class="h-12 w-full" />
@@ -79,21 +85,15 @@
 			<Skeleton class="h-32 w-full" />
 		</div>
 	</div>
-{:else if shouldShowLanding}
-	<!-- Show landing page for unauthenticated users on home page -->
-	<LandingPage />
-	<Toaster />
-{:else if !$currentUser}
+{:else if !$currentUser && $page.url.pathname !== '/' && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
 	<!-- Authentication redirect handled by effect -->
 	<div class="min-h-screen flex items-center justify-center">
 		<p>Redirecting to login...</p>
 	</div>
-{:else if !shouldShowContent}
-	<!-- Team selection redirect handled by effect -->
-	<div class="min-h-screen flex items-center justify-center">
-		<p>Redirecting to team selection...</p>
-	</div>
-{:else}
+{:else if !shouldShowContent && $currentUser && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
+	<!-- Team selection page should render here -->
+	{@render children()}
+{:else if shouldShowContent}
 	<QueryClientProvider client={queryClient}>
 		<div class="min-h-screen flex flex-col bg-background">
 			<AppHeader />
@@ -103,4 +103,10 @@
 			<Toaster />
 		</div>
 	</QueryClientProvider>
+{:else}
+	<!-- Login/Signup pages and other unauthenticated pages -->
+	<div class="min-h-screen bg-background">
+		{@render children()}
+		<Toaster />
+	</div>
 {/if}
