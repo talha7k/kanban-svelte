@@ -1,43 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
+	import { authStore, authLoading } from '$lib/stores/auth';
 	
 	// Form state
 	let email = $state('');
 	let password = $state('');
 	let isSubmitting = $state(false);
 	let formError = $state<string | null>(null);
-	let currentUser = $state<any>(null);
-	let loading = $state(true);
 	
 	// Form validation
 	let emailError = $derived(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Invalid email address' : '');
 	let passwordError = $derived(password && password.length < 6 ? 'Password must be at least 6 characters' : '');
 	let isFormValid = $derived(email && password && !emailError && !passwordError);
-	
-	onMount(() => {
-		if (browser) {
-			// Check if user is already logged in
-			try {
-				const storedUser = localStorage.getItem('currentUser');
-				if (storedUser) {
-					currentUser = JSON.parse(storedUser);
-					goto('/teams');
-					return;
-				}
-			} catch (e) {
-				console.error('Failed to load user state', e);
-			} finally {
-				loading = false;
-			}
-		}
-	});
 	
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -47,14 +26,7 @@
 		formError = null;
 		
 		try {
-			// TODO: Implement actual login logic
-			// For now, simulate login
-			await new Promise(resolve => setTimeout(resolve, 1000));
-			
-			// Mock successful login
-			const mockUser = { email, id: 'mock-user-id' };
-			localStorage.setItem('currentUser', JSON.stringify(mockUser));
-			currentUser = mockUser;
+			await authStore.login(email, password);
 			
 			toast.success('Login Successful!', {
 				description: 'Redirecting to teams...'
@@ -74,7 +46,7 @@
 	}
 </script>
 
-{#if loading}
+{#if $authLoading}
 	<div class="w-full max-w-md">
 		<div class="animate-pulse space-y-4">
 			<div class="h-32 bg-muted rounded-lg"></div>

@@ -1,62 +1,64 @@
 <script lang="ts">
-	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { currentUser, authLoading } from '$lib/stores/auth';
+	import { selectedTeamId, setSelectedTeamId } from '$lib/stores/team';
 	import { browser } from '$app/environment';
-	// import AppHeader from '$lib/components/layout/AppHeader.svelte'; // TODO: Convert from TSX
-	import { Toaster } from '$lib/components/ui/sonner';
+	import { Toaster } from 'svelte-sonner';
+	import AppHeader from '$lib/components/layout/AppHeader.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	
-	let { children } = $props();
-	
-	// Auth state
-	let currentUser: any = $state(null);
-	let loading = $state(true);
-	let selectedTeamId: string | null = $state(null);
+	import type { TeamId } from '$lib/types/types';
+
 	let teamLoading = $state(true);
-	
-	// Check if current route is auth route
-	let isAuthRoute = $derived($page.route.id?.startsWith('/(auth)') ?? false);
-	
-	onMount(async () => {
-		if (browser) {
-			// Load auth state from localStorage or API
-			try {
-				const storedUser = localStorage.getItem('currentUser');
-				if (storedUser) {
-					currentUser = JSON.parse(storedUser);
-				}
-				
-				const storedTeamId = localStorage.getItem('selectedTeamId');
-				if (storedTeamId) {
-					selectedTeamId = storedTeamId;
-				}
-			} catch (e) {
-				console.error('Failed to load auth state', e);
-			} finally {
-				loading = false;
-				teamLoading = false;
+
+	// Load selected team from localStorage
+	async function loadSelectedTeam() {
+		if (!browser) return;
+		
+		try {
+			const storedTeamId = localStorage.getItem('selectedTeamId');
+			if (storedTeamId) {
+				setSelectedTeamId(storedTeamId as TeamId);
 			}
-			
-			// Redirect logic
-			if (!currentUser && !isAuthRoute) {
-				goto('/login');
-			} else if (currentUser && isAuthRoute) {
-				goto('/teams');
-			} else if (currentUser && !selectedTeamId && !$page.url.pathname.includes('/teams')) {
+		} catch (e) {
+			console.error('Failed to load selected team from storage', e);
+		} finally {
+			teamLoading = false;
+		}
+	}
+
+	// Handle authentication and team selection navigation
+	$effect(() => {
+		if (!$authLoading && !$currentUser) {
+			goto('/login');
+		} else if ($currentUser && teamLoading) {
+			loadSelectedTeam();
+		}
+	});
+
+	// Handle team selection navigation
+	$effect(() => {
+		if (!$authLoading && !teamLoading && $currentUser && !$selectedTeamId) {
+			// Only redirect to teams if we're not already on the teams page
+			if ($page.url.pathname !== '/teams') {
 				goto('/teams');
 			}
 		}
 	});
+
+	onMount(() => {
+		if ($currentUser) {
+			loadSelectedTeam();
+		}
+	});
+
+	let isLoading = $derived($authLoading || teamLoading);
+	let isTeamsPage = $derived($page.url.pathname === '/teams');
+	let shouldShowContent = $derived($currentUser && ($selectedTeamId || isTeamsPage));
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
-
-{#if loading || teamLoading}
+{#if isLoading}
 	<div class="min-h-screen flex flex-col items-center justify-center bg-background p-4">
 		<div class="space-y-4 w-full max-w-md">
 			<Skeleton class="h-12 w-full" />
@@ -65,18 +67,22 @@
 			<Skeleton class="h-32 w-full" />
 		</div>
 	</div>
-{:else if isAuthRoute}
-	<!-- Auth routes don't need the main layout -->
-	{@render children?.()}
-{:else if currentUser}
+{:else if !$currentUser}
+	<!-- Authentication redirect handled by effect -->
+	<div class="min-h-screen flex items-center justify-center">
+		<p>Redirecting to login...</p>
+	</div>
+{:else if !shouldShowContent}
+	<!-- Team selection redirect handled by effect -->
+	<div class="min-h-screen flex items-center justify-center">
+		<p>Redirecting to team selection...</p>
+	</div>
+{:else}
 	<div class="min-h-screen flex flex-col bg-background">
-		<!-- <AppHeader /> TODO: Convert AppHeader from TSX to Svelte -->
+		<AppHeader />
 		<main class="flex-1">
-			{@render children?.()}
+			<slot />
 		</main>
 		<Toaster />
 	</div>
-{:else}
-	<!-- Fallback for unauthenticated users -->
-	{@render children?.()}
 {/if}

@@ -1,21 +1,19 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
+	import { authStore, authLoading } from '$lib/stores/auth';
 	
 	// Form state
 	let email = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
+	let name = $state('');
 	let isSubmitting = $state(false);
 	let formError = $state<string | null>(null);
-	let currentUser = $state<any>(null);
-	let loading = $state(true);
 	
 	// Form validation
 	let emailError = $derived(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Invalid email address' : '');
@@ -23,28 +21,11 @@
 	let confirmPasswordError = $derived(
 		confirmPassword && password !== confirmPassword ? "Passwords don't match" : ''
 	);
+	let nameError = $derived(name && name.length < 2 ? 'Name must be at least 2 characters' : '');
 	let isFormValid = $derived(
-		email && password && confirmPassword && 
-		!emailError && !passwordError && !confirmPasswordError
+		email && password && confirmPassword && name &&
+		!emailError && !passwordError && !confirmPasswordError && !nameError
 	);
-	
-	onMount(() => {
-		if (browser) {
-			// Check if user is already logged in
-			try {
-				const storedUser = localStorage.getItem('currentUser');
-				if (storedUser) {
-					currentUser = JSON.parse(storedUser);
-					goto('/teams');
-					return;
-				}
-			} catch (e) {
-				console.error('Failed to load user state', e);
-			} finally {
-				loading = false;
-			}
-		}
-	});
 	
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -54,17 +35,15 @@
 		formError = null;
 		
 		try {
-			// TODO: Implement actual signup logic
-			// For now, simulate signup
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await authStore.signup(email, password, { name });
 			
-			toast.success('Signup Successful!', {
-				description: 'You can now log in.'
+			toast.success('Account Created!', {
+				description: 'Welcome to DijiKanban!'
 			});
 			
-			goto('/login');
+			goto('/teams');
 		} catch (error: any) {
-			const errorMessage = error.message || 'Failed to sign up. Please try again.';
+			const errorMessage = error.message || 'Failed to create account. Please try again.';
 			formError = errorMessage;
 			toast.error('Signup Failed', {
 				description: errorMessage
@@ -76,7 +55,7 @@
 	}
 </script>
 
-{#if loading}
+{#if $authLoading}
 	<div class="w-full max-w-md">
 		<div class="animate-pulse space-y-4">
 			<div class="h-32 bg-muted rounded-lg"></div>
@@ -100,6 +79,19 @@
 				{#if formError}
 					<p class="text-sm text-destructive text-center">{formError}</p>
 				{/if}
+				<div class="space-y-1.5">
+					<Label for="name">Full Name</Label>
+					<Input 
+						id="name" 
+						type="text" 
+						bind:value={name} 
+						placeholder="John Doe"
+						required
+					/>
+					{#if nameError}
+						<p class="text-xs text-destructive">{nameError}</p>
+					{/if}
+				</div>
 				<div class="space-y-1.5">
 					<Label for="email">Email</Label>
 					<Input 
