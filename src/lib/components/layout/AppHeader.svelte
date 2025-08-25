@@ -1,120 +1,123 @@
 
-"use client";
+<script lang="ts">
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { currentUser, userProfile, authStore } from '$lib/stores/auth';
+	import KanbanIcon from '$lib/components/icons/KanbanIcon.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Github, LayoutDashboard, LogOut, UserCircle, LogIn, Settings, Users } from '@lucide/svelte';
+	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuItem,
+		DropdownMenuLabel,
+		DropdownMenuSeparator,
+		DropdownMenuTrigger,
+	} from '$lib/components/ui/dropdown-menu';
+	import { toast } from 'svelte-sonner';
 
-import Link from 'next/link';
-import { KanbanIcon } from '@/components/icons/KanbanIcon';
-import { Button } from '@/components/ui/button';
-import { Github, LayoutDashboard, LogOut, UserCircle, LogIn, Settings, Users } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+	async function handleLogout() {
+		try {
+			await authStore.logout();
+			toast.success('Logged Out', {
+				description: 'You have been successfully logged out.'
+			});
+			goto('/login');
+		} catch (error) {
+			toast.error('Logout Failed', {
+				description: 'Could not log out at this time.'
+			});
+			console.error('Logout error:', error);
+		}
+	}
+</script>
 
-export function AppHeader() {
-  const { currentUser, userProfile, logout, loading } = useAuth();
-  const { toast } = useToast();
+<header class="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+	<div class="flex h-14 items-center justify-between w-full">
+		<div class="flex items-center">
+			<a href="/" class="mr-6 flex items-center space-x-2">
+				<KanbanIcon className="h-6 w-6 text-primary" />
+				<span class="font-bold sm:inline-block">
+					DijiKanban
+				</span>
+			</a>
+			<nav class="flex items-center space-x-4">
+				{#if $currentUser}
+					<Button variant="ghost">
+						<a href="/teams" class="flex items-center">
+							<Users class="mr-2 h-4 w-4" />
+							Teams
+						</a>
+					</Button>
+					<Button variant="ghost">
+						<a href="/dashboard" class="flex items-center">
+							<LayoutDashboard class="mr-2 h-4 w-4" />
+							Dashboard
+						</a>
+					</Button>
+				{/if}
+			</nav>
+		</div>
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      // Router push is handled within logout() in AuthContext
-    } catch (error) {
-      toast({ variant: "destructive", title: "Logout Failed", description: "Could not log out at this time." });
-      console.error("Logout error:", error);
-    }
-  };
+		<div class="flex items-center space-x-4">
+			<Button variant="ghost" size="sm">
+				<a href="https://github.com/yourusername/kanban-app" target="_blank" rel="noopener noreferrer" class="flex items-center">
+					<Github class="h-4 w-4" />
+				</a>
+			</Button>
 
-  return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-      <div className="flex h-14 items-center justify-between w-full">
-        <div className="flex items-center">
-          <Link href="/" className="mr-6 flex items-center space-x-2" prefetch={false}>
-            <KanbanIcon className="h-6 w-6 text-primary" />
-            <span className="font-bold sm:inline-block">
-              DijiKanban
-            </span>
-          </Link>
-          <nav className="flex items-center space-x-4">
-            {currentUser && (
-              <Button variant="ghost" asChild>
-                <Link href="/teams" prefetch={false}>
-                  <Users className="mr-2 h-4 w-4" />
-                  Teams
-                </Link>
-              </Button>
-            )}
-          </nav>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="https://github.com/talha7k/kanban" target="_blank" rel="noopener noreferrer">
-              <Github className="h-5 w-5" />
-              <span className="sr-only">GitHub</span>
-            </a>
-          </Button>
-          
-          {loading ? (
-             <Button variant="ghost" size="sm" disabled>Loading...</Button>
-          ) : currentUser ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage 
-                        src={userProfile?.avatarUrl || currentUser.photoURL || undefined} 
-                        alt={userProfile?.name || currentUser.displayName || currentUser.email || 'User'} 
-                        data-ai-hint="user avatar"
-                    />
-                    <AvatarFallback>
-                      {(userProfile?.name || currentUser.email || 'U').substring(0,1).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userProfile?.name || currentUser.displayName}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {currentUser.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" prefetch={false}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Button variant="ghost" asChild size="sm">
-                <Link href="/login" prefetch={false}>
-                  <LogIn className="mr-2 h-4 w-4" /> Login
-                </Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/signup" prefetch={false}>Sign Up</Link>
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
+			{#if $currentUser}
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild let:builder>
+					<Button variant="ghost" class="relative h-8 w-8 rounded-full" {...builder}>
+							<Avatar class="h-8 w-8">
+								<AvatarImage src={$userProfile?.avatarUrl || ''} alt={$userProfile?.name || 'User'} />
+								<AvatarFallback>
+									{$userProfile?.name?.charAt(0) || $currentUser.email?.charAt(0) || 'U'}
+								</AvatarFallback>
+							</Avatar>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent class="w-56" align="end">
+						<DropdownMenuLabel class="font-normal">
+							<div class="flex flex-col space-y-1">
+								<p class="text-sm font-medium leading-none">
+									{$userProfile?.name || 'User'}
+								</p>
+								<p class="text-xs leading-none text-muted-foreground">
+									{$currentUser.email}
+								</p>
+							</div>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem>
+							<a href="/profile" class="flex items-center w-full">
+								<UserCircle class="mr-2 h-4 w-4" />
+								<span>Profile</span>
+							</a>
+						</DropdownMenuItem>
+						<DropdownMenuItem>
+							<a href="/settings" class="flex items-center w-full">
+								<Settings class="mr-2 h-4 w-4" />
+								<span>Settings</span>
+							</a>
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onclick={handleLogout}>
+							<LogOut class="mr-2 h-4 w-4" />
+							<span>Log out</span>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			{:else}
+				<Button variant="ghost">
+					<a href="/login" class="flex items-center">
+						<LogIn class="mr-2 h-4 w-4" />
+						Sign In
+					</a>
+				</Button>
+			{/if}
+		</div>
+	</div>
+</header>

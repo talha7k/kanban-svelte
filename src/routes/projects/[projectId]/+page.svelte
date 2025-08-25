@@ -321,7 +321,8 @@
 		</div>
 		{#if $currentUser?.uid === project.ownerId && project}
 			<EditProjectDialog
-				bind:isOpen={isEditProjectDialogOpen}
+				isOpen={isEditProjectDialogOpen}
+				onOpenChange={(open) => isEditProjectDialogOpen = open}
 				{project}
 				onEditProject={handleEditProjectSubmit}
 				onDeleteProject={openDeleteProjectDialog}
@@ -331,18 +332,20 @@
 
 		{#if projectToDelete}
 			<DeleteProjectAlertDialog
+				{projectToDelete}
 				{isDeletingProject}
+				setProjectToDelete={(project) => projectToDelete = project}
 				confirmDeleteProject={handleDeleteProject}
-				bind:projectToDelete
 			/>
 		{/if}
 
 		{#if project}
 			<GenerateTasksDialog
-				bind:isOpen={isGenerateTasksDialogOpen}
+				isOpen={isGenerateTasksDialogOpen}
+				onOpenChange={(open) => isGenerateTasksDialogOpen = open}
 				onGenerate={handleGenerateTasks}
 				onAddTasks={handleAddTasks}
-				{isGeneratingTasks}
+				isGenerating={isGeneratingTasks}
 				{isAddingTasks}
 			/>
 		{/if}

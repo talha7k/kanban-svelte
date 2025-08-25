@@ -1,72 +1,64 @@
-"use client";
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import TeamUsersCard from './TeamUsersCard.svelte';
+	import { getTeamMembers, getTeam } from '$lib/api/firebaseTeam';
+	import { toast } from 'svelte-sonner';
+	import type { UserProfile, Team, TeamId, Project } from '$lib/types/types';
 
-import { useState, useEffect } from "react";
-import { TeamUsersCard } from "./TeamUsersCard";
-import { getTeamMembers, getTeam } from "@/lib/firebaseTeam";
-import { useToast } from "@/hooks/use-toast";
-import type { UserProfile, Team, TeamId, Project } from "@/lib/types";
+	export let selectedTeamId: TeamId | null;
+	export let selectedProject: Project | null;
+	export let onClearSelectedProject: () => void;
+	export let onUsersLoaded: ((users: UserProfile[]) => void) | undefined = undefined;
 
-interface LazyTeamUsersCardProps {
-  selectedTeamId: TeamId | null;
-  selectedProject: Project | null;
-  onClearSelectedProject: () => void;
-  onUsersLoaded?: (users: UserProfile[]) => void;
-}
+	let allUsers: UserProfile[] = [];
+	let selectedTeam: Team | null = null;
+	let isLoadingUsers = true;
 
-export function LazyTeamUsersCard({
-  selectedTeamId,
-  selectedProject,
-  onClearSelectedProject,
-  onUsersLoaded,
-}: LazyTeamUsersCardProps) {
-  const { toast } = useToast();
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+	async function fetchTeamData() {
+		if (!selectedTeamId) {
+			isLoadingUsers = false;
+			return;
+		}
 
-  useEffect(() => {
-    const fetchTeamData = async () => {
-      if (!selectedTeamId) {
-        setIsLoadingUsers(false);
-        return;
-      }
+		isLoadingUsers = true;
 
-      setIsLoadingUsers(true);
+		try {
+			// Fetch team details and members in parallel
+			const [team, fetchedUsers] = await Promise.all([
+				getTeam(selectedTeamId),
+				getTeamMembers(selectedTeamId)
+			]);
 
-      try {
-        // Fetch team details and members in parallel
-        const [team, fetchedUsers] = await Promise.all([
-          getTeam(selectedTeamId),
-          getTeamMembers(selectedTeamId),
-        ]);
+			selectedTeam = team;
+			allUsers = fetchedUsers;
+			onUsersLoaded?.(fetchedUsers);
+		} catch (error) {
+			console.error('Error fetching team data:', error);
+			toast.error('Could not load team data.');
+		} finally {
+			isLoadingUsers = false;
+		}
+	}
 
-        setSelectedTeam(team);
-        setAllUsers(fetchedUsers);
-        onUsersLoaded?.(fetchedUsers);
-      } catch (error) {
-        console.error("Error fetching team data:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load team data.",
-        });
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
+	// Reactive statement to fetch data when selectedTeamId changes
+	$: if (selectedTeamId !== null) {
+		// Add a small delay to allow projects to load first
+		setTimeout(fetchTeamData, 200);
+	} else {
+		isLoadingUsers = false;
+	}
 
-    // Add a small delay to allow projects to load first
-    const timer = setTimeout(fetchTeamData, 200);
-    return () => clearTimeout(timer);
-  }, [selectedTeamId, toast]);
+	onMount(() => {
+		if (selectedTeamId) {
+			fetchTeamData();
+		}
+	});
+</script>
 
-  return (
-    <TeamUsersCard
-      isLoadingUsers={isLoadingUsers}
-      allUsers={allUsers}
-      selectedTeam={selectedTeam}
-      selectedProject={selectedProject}
-      onClearSelectedProject={onClearSelectedProject}
-    />
-  );
-}
+<TeamUsersCard
+	{isLoadingUsers}
+	{allUsers}
+	{selectedTeam}
+	{selectedProject}
+	{onClearSelectedProject}
+/>
