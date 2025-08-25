@@ -1,7 +1,7 @@
 import { db } from './firebase';
 import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where, arrayUnion, arrayRemove, deleteDoc, documentId } from 'firebase/firestore';
 import { auth } from './firebase';
-import type { Team, UserId, UserProfile } from '../../lib/types/types';
+import type { Team, UserId, UserProfile } from '../types/types';
 
 export async function createTeam(teamName: string, creatorId: UserId, teamDescription: string): Promise<Team> {
   try {

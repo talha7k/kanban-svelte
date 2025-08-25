@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase";
+import { auth, db } from "$lib/firebase";
 import {
   doc,
   setDoc,
@@ -20,7 +20,7 @@ import type {
   UserId,
   UserProjectRole,
   TeamId,
-} from "../../lib/types/types";
+} from "$lib/types/types";
 import { v4 as uuidv4 } from "uuid";
 
 

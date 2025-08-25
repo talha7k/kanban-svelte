@@ -1,6 +1,6 @@
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { auth, db } from './firebase';
-import type { Task, NewTaskData, ColumnId, ProjectDocument, Comment, NewCommentData, TaskId } from '../../lib/types/types';
+import { auth, db } from '$lib/firebase';
+import type { Task, NewTaskData, ColumnId, ProjectDocument, Comment, NewCommentData, TaskId } from '$lib/types/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Task Functions
