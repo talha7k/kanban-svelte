@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import TeamUsersCard from './TeamUsersCard.svelte';
 	import { getTeamMembers, getTeam } from '$lib/api/firebaseTeam';
+	import { getProjectRelevantUsers } from '$lib/api/firebaseUser';
 	import { toast } from 'svelte-sonner';
 	import type { UserProfile, Team, TeamId, Project } from '$lib/types/types';
 
@@ -23,15 +24,23 @@
 		isLoadingUsers = true;
 
 		try {
-			// Fetch team details and members in parallel
-			const [team, fetchedUsers] = await Promise.all([
-				getTeam(selectedTeamId),
-				getTeamMembers(selectedTeamId)
-			]);
+			if (selectedProject) {
+				// Fetch project-specific users
+				const fetchedUsers = await getProjectRelevantUsers(selectedProject.id);
+				allUsers = fetchedUsers;
+				selectedTeam = null; // Clear team when showing project users
+				onUsersLoaded?.(fetchedUsers);
+			} else {
+				// Fetch team details and members
+				const [team, fetchedUsers] = await Promise.all([
+					getTeam(selectedTeamId),
+					getTeamMembers(selectedTeamId)
+				]);
 
-			selectedTeam = team;
-			allUsers = fetchedUsers;
-			onUsersLoaded?.(fetchedUsers);
+				selectedTeam = team;
+				allUsers = fetchedUsers;
+				onUsersLoaded?.(fetchedUsers);
+			}
 		} catch (error) {
 			console.error('Error fetching team data:', error);
 			toast.error('Could not load team data.');
@@ -40,12 +49,17 @@
 		}
 	}
 
-	// Reactive statement to fetch data when selectedTeamId changes
+	// Reactive statement to fetch data when selectedTeamId or selectedProject changes
 	$: if (selectedTeamId !== null) {
 		// Add a small delay to allow projects to load first
 		setTimeout(fetchTeamData, 200);
 	} else {
 		isLoadingUsers = false;
+	}
+
+	// Also watch for selectedProject changes
+	$: if (selectedProject !== null && selectedTeamId !== null) {
+		setTimeout(fetchTeamData, 200);
 	}
 
 	onMount(() => {

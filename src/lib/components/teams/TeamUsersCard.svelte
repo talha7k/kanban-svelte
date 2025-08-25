@@ -77,7 +77,7 @@
 	}
 </script>
 
-<Card class="shadow-lg">
+<Card class="shadow-lg border-0">
 	<CardHeader>
 		<CardTitle class="flex items-center text-2xl mb-2">
 			<Users class="mr-3 h-7 w-7 text-accent" />

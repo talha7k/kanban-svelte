@@ -240,8 +240,8 @@
 				<div class="lg:col-span-1">
 					<LazyTeamUsersCard
 						selectedTeamId={$selectedTeamId}
-						selectedProject={null}
-						onClearSelectedProject={() => {}}
+						selectedProject={selectedProject}
+						onClearSelectedProject={() => selectedProject = null}
 					/>
 				</div>
 			</div>

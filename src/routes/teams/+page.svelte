@@ -114,7 +114,7 @@ let isCreatingTeam = $state(false);
 			{#each $teamsData.data || [] as team}
 				<TeamCard 
 					{team} 
-					on:select={() => selectTeam(team.id)}
+					onSelect={() => selectTeam(team.id)}
 			/>
 			{/each}
 		</div>

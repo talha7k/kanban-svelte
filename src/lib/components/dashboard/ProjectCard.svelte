@@ -46,16 +46,16 @@
 </script>
 
 <Card
-	class="bg-gradient-to-r from-pink-100 to-white hover:shadow-lg transition-shadow hover:bg-gradient-to-r hover:from-pink-200 hover:to-purple-100"
+	class="border-0 bg-gradient-to-r from-pink-100 to-white hover:shadow-lg transition-shadow hover:bg-gradient-to-r hover:from-pink-200 hover:to-purple-100"
 >
 	<CardHeader
 		onclick={handleNavigateToProject}
-		class="pb-3 cursor-pointer"
+		class="pb-3 cursor-pointer "
 	>
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
 			{#if currentUserUid === project.ownerId}
-				<Badge variant="outline" class="ml-2 border-accent text-accent">
+				<Badge variant="outline" class="ml-2 border-primary text-primary">
 					<Crown class="mr-1.5 h-3.5 w-3.5" /> Owner
 				</Badge>
 			{/if}
