@@ -30,8 +30,8 @@
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Badge } from '$lib/components/ui/badge';
-	import { useTeamManagement } from '../../../queries/useTeamManagement';
-	import { useProjectManagement, useTeamProjects } from '../../../queries/useProjectManagement';
+	import { useTeamManagement } from '$queries/useTeamManagement';
+	import { useProjectManagement, useTeamProjects } from '$queries/useProjectManagement';
 	import ProjectCard from '$lib/components/dashboard/ProjectCard.svelte';
 	import {
 		Dialog,

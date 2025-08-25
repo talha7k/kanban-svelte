@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { currentUser, authStore } from '$lib/stores/auth';
 	import TeamCard from '$lib/components/teams/TeamCard.svelte';
-	import { useTeamManagement } from '../../queries/useTeamManagement';
+	import { useTeamManagement } from '$queries/useTeamManagement';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '$lib/components/ui/dialog';
