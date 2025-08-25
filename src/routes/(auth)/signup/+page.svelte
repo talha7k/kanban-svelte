@@ -75,7 +75,7 @@
 			<CardDescription>Join DijiKanban to manage your projects efficiently.</CardDescription>
 		</CardHeader>
 		<CardContent>
-			<form on:submit={handleSubmit} class="space-y-4">
+			<form onsubmit={handleSubmit} class="space-y-4">
 				{#if formError}
 					<p class="text-sm text-destructive text-center">{formError}</p>
 				{/if}

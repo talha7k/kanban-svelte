@@ -69,15 +69,13 @@
 
 			{#if $currentUser}
 				<DropdownMenu>
-					<DropdownMenuTrigger asChild let:builder>
-					<Button variant="ghost" class="relative h-8 w-8 rounded-full" {...builder}>
-							<Avatar class="h-8 w-8">
-								<AvatarImage src={$userProfile?.avatarUrl || ''} alt={$userProfile?.name || 'User'} />
-								<AvatarFallback>
-									{$userProfile?.name?.charAt(0) || $currentUser.email?.charAt(0) || 'U'}
-								</AvatarFallback>
-							</Avatar>
-						</Button>
+					<DropdownMenuTrigger class="relative h-8 w-8 rounded-full">
+						<Avatar class="h-8 w-8">
+							<AvatarImage src={$userProfile?.avatarUrl || ''} alt={$userProfile?.name || 'User'} />
+							<AvatarFallback>
+								{$userProfile?.name?.charAt(0) || $currentUser.email?.charAt(0) || 'U'}
+							</AvatarFallback>
+						</Avatar>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent class="w-56" align="end">
 						<DropdownMenuLabel class="font-normal">

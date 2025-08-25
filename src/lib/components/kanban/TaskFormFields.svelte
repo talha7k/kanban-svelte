@@ -1,249 +1,234 @@
 
-"use client";
+<script context="module" lang="ts">
+	export interface TaskFormData {
+		title: string;
+		description?: string;
+		priority: Task['priority'];
+		assigneeUids?: string[];
+		dueDate?: string; // YYYY-MM-DD string
+		tags?: string[];
+		dependentTaskTitles?: string[];
+	}
+</script>
 
-import type { UserProfile, Task } from '@/lib/types';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { UseFormReturn } from 'react-hook-form';
-import { Controller } from 'react-hook-form';
-import { cn } from '@/lib/utils';
-import React, { useState } from 'react';
-import { AITaskDetailGenerator } from './AITaskDetailGenerator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Sparkles } from 'lucide-react';
+<script lang="ts">
+	import type { Task, UserProfile, AIPrioritySuggestion } from '$lib/types/types';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import { Label } from '$lib/components/ui/label';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
+	import { Check, ChevronsUpDown, X } from '@lucide/svelte';
+	import { cn } from '$lib/utils';
+	import { Command } from 'bits-ui';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
 
-export interface TaskFormData {
-  title: string;
-  description?: string;
-  priority: Task['priority'];
-  assigneeUids?: string[];
-  dueDate?: string; // YYYY-MM-DD string
-  tags?: string[]; 
-  dependentTaskTitles?: string[]; 
-}
+	export let formData: TaskFormData;
+	export let assignableUsers: UserProfile[];
+	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
+	export let isEditing: boolean = false;
+	export let formErrors: Record<string, string> = {};
+	export let updateFormData: (field: keyof TaskFormData, value: any) => void;
 
-interface TaskFormFieldsProps {
-  form: UseFormReturn<TaskFormData>; 
-  assignableUsers: UserProfile[]; // Changed from 'users'
-  allTasksForDependencies: Pick<Task, 'id' | 'title'>[]; 
-  isEditing?: boolean;
-}
+	$: selectedAssignees = formData.assigneeUids || [];
+	$: selectedDependencies = formData.dependentTaskTitles || [];
+	let aiBrief = '';
+	let isAiDialogOpen = false;
 
-export function TaskFormFields({ form, assignableUsers, allTasksForDependencies }: TaskFormFieldsProps) {
-  const { register, control, watch, setValue } = form;
+	function handleAIDetailsGenerated(details: { title: string; description: string }) {
+		updateFormData('title', details.title);
+		updateFormData('description', details.description);
+		isAiDialogOpen = false;
+	}
 
-  const selectedAssignees = watch('assigneeUids') || [];
-  const selectedDependencies = watch('dependentTaskTitles') || [];
-  const [aiBrief, setAiBrief] = useState('');
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+	function handlePriorityChange(value: string | undefined) {
+		if (value) {
+			updateFormData('priority', value as Task['priority']);
+		}
+	}
 
-  const handleAIDetailsGenerated = (details: { title: string; description: string }) => {
-    setValue('title', details.title);
-    setValue('description', details.description);
-    setIsAiDialogOpen(false);
-  };
 
-  return (
-    <div className="grid gap-4 py-4">
-      <div className="space-y-1">
-        <div className="flex justify-between items-center">
-          <Label htmlFor="title">Title</Label>
-          <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
-            <DialogTrigger asChild>
-              <Button type="button" variant="default" size="sm" className="m-2">
-                <Sparkles className="mr-2 h-4 w-4" /> AI Generate
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Generate Task Details with AI</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-1">
-                  <Label htmlFor="ai-brief">Brief Input</Label>
-                  <Textarea
-                    id="ai-brief"
-                    value={aiBrief}
-                    onChange={(e) => setAiBrief(e.target.value)}
-                    placeholder="e.g., Create a new user authentication module with OAuth2 support."
-                  />
-                </div>
-                <AITaskDetailGenerator briefInput={aiBrief} onDetailsGenerated={handleAIDetailsGenerated} />
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <Input id="title" {...register('title')} placeholder="e.g., Implement feature X" />
-        {form.formState.errors.title && <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>}
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" {...register('description')} placeholder="Provide a detailed description of the task..." />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <Label htmlFor="priority">Priority</Label>
-          <Controller
-            name="priority"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <SelectTrigger id="priority">
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">None</SelectItem>
-                  <SelectItem value="LOW">Low</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="dueDate">Due Date</Label>
-           <Controller
-            name="dueDate"
-            control={control}
-            render={({ field }) => (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="dueDate"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !field.value && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : undefined)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-          />
-        </div>
-      </div>
-      <div className="space-y-1">
-        <Label>Assignees</Label>
-        <Controller
-            name="assigneeUids"
-            control={control}
-            render={({ field }) => (
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between">
-                            {selectedAssignees.length > 0
-                                ? assignableUsers.filter(user => selectedAssignees.includes(user.id)).map(user => user.name).join(', ')
-                                : "Select assignees..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                            <CommandInput placeholder="Search users..." />
-                            <CommandList>
-                                <CommandEmpty>No users found in this project.</CommandEmpty>
-                                <CommandGroup>
-                                    {assignableUsers.map((user) => (
-                                        <CommandItem
-                                            key={user.id}
-                                            value={user.name}
-                                            onSelect={() => {
-                                                const currentSelection = field.value || [];
-                                                const newSelection = currentSelection.includes(user.id)
-                                                    ? currentSelection.filter(id => id !== user.id)
-                                                    : [...currentSelection, user.id];
-                                                field.onChange(newSelection);
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    (field.value || []).includes(user.id) ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {user.name}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            )}
-        />
-      </div>
-       <div className="space-y-1">
-        <Label>Dependent Tasks (for AI)</Label>
-        <Controller
-            name="dependentTaskTitles"
-            control={control}
-            render={({ field }) => (
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between">
-                            {selectedDependencies.length > 0
-                                ? selectedDependencies.join(', ')
-                                : "Select dependent tasks..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                            <CommandInput placeholder="Search tasks..." />
-                            <CommandList>
-                                <CommandEmpty>No tasks found.</CommandEmpty>
-                                <CommandGroup>
-                                    {allTasksForDependencies.map((taskDep) => (
-                                        <CommandItem
-                                            key={taskDep.id}
-                                            value={taskDep.title}
-                                            onSelect={() => {
-                                                const currentSelection = field.value || [];
-                                                const newSelection = currentSelection.includes(taskDep.title)
-                                                    ? currentSelection.filter(title => title !== taskDep.title)
-                                                    : [...currentSelection, taskDep.title];
-                                                field.onChange(newSelection);
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    (field.value || []).includes(taskDep.title) ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {taskDep.title}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            )}
-        />
-      </div>
-    </div>
-  );
-}
+
+
+	function toggleAssignee(userId: string) {
+		const currentSelection = formData.assigneeUids || [];
+		const newSelection = currentSelection.includes(userId)
+			? currentSelection.filter(id => id !== userId)
+			: [...currentSelection, userId];
+		updateFormData('assigneeUids', newSelection);
+	}
+
+	function toggleDependentTask(taskTitle: string) {
+		const currentSelection = formData.dependentTaskTitles || [];
+		const newSelection = currentSelection.includes(taskTitle)
+			? currentSelection.filter(title => title !== taskTitle)
+			: [...currentSelection, taskTitle];
+		updateFormData('dependentTaskTitles', newSelection);
+	}
+
+
+</script>
+
+<div class="grid gap-4 py-4">
+	<div class="space-y-1">
+		<div class="flex justify-between items-center">
+			<Label for="title">Title</Label>
+			<Dialog bind:open={isAiDialogOpen}>
+				<DialogTrigger>
+					<Button variant="outline" size="sm" class="ml-2">
+						Generate with AI
+					</Button>
+				</DialogTrigger>
+				<DialogContent class="sm:max-w-[425px]">
+					<DialogHeader>
+						<DialogTitle>Generate Task Details with AI</DialogTitle>
+					</DialogHeader>
+					<div class="grid gap-4 py-4">
+						<div class="space-y-1">
+							<Label for="ai-brief">Brief Input</Label>
+							<Textarea
+								id="ai-brief"
+								bind:value={aiBrief}
+								placeholder="e.g., Create a new user authentication module with OAuth2 support."
+							/>
+						</div>
+						<!-- AITaskDetailGenerator component removed due to missing dependencies -->
+					</div>
+				</DialogContent>
+			</Dialog>
+		</div>
+		<Input 
+			id="title" 
+			bind:value={formData.title} 
+			placeholder="e.g., Implement feature X" 
+		/>
+		{#if formErrors.title}
+			<p class="text-xs text-destructive">{formErrors.title}</p>
+		{/if}
+	</div>
+	<div class="space-y-1">
+		<Label for="description">Description</Label>
+		<Textarea 
+			id="description" 
+			bind:value={formData.description} 
+			placeholder="Provide a detailed description of the task..." 
+		/>
+		{#if formErrors.description}
+			<p class="text-xs text-destructive">{formErrors.description}</p>
+		{/if}
+	</div>
+	<div class="grid grid-cols-2 gap-4">
+		<div class="space-y-1">
+			<Label for="priority">Priority</Label>
+			<select 
+				id="priority" 
+				bind:value={formData.priority}
+				class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<option value="NONE">None</option>
+				<option value="LOW">Low</option>
+				<option value="MEDIUM">Medium</option>
+				<option value="HIGH">High</option>
+			</select>
+			{#if formErrors.priority}
+				<p class="text-xs text-destructive">{formErrors.priority}</p>
+			{/if}
+		</div>
+		<div class="space-y-1">
+			<Label for="dueDate">Due Date</Label>
+			<Input
+				id="dueDate"
+				type="date"
+				bind:value={formData.dueDate}
+				class="w-full"
+			/>
+			{#if formErrors.dueDate}
+				<p class="text-xs text-destructive">{formErrors.dueDate}</p>
+			{/if}
+		</div>
+	</div>
+	<div class="space-y-1">
+		<Label>Assignees</Label>
+		<Popover>
+			<PopoverTrigger>
+				<Button variant="outline" role="combobox" class="w-full justify-between">
+					{selectedAssignees.length > 0
+						? assignableUsers.filter(user => selectedAssignees.includes(user.id)).map(user => user.name).join(', ')
+						: "Select assignees..."}
+					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
+				<Command.Root>
+					<Command.Input placeholder="Search users..." />
+					<Command.List>
+						<Command.Empty>No users found in this project.</Command.Empty>
+						<Command.Group>
+							{#each assignableUsers as user (user.id)}
+								<Command.Item
+									value={user.name}
+									onSelect={() => toggleAssignee(user.id)}
+								>
+									<Check
+										class={cn(
+											"mr-2 h-4 w-4",
+											selectedAssignees.includes(user.id) ? "opacity-100" : "opacity-0"
+										)}
+									/>
+									{user.name}
+								</Command.Item>
+							{/each}
+						</Command.Group>
+					</Command.List>
+				</Command.Root>
+			</PopoverContent>
+		</Popover>
+		{#if formErrors.assigneeUids}
+			<p class="text-xs text-destructive">{formErrors.assigneeUids}</p>
+		{/if}
+	</div>
+	<div class="space-y-1">
+		<Label>Dependent Tasks (for AI)</Label>
+		<Popover>
+			<PopoverTrigger>
+				<Button variant="outline" role="combobox" class="w-full justify-between">
+					{selectedDependencies.length > 0
+						? selectedDependencies.join(', ')
+						: "Select dependent tasks..."}
+					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
+				<Command.Root>
+					<Command.Input placeholder="Search tasks..." />
+					<Command.List>
+						<Command.Empty>No tasks found.</Command.Empty>
+						<Command.Group>
+							{#each allTasksForDependencies as taskDep (taskDep.id)}
+								<Command.Item
+									value={taskDep.title}
+									onSelect={() => toggleDependentTask(taskDep.title)}
+								>
+									<Check
+										class={cn(
+											"mr-2 h-4 w-4",
+											selectedDependencies.includes(taskDep.title) ? "opacity-100" : "opacity-0"
+										)}
+									/>
+									{taskDep.title}
+								</Command.Item>
+							{/each}
+						</Command.Group>
+					</Command.List>
+				</Command.Root>
+			</PopoverContent>
+		</Popover>
+		{#if formErrors.dependentTaskTitles}
+			<p class="text-xs text-destructive">{formErrors.dependentTaskTitles}</p>
+		{/if}
+	</div>
+</div>
 
     
