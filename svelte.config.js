@@ -14,6 +14,8 @@ const config = {
     adapter: adapter(),
     alias: {
       "@/*": "./path/to/lib/*",
+      "$queries": "./src/queries",
+      "$queries/*": "./src/queries/*",
     },
   },
 };

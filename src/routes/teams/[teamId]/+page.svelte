@@ -2,445 +2,446 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { currentUser, authLoading } from '$lib/stores/auth';
+	import { currentUser, userProfile, authLoading, selectedTeamId } from '$lib/stores/auth';
 	import { toast } from 'svelte-sonner';
-	import { getTeam, updateTeam, addMemberToTeam, removeMemberFromTeam, deleteTeam, getTeamMembers } from '$lib/api/firebaseTeam';
-	import { getUserProfileByEmail, getUserProfile } from '$lib/api/firebaseUser';
-	import { getProjectsForTeam } from '$lib/api/firebaseProject';
-	import type { Team, UserId, UserProfile, Project } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardFooter,
+		CardHeader,
+		CardTitle,
+	} from '$lib/components/ui/card';
+	import type { NewProjectData, Project, UserProfile, Team, TeamId } from '$lib/types/types';
+	import {
+		PlusCircle,
+		FolderKanban,
+		Loader2,
+		Briefcase,
+		Settings2,
+		Eye,
+		Crown,
+		Pencil,
+		Trash2,
+		Users,
+	} from '@lucide/svelte';
+	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { Badge } from '$lib/components/ui/badge';
+	import {
+		getProjectsForTeam,
+		deleteProject as deleteProjectFromDb,
+		updateProjectDetails,
+		createProject as createProjectInDb
+	} from '$lib/api/firebaseProject';
+	import { useTeamManagement } from '../../../queries/useTeamManagement';
+	import {
+		Dialog,
+		DialogContent,
+		DialogHeader,
+		DialogTitle,
+		DialogFooter,
+	} from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Loader2, UserPlus, Trash2, AlertTriangle, Edit2 } from '@lucide/svelte';
-	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '$lib/components/ui/dialog';
-
-	// Get teamId from page params
-	let teamId = $derived($page.params.teamId);
+	import { Textarea } from '$lib/components/ui/textarea';
+	import LazyTeamUsersCard from '$lib/components/teams/LazyTeamUsersCard.svelte';
 
 	// State variables
+	let projects: Project[] = $state([]);
 	let team: Team | null = $state(null);
-	let teamCreator: UserProfile | null = $state(null);
 	let teamMembers: UserProfile[] = $state([]);
-	let teamProjects: Project[] = $state([]);
 	let isLoading = $state(true);
-	let isEditTeamDialogOpen = $state(false);
-	let newTeamName = $state('');
-	let newTeamDescription = $state('');
-	let isUpdatingTeam = $state(false);
-	let isAddMemberDialogOpen = $state(false);
-	let memberEmail = $state('');
-	let isAddingMember = $state(false);
-	let isDeleteTeamDialogOpen = $state(false);
-	let isDeletingTeam = $state(false);
-	let isRemoveMemberConfirmDialogOpen = $state(false);
-	let memberToRemove: UserProfile | null = $state(null);
+	let isCreateProjectDialogOpen = $state(false);
+	let isEditProjectDialogOpen = $state(false);
+	let isDeleteProjectDialogOpen = $state(false);
+	let selectedProject: Project | null = $state(null);
+	let newProjectName = $state('');
+	let newProjectDescription = $state('');
+	let isCreatingProject = $state(false);
+	let isUpdatingProject = $state(false);
+	let isDeletingProject = $state(false);
 
-	async function fetchTeamDetails() {
-		if (!teamId || !$currentUser?.uid) return;
+	// Team management queries
+	const {
+		teamData,
+		teamMembersData
+	} = useTeamManagement($selectedTeamId || undefined);
+
+	async function fetchTeamData() {
+		if (!$selectedTeamId || !$currentUser) {
+			isLoading = false;
+			return;
+		}
+
 		isLoading = true;
+
 		try {
-			const [fetchedTeam, members, projects] = await Promise.all([
-				getTeam(teamId),
-				getTeamMembers(teamId),
-				getProjectsForTeam(teamId)
-			]);
-
-			team = fetchedTeam;
-			teamMembers = members;
-			teamProjects = projects;
-
-			// Fetch team creator profile
-			if (fetchedTeam?.ownerId) {
-				try {
-					const creatorProfile = await getUserProfile(fetchedTeam.ownerId);
-					teamCreator = creatorProfile;
-				} catch (error) {
-					console.error('Error fetching team creator profile:', error);
-				}
-			}
-
-			console.log('Fetched team:', fetchedTeam);
-			console.log('Fetched members:', members);
-			console.log('Fetched projects:', projects);
-
-			if (fetchedTeam) {
-				newTeamName = fetchedTeam.name;
-				newTeamDescription = fetchedTeam.description || '';
-
-				// Check if current user is the owner
-				if (fetchedTeam.ownerId !== $currentUser?.uid) {
-					toast.error('Access Denied', {
-						description: 'You do not have permission to view this team page.'
-					});
-					goto('/teams');
-					return;
-				}
-			}
+			// Fetch projects for the team (still using direct API for now)
+			const teamProjects = await getProjectsForTeam($selectedTeamId);
+			projects = teamProjects;
 		} catch (error) {
-			console.error('Error fetching team details:', error);
-			toast.error('Error', {
-				description: 'Could not load team details.'
-			});
+			console.error('Error fetching team data:', error);
+			toast.error('Failed to load team data');
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	async function handleUpdateTeam() {
-		if (!team || !$currentUser) return;
-		isUpdatingTeam = true;
+	async function handleCreateProject() {
+		if (!newProjectName.trim() || !$selectedTeamId || !$currentUser) return;
+
+		isCreatingProject = true;
+
 		try {
-			await updateTeam(team.id, { name: newTeamName, description: newTeamDescription });
-			team = { ...team, name: newTeamName, description: newTeamDescription };
-			isEditTeamDialogOpen = false;
-			toast.success('Team Updated!', {
-				description: 'Team details have been successfully updated.'
-			});
+			const projectData: NewProjectData = {
+				name: newProjectName.trim(),
+				description: newProjectDescription.trim()
+			};
+
+			const newProject = await createProjectInDb(projectData, $currentUser.uid, $selectedTeamId);
+			projects = [...projects, newProject];
+
+			toast.success('Project created successfully!');
+
+			// Reset form
+			newProjectName = '';
+			newProjectDescription = '';
+			isCreateProjectDialogOpen = false;
 		} catch (error) {
-			console.error('Error updating team:', error);
-			toast.error('Update Failed', {
-				description: 'Could not update team.'
-			});
+			console.error('Error creating project:', error);
+			toast.error('Failed to create project');
 		} finally {
-			isUpdatingTeam = false;
+			isCreatingProject = false;
 		}
 	}
 
-	function handleRemoveMemberClick(member: UserProfile) {
-		memberToRemove = member;
-		isRemoveMemberConfirmDialogOpen = true;
-	}
+	async function handleUpdateProject() {
+		if (!selectedProject || !newProjectName.trim()) return;
 
-	async function handleRemoveMemberConfirm() {
-		if (!team || !$currentUser || !memberToRemove) {
-			isRemoveMemberConfirmDialogOpen = false;
-			memberToRemove = null;
-			return;
-		}
+		isUpdatingProject = true;
 
 		try {
-			await removeMemberFromTeam(team.id, memberToRemove.id);
-			teamMembers = teamMembers.filter(member => member.id !== memberToRemove!.id);
-			toast.success('Member Removed', {
-				description: `${memberToRemove.name} has been removed from the team.`
+			const updatedProject = await updateProjectDetails(selectedProject!.id, {
+				name: newProjectName.trim(),
+				description: newProjectDescription.trim()
 			});
+
+			projects = projects.map(p => p.id === selectedProject!.id ? updatedProject : p);
+
+			toast.success('Project updated successfully!');
+
+			// Reset form
+			newProjectName = '';
+			newProjectDescription = '';
+			selectedProject = null;
+			isEditProjectDialogOpen = false;
 		} catch (error) {
-			console.error('Error removing member:', error);
-			toast.error('Removal Failed', {
-				description: 'Could not remove member from team.'
-			});
+			console.error('Error updating project:', error);
+			toast.error('Failed to update project');
 		} finally {
-			isRemoveMemberConfirmDialogOpen = false;
-			memberToRemove = null;
-		}
-	}
-
-	async function handleAddMember() {
-		if (!team || !$currentUser || !memberEmail.trim()) return;
-		isAddingMember = true;
-		try {
-			const userProfile = await getUserProfileByEmail(memberEmail.trim());
-			if (!userProfile) {
-				toast.error('User Not Found', {
-					description: 'No user found with this email address.'
-				});
-				return;
-			}
-
-			// Check if user is already a member
-			if (teamMembers.some(member => member.id === userProfile.id)) {
-				toast.error('Already a Member', {
-					description: 'This user is already a member of the team.'
-				});
-				return;
-			}
-
-			await addMemberToTeam(team.id, userProfile.id);
-			teamMembers = [...teamMembers, userProfile];
-			memberEmail = '';
-			isAddMemberDialogOpen = false;
-			toast.success('Member Added', {
-				description: `${userProfile.name} has been added to the team.`
-			});
-		} catch (error) {
-			console.error('Error adding member:', error);
-			toast.error('Addition Failed', {
-				description: 'Could not add member to team.'
-			});
-		} finally {
-			isAddingMember = false;
+			isUpdatingProject = false;
 		}
 	}
 
-	async function handleDeleteTeam() {
-		if (!team || !$currentUser) return;
-		isDeletingTeam = true;
+	async function handleDeleteProject() {
+		if (!selectedProject) return;
+
+		isDeletingProject = true;
+
 		try {
-			await deleteTeam(team.id);
-			toast.success('Team Deleted', {
-				description: 'Team has been successfully deleted.'
-			});
-			goto('/teams');
+			await deleteProjectFromDb(selectedProject!.id);
+			projects = projects.filter(p => p.id !== selectedProject!.id);
+
+			toast.success('Project deleted successfully!');
+
+			selectedProject = null;
+			isDeleteProjectDialogOpen = false;
 		} catch (error) {
-			console.error('Error deleting team:', error);
-			toast.error('Deletion Failed', {
-				description: 'Could not delete team.'
-			});
+			console.error('Error deleting project:', error);
+			toast.error('Failed to delete project');
 		} finally {
-			isDeletingTeam = false;
-			isDeleteTeamDialogOpen = false;
+			isDeletingProject = false;
 		}
+	}
+
+	function openEditDialog(project: Project) {
+		selectedProject = project;
+		newProjectName = project.name;
+		newProjectDescription = project.description || '';
+		isEditProjectDialogOpen = true;
+	}
+
+	function openDeleteDialog(project: Project) {
+		selectedProject = project;
+		isDeleteProjectDialogOpen = true;
+	}
+
+	function viewProject(projectId: string) {
+		goto(`/projects/${projectId}`);
 	}
 
 	onMount(() => {
-		if ($currentUser?.uid) {
-			fetchTeamDetails();
+		if (!$currentUser) {
+			goto('/login');
+			return;
+		}
+
+		if ($selectedTeamId && $currentUser) {
+			fetchTeamData();
+		} else if (!$selectedTeamId) {
+			goto('/teams');
 		}
 	});
 
-	// Effect to fetch data when teamId or currentUser changes
+	// Effect to fetch data when selectedTeamId changes
 	$effect(() => {
-		if (teamId && $currentUser?.uid && !$authLoading) {
-			fetchTeamDetails();
+		if ($selectedTeamId && $currentUser && !$authLoading) {
+			fetchTeamData();
 		}
 	});
 </script>
 
-<!-- Authentication and loading guard -->
-{#if $authLoading || !$currentUser}
-	<div class="flex items-center justify-center min-h-screen">
-		<Loader2 class="h-8 w-8 animate-spin" />
-		<p class="ml-2">Loading...</p>
-	</div>
-{:else if isLoading}
-	<div class="flex items-center justify-center min-h-screen">
-		<Loader2 class="h-8 w-8 animate-spin" />
-		<p class="ml-2">Loading team details...</p>
-	</div>
-{:else if !team}
-	<div class="flex flex-col items-center justify-center min-h-screen">
-		<p class="text-lg text-muted-foreground">Team not found or access denied.</p>
-		<Button onclick={() => goto('/teams')} variant="link" class="mt-2">
-			Go to Teams
-		</Button>
-	</div>
-{:else}
-	<div class="container mx-auto p-6 space-y-6">
-		<!-- Team Header -->
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-3xl font-bold">{team.name}</h1>
-				{#if team.description}
-					<p class="text-muted-foreground mt-1">{team.description}</p>
-				{/if}
-				{#if teamCreator}
-					<p class="text-sm text-muted-foreground mt-1">
-						Created by: {teamCreator.name}
-					</p>
-				{/if}
+<div class="container mx-auto px-4 py-8">
+	{#if $authLoading || isLoading}
+		<div class="space-y-6">
+			<div class="flex justify-between items-center">
+				<div class="space-y-2">
+					<Skeleton class="h-8 w-48" />
+					<Skeleton class="h-4 w-64" />
+				</div>
+				<Skeleton class="h-10 w-32" />
 			</div>
-			<div class="flex gap-2">
-				<Button onclick={() => isEditTeamDialogOpen = true} variant="outline">
-					<Edit2 class="h-4 w-4 mr-2" />
-					Edit Team
-				</Button>
-				<Button onclick={() => isDeleteTeamDialogOpen = true} variant="destructive">
-					<Trash2 class="h-4 w-4 mr-2" />
-					Delete Team
-				</Button>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				{#each Array(6) as _}
+					<Skeleton class="h-48" />
+				{/each}
 			</div>
 		</div>
-
-		<!-- Team Members -->
-		<Card>
-			<CardHeader>
-				<div class="flex items-center justify-between">
-					<CardTitle>Team Members ({teamMembers.length})</CardTitle>
-					<Button onclick={() => isAddMemberDialogOpen = true} size="sm">
-						<UserPlus class="h-4 w-4 mr-2" />
-						Add Member
-					</Button>
+	{:else if !$selectedTeamId}
+		<div class="text-center py-12">
+			<Users class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+			<h3 class="text-lg font-semibold mb-2">No team selected</h3>
+			<p class="text-muted-foreground mb-4">
+				Please select a team to view projects
+			</p>
+			<Button onclick={() => goto('/teams')}>
+				Select Team
+			</Button>
+		</div>
+	{:else}
+		<div class="space-y-6">
+			<!-- Header -->
+			<div class="flex justify-between items-center">
+				<div>
+					<h1 class="text-3xl font-bold tracking-tight">
+						{$teamData?.data?.name || 'Team Dashboard'}
+					</h1>
+					<p class="text-muted-foreground mt-2">
+						{$teamData?.data?.description || 'Manage your team projects'}
+					</p>
 				</div>
-			</CardHeader>
-			<CardContent>
-				{#if teamMembers.length === 0}
-					<p class="text-muted-foreground">No members in this team yet.</p>
-				{:else}
-					<div class="space-y-2">
-						{#each teamMembers as member (member.id)}
-							<div class="flex items-center justify-between p-3 border rounded-lg">
-								<div>
-									<p class="font-medium">{member.name}</p>
-									<p class="text-sm text-muted-foreground">{member.email}</p>
-									{#if member.id === team.ownerId}
-										<span class="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-											Owner
-										</span>
-									{/if}
-								</div>
-								{#if member.id !== team.ownerId}
-									<Button
-										onclick={() => handleRemoveMemberClick(member)}
-										variant="outline"
-										size="sm"
-									>
-										<Trash2 class="h-4 w-4" />
-									</Button>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</CardContent>
-		</Card>
+				<Button onclick={() => isCreateProjectDialogOpen = true}>
+					<PlusCircle class="mr-2 h-4 w-4" />
+					New Project
+				</Button>
+			</div>
 
-		<!-- Team Projects -->
-		<Card>
-			<CardHeader>
-				<CardTitle>Team Projects ({teamProjects.length})</CardTitle>
-			</CardHeader>
-			<CardContent>
-				{#if teamProjects.length === 0}
-					<p class="text-muted-foreground">No projects in this team yet.</p>
-				{:else}
-					<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-						{#each teamProjects as project (project.id)}
-							<Card class="cursor-pointer hover:shadow-md transition-shadow"
-								onclick={() => goto(`/projects/${project.id}`)}>
-								<CardHeader>
-									<CardTitle class="text-lg">{project.name}</CardTitle>
-								</CardHeader>
-								<CardContent>
-									{#if project.description}
-										<p class="text-sm text-muted-foreground">{project.description}</p>
-									{/if}
-									<p class="text-xs text-muted-foreground mt-2">
-										Members: {project.memberIds?.length || 0}
-									</p>
-								</CardContent>
-							</Card>
-						{/each}
-					</div>
-				{/if}
-			</CardContent>
-		</Card>
-
-		<!-- Edit Team Dialog -->
-		<Dialog bind:open={isEditTeamDialogOpen}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Edit Team</DialogTitle>
-				</DialogHeader>
-				<div class="space-y-4">
-					<div>
-						<Label for="teamName">Team Name</Label>
-						<Input
-							id="teamName"
-							bind:value={newTeamName}
-							placeholder="Enter team name"
-						/>
-					</div>
-					<div>
-						<Label for="teamDescription">Description (Optional)</Label>
-						<Input
-							id="teamDescription"
-							bind:value={newTeamDescription}
-							placeholder="Enter team description"
-						/>
-					</div>
+			<!-- Main Content Layout -->
+			<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+				<!-- Projects Section -->
+				<div class="lg:col-span-3">
+					<h2 class="text-xl font-semibold mb-4">Projects</h2>
+					{#if projects.length === 0}
+						<div class="text-center py-12">
+							<FolderKanban class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+							<h3 class="text-lg font-semibold mb-2">No projects yet</h3>
+							<p class="text-muted-foreground mb-4">
+								Create your first project to get started
+							</p>
+							<Button onclick={() => isCreateProjectDialogOpen = true}>
+								<PlusCircle class="mr-2 h-4 w-4" />
+								Create Project
+							</Button>
+						</div>
+					{:else}
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							{#each projects as project (project.id)}
+								<Card class="hover:shadow-md transition-shadow">
+									<CardHeader>
+										<div class="flex justify-between items-start">
+											<div class="flex-1">
+												<CardTitle class="text-lg">{project.name}</CardTitle>
+												{#if project.description}
+													<CardDescription class="mt-1">
+														{project.description}
+													</CardDescription>
+												{/if}
+											</div>
+											<div class="flex gap-1">
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => openEditDialog(project)}
+												>
+													<Pencil class="h-4 w-4" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => openDeleteDialog(project)}
+												>
+													<Trash2 class="h-4 w-4" />
+												</Button>
+											</div>
+										</div>
+									</CardHeader>
+									<CardContent>
+										<div class="flex items-center text-sm text-muted-foreground mb-4">
+											<Users class="h-4 w-4 mr-1" />
+											{project.memberIds?.length || 0} members
+										</div>
+									</CardContent>
+									<CardFooter>
+										<Button
+											class="w-full"
+											onclick={() => viewProject(project.id)}
+										>
+											<Eye class="mr-2 h-4 w-4" />
+											View Project
+										</Button>
+									</CardFooter>
+								</Card>
+							{/each}
+						</div>
+					{/if}
 				</div>
-				<DialogFooter>
-					<Button onclick={() => isEditTeamDialogOpen = false} variant="outline">
-						Cancel
-					</Button>
-					<Button onclick={handleUpdateTeam} disabled={isUpdatingTeam}>
-						{#if isUpdatingTeam}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						{/if}
-						Update Team
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
 
-		<!-- Add Member Dialog -->
-		<Dialog bind:open={isAddMemberDialogOpen}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Add Team Member</DialogTitle>
-				</DialogHeader>
-				<div class="space-y-4">
-					<div>
-						<Label for="memberEmail">Email Address</Label>
-						<Input
-							id="memberEmail"
-							bind:value={memberEmail}
-							placeholder="Enter member's email"
-							type="email"
-						/>
-					</div>
+				<!-- Team Members Section -->
+				<div class="lg:col-span-1">
+					<LazyTeamUsersCard
+						selectedTeamId={$selectedTeamId}
+						selectedProject={null}
+						onClearSelectedProject={() => {}}
+					/>
 				</div>
-				<DialogFooter>
-					<Button onclick={() => isAddMemberDialogOpen = false} variant="outline">
-						Cancel
-					</Button>
-					<Button onclick={handleAddMember} disabled={isAddingMember || !memberEmail.trim()}>
-						{#if isAddingMember}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						{/if}
-						Add Member
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</div>
+	{/if}
 
-		<!-- Remove Member Confirmation Dialog -->
-		{#if memberToRemove}
-			<Dialog bind:open={isRemoveMemberConfirmDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Remove Team Member</DialogTitle>
-					</DialogHeader>
-					<p>Are you sure you want to remove <strong>{memberToRemove.name}</strong> from the team?</p>
-					<DialogFooter>
-						<Button onclick={() => {
-							isRemoveMemberConfirmDialogOpen = false;
-							memberToRemove = null;
-						}} variant="outline">
-							Cancel
-						</Button>
-						<Button onclick={handleRemoveMemberConfirm} variant="destructive">
-							Remove
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		{/if}
-
-		<!-- Delete Team Confirmation Dialog -->
-		<Dialog bind:open={isDeleteTeamDialogOpen}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Delete Team</DialogTitle>
-				</DialogHeader>
-				<div class="flex items-center gap-2 text-destructive mb-4">
-					<AlertTriangle class="h-5 w-5" />
-					<span class="font-medium">This action cannot be undone</span>
+	<!-- Create Project Dialog -->
+	<Dialog bind:open={isCreateProjectDialogOpen}>
+		<DialogContent class="sm:max-w-[425px]">
+			<DialogHeader>
+				<DialogTitle>Create New Project</DialogTitle>
+			</DialogHeader>
+			<div class="grid gap-4 py-4">
+				<div class="grid gap-2">
+					<Label for="project-name">Project Name</Label>
+					<Input
+						id="project-name"
+						bind:value={newProjectName}
+						placeholder="Enter project name"
+					/>
 				</div>
-				<p>Are you sure you want to delete <strong>{team.name}</strong>? This will permanently remove the team and all associated data.</p>
-				<DialogFooter>
-					<Button onclick={() => isDeleteTeamDialogOpen = false} variant="outline">
-						Cancel
-					</Button>
-					<Button onclick={handleDeleteTeam} variant="destructive" disabled={isDeletingTeam}>
-						{#if isDeletingTeam}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						{/if}
-						Delete Team
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	</div>
-{/if}
+				<div class="grid gap-2">
+					<Label for="project-description">Description (Optional)</Label>
+					<Textarea
+						id="project-description"
+						bind:value={newProjectDescription}
+						placeholder="Enter project description"
+					/>
+				</div>
+			</div>
+			<DialogFooter>
+				<Button
+					variant="outline"
+					onclick={() => isCreateProjectDialogOpen = false}
+				>
+					Cancel
+				</Button>
+				<Button onclick={handleCreateProject} disabled={isCreatingProject}>
+					{#if isCreatingProject}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					{/if}
+					Create Project
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
+
+	<!-- Edit Project Dialog -->
+	<Dialog bind:open={isEditProjectDialogOpen}>
+		<DialogContent class="sm:max-w-[425px]">
+			<DialogHeader>
+				<DialogTitle>Edit Project</DialogTitle>
+			</DialogHeader>
+			<div class="grid gap-4 py-4">
+				<div class="grid gap-2">
+					<Label for="edit-project-name">Project Name</Label>
+					<Input
+						id="edit-project-name"
+						bind:value={newProjectName}
+						placeholder="Enter project name"
+					/>
+				</div>
+				<div class="grid gap-2">
+					<Label for="edit-project-description">Description (Optional)</Label>
+					<Textarea
+						id="edit-project-description"
+						bind:value={newProjectDescription}
+						placeholder="Enter project description"
+					/>
+				</div>
+			</div>
+			<DialogFooter>
+				<Button
+					variant="outline"
+					onclick={() => isEditProjectDialogOpen = false}
+				>
+					Cancel
+				</Button>
+				<Button onclick={handleUpdateProject} disabled={isUpdatingProject}>
+					{#if isUpdatingProject}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					{/if}
+					Update Project
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
+
+	<!-- Delete Project Dialog -->
+	<Dialog bind:open={isDeleteProjectDialogOpen}>
+		<DialogContent class="sm:max-w-[425px]">
+			<DialogHeader>
+				<DialogTitle>Delete Project</DialogTitle>
+			</DialogHeader>
+			<div class="py-4">
+				<p class="text-sm text-muted-foreground">
+					Are you sure you want to delete "{selectedProject?.name}"? This action cannot be undone.
+				</p>
+			</div>
+			<DialogFooter>
+				<Button
+					variant="outline"
+					onclick={() => isDeleteProjectDialogOpen = false}
+				>
+					Cancel
+				</Button>
+				<Button
+					variant="destructive"
+					onclick={handleDeleteProject}
+					disabled={isDeletingProject}
+				>
+					{#if isDeletingProject}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					{/if}
+					Delete Project
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
+</div>

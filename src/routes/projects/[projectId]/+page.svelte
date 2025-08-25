@@ -104,7 +104,7 @@
 			toast.success('Project Deleted', {
 				description: `"${projectToDelete.name}" has been successfully deleted.`
 			});
-			goto('/team-dashboard');
+			goto('/dashboard');
 		} catch (error) {
 			console.error('Error deleting project:', error);
 			const errorMessage =
@@ -255,14 +255,14 @@
 		<Button onclick={handleRefresh} variant="outline" class="mt-4">
 			Try Reloading
 		</Button>
-		<Button onclick={() => goto('/team-dashboard')} variant="link" class="mt-2">
+		<Button onclick={() => goto('/dashboard')} variant="link" class="mt-2">
 			Go to Dashboard
 		</Button>
 	</div>
 {:else if !project}
 	<div class="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
 		<p class="text-lg">Project not found or you do not have access.</p>
-		<Button onclick={() => goto('/team-dashboard')} variant="link" class="mt-2">
+		<Button onclick={() => goto('/dashboard')} variant="link" class="mt-2">
 			Go to Dashboard
 		</Button>
 	</div>
@@ -272,7 +272,7 @@
 			<div class="container mx-auto">
 				<div class="flex items-center justify-between w-full">
 					<div class="flex items-center gap-4">
-						<Button onclick={() => goto('/team-dashboard')} variant="outline" size="icon">
+						<Button onclick={() => goto('/dashboard')} variant="outline" size="icon">
 							<ArrowLeft class="h-4 w-4" />
 						</Button>
 						<div class="flex flex-col">
