@@ -2,10 +2,5 @@
   "buildCommand": "bun run build",
   "devCommand": "bun run dev",
   "installCommand": "bun install",
-  "framework": "sveltekit",
-  "functions": {
-    "src/routes/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  "framework": "sveltekit"
 }
