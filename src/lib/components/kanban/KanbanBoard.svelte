@@ -14,7 +14,7 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 
 	export let project: Project;
 	export let users: UserProfile[] = [];
-	export let onProjectUpdate: () => Promise<void> = () => Promise.resolve();
+
 
 	let isLoading = false;
 	const tasksStore = writable<Task[]>([]);
@@ -102,8 +102,8 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 										toast.dismiss(savingToastId);
 										dragState.update(state => ({ ...state, isSaving: false }));
 
-										// Refresh project data
-							await onProjectUpdate();
+																// Invalidate project queries to refresh data
+							await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 				} catch (error) {
 					console.error('Error updating tasks after drag and drop:', error);
 					toast.error('Failed to save task position');
@@ -176,7 +176,7 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 				throw new Error('Failed to update task');
 			}
 
-			await onProjectUpdate();
+			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 		} catch (error) {
 			console.error('Error updating task:', error);
 		}

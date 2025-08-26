@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { currentUser, authLoading } from '$lib/stores/auth';
@@ -7,24 +6,28 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { Project, UserProfile, NewTaskData, Task } from '$lib/types/types';
 	import { getProjectRelevantUsers, getUserProfile } from '$lib/api/firebaseUser';
-	import { getProjectById, updateProjectDetails, deleteProject } from '$lib/api/firebaseProject';
+	import { updateProjectDetails, deleteProject } from '$lib/api/firebaseProject';
 	import { addTaskToProject } from '$lib/api/firebaseTask';
 	import { Loader2, Settings, Sparkles, ArrowLeft, Edit2 } from '@lucide/svelte';
 	import KanbanBoard from '$lib/components/kanban/KanbanBoard.svelte';
 	import EditProjectDialog from '$lib/components/project/EditProjectDialog.svelte';
 	import DeleteProjectAlertDialog from '$lib/components/dashboard/DeleteProjectAlertDialog.svelte';
 	import GenerateTasksDialog from '$lib/components/project/GenerateTasksDialog.svelte';
+	import { useProject } from '$queries/useProjectManagement';
+	import { useQueryClient } from '@tanstack/svelte-query';
 
 	// Get projectId from page params
 	let projectId = $derived($page.params.projectId);
+	const queryClient = useQueryClient();
 
-	// State variables
-	let project: Project | null = $state(null);
+	// Use TanStack Query for project data
+	const projectQuery = useProject(projectId);
+	
+	// Reactive state variables
+	let project: Project | null = $derived($projectQuery.data || null);
 	let users: UserProfile[] = $state([]);
 	let projectCreator: UserProfile | null = $state(null);
-	let isLoadingProject = $state(true);
 	let isLoadingUsers = $state(true);
-	let error: string | null = $state(null);
 	let isEditProjectDialogOpen = $state(false);
 	let isSubmittingProjectEdit = $state(false);
 	let isGenerateTasksDialogOpen = $state(false);
@@ -33,55 +36,25 @@
 	let isGeneratingTasks = $state(false);
 	let isAddingTasks = $state(false);
 
-	async function fetchProjectData() {
+	// Fetch users when project loads
+	async function fetchUsers() {
 		if (!projectId || !$currentUser) return;
-
-		isLoadingProject = true;
+		
 		isLoadingUsers = true;
-		error = null;
-
 		try {
-			const [fetchedProject, fetchedUsers] = await Promise.all([
-				getProjectById(projectId),
-				getProjectRelevantUsers(projectId),
-			]);
-
-			if (fetchedProject?.ownerId) {
-				const creatorProfile = await getUserProfile(fetchedProject.ownerId);
+			const fetchedUsers = await getProjectRelevantUsers(projectId);
+			users = fetchedUsers;
+			
+			if (project?.ownerId) {
+				const creatorProfile = await getUserProfile(project.ownerId);
 				projectCreator = creatorProfile;
 			}
-
-			if (fetchedProject) {
-				const isMember =
-					fetchedProject.memberIds?.includes($currentUser.uid) ||
-					fetchedProject.ownerId === $currentUser.uid;
-				if (isMember) {
-					project = fetchedProject;
-				} else {
-					error = `You do not have access to project ${projectId}.`;
-					project = null;
-					toast.error('Access Denied', {
-						description: 'You do not have permission to view this project.'
-					});
-				}
-			} else {
-				error = `Project with ID ${projectId} not found.`;
-				project = null;
-				toast.error('Project Not Found', {
-					description: `Could not load project ${projectId}.`
-				});
-			}
-			users = fetchedUsers;
 		} catch (err) {
-			console.error('Error fetching project data:', err);
-			const errorMessage =
-				err instanceof Error ? err.message : 'An unknown error occurred.';
-			error = errorMessage;
-			toast.error('Error Loading Project', {
-				description: errorMessage
+			console.error('Error fetching users:', err);
+			toast.error('Error Loading Users', {
+				description: err instanceof Error ? err.message : 'Could not load project users.'
 			});
 		} finally {
-			isLoadingProject = false;
 			isLoadingUsers = false;
 		}
 	}
@@ -241,24 +214,26 @@
 		}
 	}
 
-	function handleRefresh() {
-		fetchProjectData();
-	}
-
-	onMount(() => {
-		if (projectId && $currentUser) {
-			fetchProjectData();
-		}
-	});
-
-	// Effect to fetch data when projectId or currentUser changes
+	// Fetch users when project data is available
 	$effect(() => {
-		if (projectId && $currentUser && !$authLoading) {
-			fetchProjectData();
+		if (project) {
+			fetchUsers();
 		}
 	});
 
-	let isLoading = $derived(isLoadingProject || isLoadingUsers);
+	// Access control check
+	let hasAccess = $derived(
+		project && $currentUser && (
+			project.memberIds?.includes($currentUser.uid) ||
+			project.ownerId === $currentUser.uid
+		)
+	);
+
+	let isLoading = $derived($projectQuery.isLoading || isLoadingUsers);
+	let error = $derived(
+		$projectQuery.error?.message || 
+			(!hasAccess && project ? 'You do not have access to this project.' : null)
+	);
 </script>
 
 <!-- Authentication and loading guard -->
@@ -276,9 +251,9 @@
 	<div class="flex flex-col items-center justify-center h-full text-destructive p-8">
 		<h2 class="text-2xl font-semibold mb-2">Error</h2>
 		<p>{error}</p>
-		<Button onclick={handleRefresh} variant="outline" class="mt-4">
-			Try Reloading
-		</Button>
+		<Button onclick={() => queryClient.invalidateQueries({ queryKey: ['project', projectId] })} variant="outline" class="mt-4">
+				Try Reloading
+			</Button>
 		<Button onclick={() => goto('/dashboard')} variant="link" class="mt-2">
 			Go to Dashboard
 		</Button>
@@ -341,7 +316,7 @@
 		</div>
 		<div class="flex-1 min-h-0">
 			<!-- Allows KanbanBoard to take remaining height -->
-			<KanbanBoard {project} {users} onProjectUpdate={fetchProjectData} />
+			<KanbanBoard {project} {users} />
 		</div>
 		{#if $currentUser?.uid === project.ownerId && project}
 			<EditProjectDialog
