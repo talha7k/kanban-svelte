@@ -33,6 +33,7 @@
 	import { useTeamManagement } from '$queries/useTeamManagement';
 	import { useProjectManagement, useTeamProjects } from '$queries/useProjectManagement';
 	import ProjectCard from '$lib/components/dashboard/ProjectCard.svelte';
+	import ManageMembersDialog from '$lib/components/dashboard/ManageMembersDialog.svelte';
 	import {
 		Dialog,
 		DialogContent,
@@ -70,6 +71,10 @@
 		handleUpdateProject,
 		handleDeleteProject
 	} = useProjectManagement();
+
+	// Get query client for manual refetching
+	import { useQueryClient } from '@tanstack/svelte-query';
+	const queryClient = useQueryClient();
 
 	// Get team projects using the dedicated hook
   const teamProjectsQuery = useTeamProjects($selectedTeamId || undefined);
@@ -328,6 +333,19 @@
 			</DialogFooter>
 		</DialogContent>
 	</Dialog>
+
+	<!-- Manage Members Dialog -->
+	{#if selectedProject}
+		<ManageMembersDialog
+			project={selectedProject}
+			allUsers={$teamMembersData?.data || []}
+			bind:isOpen={isManageMembersDialogOpen}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) selectedProject = null;
+			}}
+			onMembersUpdate={() => queryClient.invalidateQueries({ queryKey: ['teamProjects', selectedProject?.teamId] })}
+		/>
+	{/if}
 
 	<!-- Delete Project Dialog -->
 	<Dialog bind:open={isDeleteProjectDialogOpen}>

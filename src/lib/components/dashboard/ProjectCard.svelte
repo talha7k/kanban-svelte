@@ -59,13 +59,58 @@
 >
 	<CardHeader
 		onclick={handleNavigateToProject}
-		class="pb-3 cursor-pointer "
+		class="pb-3 cursor-pointer relative"
 	>
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
-			{#if currentUserUid === project.ownerId}
-				<RoleBadge role="owner" size="sm" />
-			{/if}
+			<div class="flex items-center space-x-2">
+				{#if currentUserUid === project.ownerId}
+					<RoleBadge role="owner" size="sm" />
+					<DropdownMenu>
+						<DropdownMenuTrigger>
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={(e) => e.stopPropagation()}
+								class="h-7 w-7 p-0"
+							>
+								<MoreVertical class="h-3.5 w-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								onclick={(e) => {
+									e.stopPropagation();
+									openEditProjectDialog(project);
+								}}
+							>
+								<Pencil class="mr-2 h-4 w-4" />
+								Edit Project
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onclick={(e) => {
+									e.stopPropagation();
+									openManageMembersDialog(project);
+								}}
+							>
+								<PlusCircle class="mr-2 h-4 w-4" />
+								Manage Members
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onclick={(e) => {
+									e.stopPropagation();
+									openDeleteProjectDialog(project);
+								}}
+								class="text-destructive"
+							>
+								<Trash2 class="mr-2 h-4 w-4" />
+								Delete Project
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				{/if}
+			</div>
 		</div>
 		<CardDescription
 			onclick={handleNavigateToProject}
@@ -80,7 +125,7 @@
 			</div>
 		</CardDescription>
 	</CardHeader>
-	<CardFooter class="flex justify-between items-center border-t py-3">
+	<CardFooter class="flex justify-end items-center border-t py-3">
 		<Button
 			variant="outline"
 			size="sm"
@@ -91,61 +136,5 @@
 		>
 			<Eye class="mr-1.5 h-3.5 w-3.5" /> View Members
 		</Button>
-		
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={(e) => e.stopPropagation()}
-					class="h-8 w-8 p-0"
-				>
-					<MoreVertical class="h-4 w-4" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				{#if currentUserUid === project.ownerId}
-					<DropdownMenuItem
-						onclick={(e) => {
-							e.stopPropagation();
-							openEditProjectDialog(project);
-						}}
-					>
-						<Pencil class="mr-2 h-4 w-4" />
-						Edit Project
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						onclick={(e) => {
-							e.stopPropagation();
-							openManageMembersDialog(project);
-						}}
-					>
-						<PlusCircle class="mr-2 h-4 w-4" />
-						Manage Members
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						onclick={(e) => {
-							e.stopPropagation();
-							openDeleteProjectDialog(project);
-						}}
-						class="text-destructive"
-					>
-						<Trash2 class="mr-2 h-4 w-4" />
-						Delete Project
-					</DropdownMenuItem>
-				{:else}
-					<DropdownMenuItem
-						onclick={(e) => {
-							e.stopPropagation();
-							openViewMembersDialog(project);
-						}}
-					>
-						<Eye class="mr-2 h-4 w-4" />
-						View Members
-					</DropdownMenuItem>
-				{/if}
-			</DropdownMenuContent>
-		</DropdownMenu>
 	</CardFooter>
 </Card>
