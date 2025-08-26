@@ -153,15 +153,26 @@
 		if (!project) return [];
 		isGeneratingTasks = true;
 		try {
-			// TODO: Implement generateTasksAction for SvelteKit
-			// const generatedTasks = await generateTasksAction(
-			//   project.id,
-			//   brief,
-			//   $currentUser!.uid,
-			//   taskCount
-			// );
-			// return generatedTasks;
-			return [];
+			const response = await fetch('/api/generate-tasks', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					brief,
+					currentUserUid: $currentUser!.uid,
+					taskCount
+				})
+			});
+			
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to generate tasks');
+			}
+			
+			const data = await response.json();
+			return data.tasks;
 		} catch (error) {
 			console.error('Error generating tasks:', error);
 			toast.error('Error Generating Tasks', {

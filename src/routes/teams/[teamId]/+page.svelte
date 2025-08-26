@@ -136,14 +136,22 @@
 		isDeleteProjectDialogOpen = true;
 	}
 
-	function openManageMembersDialog(project: Project) {
+	let isOpeningDialog = false;
+
+	function openManageMembersDialog(project: any) {
+		if (isOpeningDialog) return;
+		isOpeningDialog = true;
 		selectedProject = project;
 		isManageMembersDialogOpen = true;
+		setTimeout(() => isOpeningDialog = false, 100);
 	}
 
-	function openViewMembersDialog(project: Project) {
+	function openViewMembersDialog(project: any) {
+		if (isOpeningDialog) return;
+		isOpeningDialog = true;
 		selectedProject = project;
 		isViewMembersDialogOpen = true;
+		setTimeout(() => isOpeningDialog = false, 100);
 	}
 
 	function viewProject(projectId: string) {

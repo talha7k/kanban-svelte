@@ -23,13 +23,22 @@ type DroppableColumnData = {
   type: 'column';
 };
 
+// Type definition for the data associated with a drop-target task (for reordering)
+type DroppableTaskData = {
+  taskId: string;
+  columnId: string;
+  type: 'task';
+};
+
 // A store to hold the state of the current drag operation for UI feedback
 export const dragState = writable<{
   isDragging: boolean;
   isOverColumnId: string | null;
+  isOverTaskId: string | null;
 }>({
   isDragging: false,
   isOverColumnId: null,
+  isOverTaskId: null,
 });
 
 /**
@@ -59,7 +68,7 @@ export function draggableTask(node: HTMLElement, data: { task: Task }) {
       dragState.update(state => ({ ...state, isDragging: true }));
     },
     onDrop: () => {
-      dragState.set({ isDragging: false, isOverColumnId: null });
+      dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null });
     },
   });
 
@@ -84,10 +93,38 @@ export function droppableColumn(node: HTMLElement, data: { columnId: string }) {
       dragState.update(state => ({ ...state, isOverColumnId: columnId }));
     },
     onDragLeave: () => {
-      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null } : state));
+      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null, isOverTaskId: null } : state));
     },
     onDrop: () => {
-      dragState.update(state => ({ ...state, isOverColumnId: null }));
+      dragState.update(state => ({ ...state, isOverColumnId: null, isOverTaskId: null }));
+    },
+  });
+
+  return {
+    destroy: cleanup,
+  };
+}
+
+/**
+ * ## Svelte Action: `droppableTask`
+ * Makes a DOM element a drop target for reordering tasks.
+ *
+ * @param node - The HTML element.
+ * @param data - The task ID and column ID associated with this element.
+ */
+export function droppableTask(node: HTMLElement, data: { taskId: string; columnId: string }) {
+  const { taskId, columnId } = data;
+  const cleanup = dropTargetForElements({
+    element: node,
+    getData: (): DroppableTaskData => ({ taskId, columnId, type: 'task' }),
+    onDragEnter: () => {
+      dragState.update(state => ({ ...state, isOverTaskId: taskId }));
+    },
+    onDragLeave: () => {
+      dragState.update(state => (state.isOverTaskId === taskId ? { ...state, isOverTaskId: null } : state));
+    },
+    onDrop: () => {
+      dragState.update(state => ({ ...state, isOverTaskId: null }));
     },
   });
 
@@ -116,16 +153,34 @@ export function setupKanbanMonitor(
       initialTasks = get(tasksStore);
     },
     onDrop({ location, source }) {
-      const target = location.current.dropTargets[0];
-      if (!target) return; // Dropped outside a valid target
+      const targets = location.current.dropTargets;
+      if (!targets || targets.length === 0) return; // Dropped outside a valid target
 
       const sourceData = source.data as DraggableTaskData;
-      const targetData = target.data as DroppableColumnData;
-      
-      if (sourceData.type !== 'task' || targetData.type !== 'column') return;
+      if (sourceData.type !== 'task') return;
       
       const draggedTask = sourceData.task;
-      const newColumnId = targetData.columnId;
+      
+      // Find the target - prioritize task drops for reordering, fallback to column drops
+      let targetTask = targets.find(t => (t.data as DroppableTaskData).type === 'task');
+      let targetColumn = targets.find(t => (t.data as DroppableColumnData).type === 'column');
+
+      let newColumnId: string;
+      let insertAfterTaskId: string | null = null;
+
+      if (targetTask) {
+        // Dropping on another task for reordering
+        const targetTaskData = targetTask.data as DroppableTaskData;
+        newColumnId = targetTaskData.columnId;
+        insertAfterTaskId = targetTaskData.taskId;
+      } else if (targetColumn) {
+        // Dropping on a column (empty space or end of column)
+        const targetColumnData = targetColumn.data as DroppableColumnData;
+        newColumnId = targetColumnData.columnId;
+        insertAfterTaskId = null; // Will add to end
+      } else {
+        return; // No valid target
+      }
 
       // --- Calculate the new state ---
       const finalTasks = [...initialTasks];
@@ -135,47 +190,64 @@ export function setupKanbanMonitor(
 
       // Remove the task from its original position
       const [movedTask] = finalTasks.splice(draggedTaskIndex, 1);
+      movedTask.columnId = newColumnId;
 
-      // Find the new position in the target column
+      // Find the new position
       const tasksInNewColumn = finalTasks
         .filter(t => t.columnId === newColumnId)
         .sort((a, b) => a.order - b.order);
-      
-      // For this example, we add it to the end. For more complex reordering,
-      // you would check if the drop was over another task to find the exact index.
-      const newIndexInColumn = tasksInNewColumn.length;
-      tasksInNewColumn.splice(newIndexInColumn, 0, movedTask);
-      
-      // Re-assign order and columnId for all affected tasks
+
+      let insertIndex = 0;
+      if (insertAfterTaskId) {
+        const targetIndex = tasksInNewColumn.findIndex(t => t.id === insertAfterTaskId);
+        if (targetIndex !== -1) {
+          insertIndex = targetIndex + 1;
+        }
+      } else {
+        // Add to end
+        insertIndex = tasksInNewColumn.length;
+      }
+
+      // Insert the task at the correct position
+      tasksInNewColumn.splice(insertIndex, 0, movedTask);
+
+      // Update orders for all tasks in the affected column
       const updates: { taskId: string; changes: Partial<Task> }[] = [];
-      const tasksToUpdate = [
-        ...tasksInNewColumn, // Tasks in the new column
-        ...finalTasks.filter(t => t.columnId !== newColumnId) // Other tasks
-      ];
-
-      const finalTaskStateWithCorrectOrder = tasksToUpdate.map(task => {
-        const columnTasks = tasksToUpdate.filter(t => t.columnId === task.columnId).sort((a,b) => a.order - b.order);
-        const order = columnTasks.findIndex(t => t.id === task.id);
-        const columnId = task.id === draggedTask.id ? newColumnId : task.columnId;
-
-        return { ...task, order, columnId };
+      
+      // Update orders for tasks in the new column
+      tasksInNewColumn.forEach((task, index) => {
+        updates.push({
+          taskId: task.id,
+          changes: { order: index, columnId: task.columnId },
+        });
       });
 
-      // --- Diff final state with initial state to find changes ---
-      const initialTaskMap = new Map(initialTasks.map(t => [t.id, t]));
-      finalTaskStateWithCorrectOrder.forEach(task => {
-        const initialTask = initialTaskMap.get(task.id);
-        if (initialTask && (initialTask.order !== task.order || initialTask.columnId !== task.columnId)) {
+      // If the task moved from a different column, update orders in the old column too
+      if (draggedTask.columnId !== newColumnId) {
+        const tasksInOldColumn = finalTasks
+          .filter(t => t.columnId === draggedTask.columnId)
+          .sort((a, b) => a.order - b.order);
+
+        tasksInOldColumn.forEach((task, index) => {
           updates.push({
             taskId: task.id,
-            changes: { order: task.order, columnId: task.columnId },
+            changes: { order: index },
           });
+        });
+      }
+
+      // Build the final task state
+      const finalTaskState = [...finalTasks];
+      updates.forEach(update => {
+        const taskIndex = finalTaskState.findIndex(t => t.id === update.taskId);
+        if (taskIndex !== -1) {
+          finalTaskState[taskIndex] = { ...finalTaskState[taskIndex], ...update.changes };
         }
       });
-      
+
       if (updates.length > 0) {
         // Optimistically update the UI
-        tasksStore.set(finalTaskStateWithCorrectOrder);
+        tasksStore.set(finalTaskState);
         // Persist changes to the backend
         onUpdateTasks(updates).catch(error => {
           console.error("Failed to save D&D changes, rolling back.", error);

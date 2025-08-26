@@ -46,11 +46,28 @@
 	export let openViewMembersDialog: (project: Project) => void = () => {};
 
 	let isPending = false;
+	let isLoadingMembers = false;
 
 	function handleNavigateToProject() {
 		isPending = true;
 		goto(`/projects/${project.id}`);
 		isPending = false;
+	}
+
+	function handleManageMembers(e: MouseEvent) {
+		e.stopPropagation();
+		isLoadingMembers = true;
+		openManageMembersDialog(project);
+		// Reset after a short delay to prevent rapid clicks
+		setTimeout(() => isLoadingMembers = false, 500);
+	}
+
+	function handleViewMembers(e: MouseEvent) {
+		e.stopPropagation();
+		isLoadingMembers = true;
+		openViewMembersDialog(project);
+		// Reset after a short delay to prevent rapid clicks
+		setTimeout(() => isLoadingMembers = false, 500);
 	}
 </script>
 
@@ -88,12 +105,14 @@
 								Edit Project
 							</DropdownMenuItem>
 							<DropdownMenuItem
-								onclick={(e) => {
-									e.stopPropagation();
-									openManageMembersDialog(project);
-								}}
+								onclick={handleManageMembers}
+								disabled={isLoadingMembers}
 							>
-								<PlusCircle class="mr-2 h-4 w-4" />
+								{#if isLoadingMembers}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{:else}
+									<PlusCircle class="mr-2 h-4 w-4" />
+								{/if}
 								Manage Members
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
@@ -125,16 +144,19 @@
 			</div>
 		</CardDescription>
 	</CardHeader>
-	<CardFooter class="flex justify-end items-center border-t py-3">
+	<CardFooter class="flex justify-center items-center border-t py-3">
 		<Button
 			variant="outline"
 			size="sm"
-			onclick={(e) => {
-				e.stopPropagation();
-				openViewMembersDialog(project);
-			}}
+			onclick={handleViewMembers}
+			disabled={isLoadingMembers}
 		>
-			<Eye class="mr-1.5 h-3.5 w-3.5" /> View Members
+			{#if isLoadingMembers}
+				<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
+			{:else}
+				<Eye class="mr-1.5 h-3.5 w-3.5" />
+			{/if}
+			View Members
 		</Button>
 	</CardFooter>
 </Card>
