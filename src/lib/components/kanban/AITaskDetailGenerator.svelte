@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Task } from '$lib/types/types';
 	import type { GenerateTaskDetailsInput, GenerateTaskDetailsOutput } from '$lib/server/ai/flows/generate-task-details';
-	import { generateTaskDetailsAction } from '$lib/server/actions/project';
 	import { Button } from '$lib/components/ui/button';
 	import { Wand2 } from '@lucide/svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
@@ -24,15 +23,28 @@
 		};
 
 		try {
-			const response = await generateTaskDetailsAction(input);
-			if (response.success && response.details) {
-				generatedDetails = response.details;
+			const response = await fetch('/api/generate-task-details', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(input)
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json();
+			
+			if (result.success && result.details) {
+				generatedDetails = result.details;
 				if (onDetailsGenerated) {
-					onDetailsGenerated(response.details);
+					onDetailsGenerated(result.details);
 				}
-				toast.success(`AI Task Details Generated - Title: ${response.details.title}`);
-			} else if (response.error) {
-				throw new Error(response.error);
+				toast.success(`AI Task Details Generated - Title: ${result.details.title}`);
+			} else if (result.error) {
+				throw new Error(result.error);
 			} else {
 				throw new Error("Unknown error during AI task details generation.");
 			}
