@@ -192,29 +192,42 @@
 		isAddingTasks = true;
 		try {
 			// Add projectId to each task
-				const tasksWithProjectId = tasks.map((task) => ({
-					...task,
-					projectId: project!.id
-				}));
-			// TODO: Implement addApprovedTasksAction for SvelteKit
-			// const result = await addApprovedTasksAction(
-			//   project.id,
-			//   tasksWithProjectId,
-			//   $currentUser!.uid
-			// );
-
-			// if (result.success) {
-			//   if (result.updatedProject) {
-			//     project = result.updatedProject;
-			//   }
-			//   toast.success('Tasks Added', {
-			//     description: `Successfully added ${result.addedTasksCount} task${
-			//       result.addedTasksCount !== 1 ? 's' : ''
-			//     } to your project.`
-			//   });
-			// } else {
-			//   throw new Error(result.error);
-			// }
+			const tasksWithProjectId = tasks.map((task) => ({
+				...task,
+				projectId: project!.id
+			}));
+			
+			const response = await fetch('/api/add-approved-tasks', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					tasks: tasksWithProjectId,
+					currentUserUid: $currentUser!.uid
+				})
+			});
+			
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to add tasks');
+			}
+			
+			const result = await response.json();
+			
+			if (result.success) {
+				if (result.updatedProject) {
+					project = result.updatedProject;
+				}
+				toast.success('Tasks Added', {
+					description: `Successfully added ${result.addedTasksCount} task${
+						result.addedTasksCount !== 1 ? 's' : ''
+					} to your project.`
+				});
+			} else {
+				throw new Error(result.error);
+			}
 		} catch (error) {
 			console.error('Error adding tasks:', error);
 			toast.error('Error Adding Tasks', {
