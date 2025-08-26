@@ -15,7 +15,7 @@
 	let selectedTeam: Team | null = null;
 	let isLoadingUsers = true;
 
-	async function fetchTeamData() {
+async function fetchTeamData() {
 		if (!selectedTeamId) {
 			isLoadingUsers = false;
 			return;
@@ -24,23 +24,16 @@
 		isLoadingUsers = true;
 
 		try {
-			if (selectedProject) {
-				// Fetch project-specific users
-				const fetchedUsers = await getProjectRelevantUsers(selectedProject.id);
-				allUsers = fetchedUsers;
-				selectedTeam = null; // Clear team when showing project users
-				onUsersLoaded?.(fetchedUsers);
-			} else {
-				// Fetch team details and members
-				const [team, fetchedUsers] = await Promise.all([
-					getTeam(selectedTeamId),
-					getTeamMembers(selectedTeamId)
-				]);
+			// LazyTeamUsersCard should only show team members, not project-specific users
+			// Project member management is handled by ManageMembersDialog
+			const [team, fetchedUsers] = await Promise.all([
+				getTeam(selectedTeamId),
+				getTeamMembers(selectedTeamId)
+			]);
 
-				selectedTeam = team;
-				allUsers = fetchedUsers;
-				onUsersLoaded?.(fetchedUsers);
-			}
+			selectedTeam = team;
+			allUsers = fetchedUsers;
+			onUsersLoaded?.(fetchedUsers);
 		} catch (error) {
 			console.error('Error fetching team data:', error);
 			toast.error('Could not load team data.');
@@ -49,18 +42,10 @@
 		}
 	}
 
-	// Reactive statement to fetch data when selectedTeamId or selectedProject changes
-	$: if (selectedTeamId !== null) {
-		// Add a small delay to allow projects to load first
-		setTimeout(fetchTeamData, 200);
-	} else {
-		isLoadingUsers = false;
-	}
-
-	// Also watch for selectedProject changes
-	$: if (selectedProject !== null && selectedTeamId !== null) {
-		setTimeout(fetchTeamData, 200);
-	}
+	// Remove automatic updates - only update when explicitly triggered
+	// This prevents race conditions and unwanted updates
+	// LazyTeamUsersCard should not auto-update when selectedProject changes
+	// The parent component will handle when to refresh data
 
 	onMount(() => {
 		if (selectedTeamId) {

@@ -26,46 +26,24 @@
 	export let selectedProject: Project | null = null;
 	export let onClearSelectedProject: (() => void) | undefined = undefined;
 
-	// Filter users based on context (team or project)
-	$: displayUsers = selectedProject
-		? allUsers.filter(
-				(user) =>
-					user.id === selectedProject.ownerId || selectedProject.memberIds?.includes(user.id)
-			)
-		: allUsers;
+	// Always show team members regardless of project selection
+	// Project member management is handled by ManageMembersDialog
+	$: displayUsers = allUsers;
 
 	function getDisplayTitle(): string {
-		if (selectedProject) {
-			return ` ${selectedProject.name}`;
-		}
 		return 'Team';
 	}
 
 	function getDisplayDescription(): string {
-		if (selectedProject) {
-			return 'Members and their roles in this project.';
-		}
 		return 'Overview of team members.';
 	}
 
 	function getUserRole(user: User): 'owner' | 'manager' | 'member' {
-		if (selectedProject) {
-			// Project context - show project-specific roles
-			if (user.id === selectedProject.ownerId) {
-				return 'owner';
-			}
-			const projectRole = selectedProject.memberRoles?.[user.id] as UserProjectRole;
-			if (projectRole === 'manager') {
-				return 'manager';
-			}
-			return 'member';
-		} else {
-			// Team context - only show team owner badge
-			if (selectedTeam?.ownerId === user.id) {
-				return 'owner';
-			}
-			return 'member';
+		// Only show team roles, never project-specific roles
+		if (selectedTeam?.ownerId === user.id) {
+			return 'owner';
 		}
+		return 'member';
 	}
 </script>
 
@@ -81,16 +59,6 @@
 			{/if}
 			)
 		</CardTitle>
-		{#if selectedProject && onClearSelectedProject}
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={onClearSelectedProject}
-				class="text-sm text-muted-foreground"
-			>
-				Clear Project Filter
-			</Button>
-		{/if}
 		<CardDescription>{getDisplayDescription()}</CardDescription>
 	</CardHeader>
 	<CardContent>
