@@ -143,6 +143,7 @@
 
 	function openViewMembersDialog(project: Project) {
 		selectedProject = project;
+		isViewMembersDialogOpen = true;
 	}
 
 	function viewProject(projectId: string) {
@@ -337,13 +338,34 @@
 	<!-- Manage Members Dialog -->
 	{#if selectedProject}
 		<ManageMembersDialog
-			project={selectedProject}
+			project={teamProjects.find(p => p.id === selectedProject?.id) || selectedProject}
 			allUsers={$teamMembersData?.data || []}
 			bind:isOpen={isManageMembersDialogOpen}
 			onOpenChange={(isOpen) => {
 				if (!isOpen) selectedProject = null;
 			}}
-			onMembersUpdate={() => queryClient.invalidateQueries({ queryKey: ['teamProjects', selectedProject?.teamId] })}
+			onMembersUpdate={async () => {
+				await queryClient.invalidateQueries({ queryKey: ['teamProjects', selectedProject?.teamId] });
+				// Update selectedProject with the latest data
+				const updatedProject = teamProjects.find(p => p.id === selectedProject?.id);
+				if (updatedProject) {
+					selectedProject = updatedProject;
+				}
+			}}
+		/>
+	{/if}
+
+	<!-- View Members Dialog -->
+	{#if selectedProject}
+		<ManageMembersDialog
+			project={teamProjects.find(p => p.id === selectedProject?.id) || selectedProject}
+			allUsers={$teamMembersData?.data || []}
+			bind:isOpen={isViewMembersDialogOpen}
+			readonly={true}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) selectedProject = null;
+			}}
+			onMembersUpdate={async () => {}}
 		/>
 	{/if}
 
