@@ -83,13 +83,17 @@ export const moveTaskInProjectServer = async (
   const projectRef = db.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
-    if (!projectDoc.exists) throw new Error('Project not found');
+    if (!projectDoc.exists) {
+      throw new Error('Project not found');
+    }
 
     const project = projectDoc.data();
     let tasks = [...(project?.tasks || [])];
     
     const taskToMoveIndex = tasks.findIndex((t: any) => t.id === taskId);
-    if (taskToMoveIndex === -1) throw new Error('Task not found');
+    if (taskToMoveIndex === -1) {
+      throw new Error('Task not found');
+    }
 
     const taskToMove = tasks[taskToMoveIndex];
     const oldColumnId = taskToMove.columnId;

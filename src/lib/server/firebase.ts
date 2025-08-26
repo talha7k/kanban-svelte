@@ -19,7 +19,6 @@ if (!getApps().length) {
     db = getFirestore(app);
     auth = getAuth(app);
     
-    console.log('Firebase Admin initialized successfully');
   } catch (error) {
     console.error('Error initializing Firebase Admin:', error);
     throw error;
@@ -29,5 +28,6 @@ if (!getApps().length) {
   db = getFirestore(app);
   auth = getAuth(app);
 }
+
 
 export { app, db, auth };
