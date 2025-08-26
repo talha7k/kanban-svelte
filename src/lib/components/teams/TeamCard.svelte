@@ -31,7 +31,7 @@
 		if (isNavigating) return;
 		
 		isNavigating = true;
-		goto(`/teams/${team.id}`);
+		goto(`/teams/edit/${team.id}`);
 	}
 </script>
 

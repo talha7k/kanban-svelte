@@ -105,21 +105,11 @@ export const moveTaskInProjectServer = async (
     taskToMove.order = newOrder;
     taskToMove.updatedAt = new Date().toISOString();
 
-    // Adjust order for tasks in the old column that were after the moved task
-    updatedTasks.forEach((task: any) => {
-      if (task.columnId === oldColumnId && task.order > taskToMove.order) {
-        task.order--;
-      }
-    });
+    // Note: Order adjustments are handled by the final sequential ordering step below
 
-    // Adjust order for tasks in the new column to make space for the moved task
-    updatedTasks.forEach((task: any) => {
-      if (task.columnId === newColumnId && task.order >= newOrder) {
-        task.order++;
-      }
-    });
-
-    // Insert the moved task into its new position
+    // Set the task's new order and column
+    taskToMove.order = newOrder;
+    taskToMove.columnId = newColumnId;
     updatedTasks.push(taskToMove);
 
     // Ensure all orders are sequential within each column
@@ -129,6 +119,7 @@ export const moveTaskInProjectServer = async (
         .filter((task: any) => task.columnId === columnId)
         .sort((a: any, b: any) => a.order - b.order);
       
+      // Reorder all tasks in the column to be sequential (0, 1, 2, ...)
       columnTasks.forEach((task: any, index: number) => {
         task.order = index;
       });

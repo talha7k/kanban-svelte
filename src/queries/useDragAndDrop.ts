@@ -197,44 +197,54 @@ export function setupKanbanMonitor(
         .filter(t => t.columnId === newColumnId)
         .sort((a, b) => a.order - b.order);
 
-      let insertIndex = 0;
+      let newOrder = 0;
       if (insertAfterTaskId) {
-        const targetIndex = tasksInNewColumn.findIndex(t => t.id === insertAfterTaskId);
-        if (targetIndex !== -1) {
-          insertIndex = targetIndex + 1;
+        const targetTask = tasksInNewColumn.find(t => t.id === insertAfterTaskId);
+        if (targetTask) {
+          newOrder = targetTask.order + 1;
+        } else {
+          newOrder = tasksInNewColumn.length;
         }
       } else {
-        // Add to end
-        insertIndex = tasksInNewColumn.length;
+        // Add to beginning of column
+        newOrder = 0;
       }
 
-      // Insert the task at the correct position
-      tasksInNewColumn.splice(insertIndex, 0, movedTask);
+      // Insert the task back into the finalTasks array at the correct position
+      // We'll let the server handle the exact positioning based on newOrder
+      movedTask.order = newOrder;
+      finalTasks.push(movedTask);
 
-      // Update orders for all tasks in the affected column
+      // Build updates for all affected tasks
       const updates: { taskId: string; changes: Partial<Task> }[] = [];
       
-      // Update orders for tasks in the new column
-      tasksInNewColumn.forEach((task, index) => {
-        updates.push({
-          taskId: task.id,
-          changes: { order: index, columnId: task.columnId },
-        });
+      // Always update the moved task
+      updates.push({
+        taskId: movedTask.id,
+        changes: { order: newOrder, columnId: newColumnId },
       });
 
-      // If the task moved from a different column, update orders in the old column too
+      // Update orders for all tasks in both old and new columns
+      const affectedColumns = [newColumnId];
       if (draggedTask.columnId !== newColumnId) {
-        const tasksInOldColumn = finalTasks
-          .filter(t => t.columnId === draggedTask.columnId)
+        affectedColumns.push(draggedTask.columnId);
+      }
+
+      affectedColumns.forEach(columnId => {
+        const columnTasks = finalTasks
+          .filter(t => t.columnId === columnId)
           .sort((a, b) => a.order - b.order);
 
-        tasksInOldColumn.forEach((task, index) => {
-          updates.push({
-            taskId: task.id,
-            changes: { order: index },
-          });
+        columnTasks.forEach((task, index) => {
+          // Skip the moved task as it's already in updates
+          if (task.id !== movedTask.id) {
+            updates.push({
+              taskId: task.id,
+              changes: { order: index },
+            });
+          }
         });
-      }
+      });
 
       // Build the final task state
       const finalTaskState = [...finalTasks];

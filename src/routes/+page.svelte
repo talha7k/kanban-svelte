@@ -61,9 +61,7 @@
         <Button size="lg" onclick={() => goto('/login')}>
           Get Started
         </Button>
-        <Button variant="outline" size="lg" onclick={() => goto('/signup')}>
-          Sign Up
-        </Button>
+       
       </div>
     </div>
   </div>
