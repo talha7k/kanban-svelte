@@ -4,9 +4,10 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Plus, Loader2 } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { writable } from 'svelte/store';
+	import { writable, get } from 'svelte/store';
 	import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, dragState } from '$queries/useDragAndDrop';
 	import { queryClient } from '$lib/queryClient';
+	import { currentUser } from '$lib/stores/auth';
 
 	export let project: Project;
 	export const users: UserProfile[] = [];
@@ -24,19 +25,73 @@
 	// Setup drag-and-drop monitor
 	onMount(() => {
 		cleanupMonitor = setupKanbanMonitor(tasksStore, async (updates: Array<{taskId: string, changes: Partial<Task>}>) => {
-			// Handle task updates after drag and drop
+			try {
+				// Group updates by taskId to avoid duplicate calls
+				const uniqueUpdates = new Map<string, Partial<Task>>();
+				
 				for (const update of updates) {
 					const { taskId, changes } = update;
-					
-					// Update in the project object
-					const taskIndex = project.tasks.findIndex(t => t.id === taskId);
-					if (taskIndex !== -1) {
-						project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...changes };
+					if (!uniqueUpdates.has(taskId)) {
+						uniqueUpdates.set(taskId, changes);
+					} else {
+						// Merge changes if there are multiple updates for the same task
+						const existing = uniqueUpdates.get(taskId)!;
+						uniqueUpdates.set(taskId, { ...existing, ...changes });
 					}
 				}
 
-			// Invalidate project queries to refresh data
-			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+				// Process each unique update - prioritize move operations
+				const movePromises: Promise<void>[] = [];
+				
+				for (const [taskId, changes] of uniqueUpdates.entries()) {
+					// Check if this is a move operation (columnId or order changed)
+					if (changes.columnId !== undefined || changes.order !== undefined) {
+						// Get the task from the store to determine the new column and order
+						const task = get(tasksStore).find(t => t.id === taskId);
+						if (task) {
+							const newColumnId = changes.columnId ?? task.columnId;
+							const newOrder = changes.order ?? task.order;
+							
+							// Use the server-side API for proper positioning
+								const userId = get(currentUser)?.uid;
+								if (!userId) {
+									throw new Error('User not authenticated');
+								}
+								
+								movePromises.push(
+									fetch('/api/move-task', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json',
+										},
+										body: JSON.stringify({
+											projectId: project.id,
+											taskId,
+											newColumnId,
+											newOrder,
+											currentUserUid: userId
+										})
+									})
+									.then(response => {
+										if (!response.ok) {
+											throw new Error('Failed to move task');
+										}
+									})
+								);
+						}
+					}
+				}
+
+				// Wait for all move operations to complete
+				await Promise.all(movePromises);
+
+				// Invalidate project queries to refresh data
+				await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+			} catch (error) {
+				console.error('Error updating tasks after drag and drop:', error);
+				// Re-throw to trigger rollback in drag handler
+				throw error;
+			}
 		});
 
 		return () => {

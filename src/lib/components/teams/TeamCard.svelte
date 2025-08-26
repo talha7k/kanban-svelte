@@ -11,25 +11,32 @@
 	export let currentUserId: string | undefined = undefined;
 	export let onSelect: ((teamId: string) => void) | undefined = undefined;
 
-	let isPending = false;
+
 
 	$: isOwner = currentUserId === team.ownerId;
 	$: memberCount = team.members?.length || team.memberIds?.length || 0;
 
+	let isNavigating = false;
+
 	function handleSelect(e: MouseEvent, teamId: string) {
 		e.stopPropagation();
+		if (isNavigating) return;
+		
+		isNavigating = true;
 		onSelect?.(teamId);
 	}
 
 	function handleManage(e: MouseEvent) {
 		e.stopPropagation();
-		isPending = true;
+		if (isNavigating) return;
+		
+		isNavigating = true;
 		goto(`/teams/${team.id}`);
 	}
 </script>
 
 <Card
-	class="bg-gradient-to-r from-purple-100 to-white group cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md hover:scale-[1.02] hover:bg-gradient-to-r hover:from-pink-100 hover:to-purple-100"
+	class="bg-gradient-to-r from-purple-100 to-white group cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md hover:scale-[1.02] hover:bg-gradient-to-r hover:from-pink-100 hover:to-purple-100 {isNavigating ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}"
 	onclick={(e) => handleSelect(e, team.id)}
 >
 	<CardHeader class="pb-3">
@@ -108,14 +115,15 @@
 		<div class="flex gap-2 pt-2 w-full">
 			{#if isOwner}
 				<Button
-					variant="outline"
-					size="sm"
-					class="w-full"
-					onclick={handleManage}
-				>
-					<Settings class="w-4 h-4 mr-1" />
-					Manage
-				</Button>
+						variant="outline"
+						size="sm"
+						class="w-full"
+						onclick={handleManage}
+						disabled={isNavigating}
+					>
+						<Settings class="w-4 h-4 mr-1" />
+						Manage
+					</Button>
 			{/if}
 		</div>
 	</CardContent>

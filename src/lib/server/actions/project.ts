@@ -1,15 +1,14 @@
 "use server";
 
 import { generateProjectTasks } from '$lib/server/ai/flows/generate-project-tasks';
-import { addTaskToProject } from '$lib/api/firebaseTask';
-import { getProjectById } from '$lib/api/firebaseProject';
+import { addTaskToProjectServer, getProjectByIdServer } from '$lib/server/firebaseProject';
 import type { NewTaskData, Task } from '$lib/types/types';
 import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDetailsOutput } from '$lib/server/ai/flows/generate-task-details';
 
 export async function generateTasksAction(projectId: string, brief: string, currentUserUid: string, taskCount: number = 3) {
   try {
     const generatedTasks = await generateProjectTasks(brief, taskCount);
-    const project = await getProjectById(projectId);
+    const project = await getProjectByIdServer(projectId);
 
     if (!project) {
       throw new Error("Project not found");
@@ -37,7 +36,7 @@ export async function generateTasksAction(projectId: string, brief: string, curr
 
 export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>[], currentUserUid: string) {
   try {
-    const project = await getProjectById(projectId);
+    const project = await getProjectByIdServer(projectId);
 
     if (!project) {
       return { success: false, error: "Project not found" };
@@ -46,7 +45,7 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
     let addedTasksCount = 0;
     for (const taskData of tasks) {
       try {
-        await addTaskToProject(projectId, {
+        await addTaskToProjectServer(projectId, {
           title: taskData.title,
           description: taskData.description,
           priority: taskData.priority,
@@ -67,7 +66,7 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
     }
 
     // Fetch updated project
-    const updatedProject = await getProjectById(projectId);
+    const updatedProject = await getProjectByIdServer(projectId);
 
     return { 
       success: true, 

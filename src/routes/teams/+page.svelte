@@ -114,6 +114,7 @@ let isCreatingTeam = $state(false);
 			{#each $teamsData.data || [] as team}
 				<TeamCard 
 					{team} 
+					currentUserId={$currentUser?.uid}
 					onSelect={() => selectTeam(team.id)}
 			/>
 			{/each}
