@@ -3,6 +3,7 @@
 	import type { Project, UserProfile, Task } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
 import { Plus, Loader2 } from '@lucide/svelte';
+import EditTaskDialog from './EditTaskDialog.svelte';
 import { onMount } from 'svelte';
 import { writable, get } from 'svelte/store';
 import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, dragState } from '$queries/useDragAndDrop';
@@ -17,6 +18,10 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 	let isLoading = false;
 	const tasksStore = writable<Task[]>([]);
 	let cleanupMonitor: () => void;
+	
+	// Edit dialog state
+	let isEditDialogOpen = false;
+	let taskToEdit: Task | null = null;
 
 	// Initialize tasks from project
 	$: if (project?.tasks) {
@@ -118,8 +123,8 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 	}
 
 	function handleEditTask(task: Task) {
-		console.log('Edit task:', task.id);
-		// TODO: Implement task edit functionality
+		taskToEdit = task;
+		isEditDialogOpen = true;
 	}
 
 	function handleDeleteTask(taskId: string) {
@@ -243,6 +248,19 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 			</div>
 		</div>
 	{/if}
+
+	<!-- Edit Task Dialog -->
+	<EditTaskDialog
+		bind:isOpen={isEditDialogOpen}
+		taskToEdit={taskToEdit}
+		assignableUsers={users}
+		allTasksForDependencies={$tasksStore}
+		onEditTask={handleUpdateTask}
+		onOpenChange={(open) => {
+			isEditDialogOpen = open;
+			if (!open) taskToEdit = null;
+		}}
+	/>
 </div>
 
 <style>

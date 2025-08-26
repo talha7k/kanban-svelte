@@ -108,7 +108,7 @@ export const moveTaskInProjectServer = async (
     // Reorder tasks in the old column (if different from new column)
     if (oldColumnId !== newColumnId) {
       tasks
-        .filter((t: any) => t.columnId === oldColumnId && t.order > taskToMoveIndex)
+        .filter((t: any) => t.columnId === oldColumnId && t.order > taskToMove.order)
         .forEach((t: any) => t.order--);
     }
 
@@ -119,8 +119,8 @@ export const moveTaskInProjectServer = async (
 
     // Adjust orders to make space for the moved task
     newColumnTasks.forEach((task: any, index: number) => {
-      if (index >= newOrder) {
-        task.order = index + 1;
+      if (task.id !== taskId && task.order >= newOrder) {
+        task.order = task.order + 1;
       }
     });
 
@@ -132,7 +132,9 @@ export const moveTaskInProjectServer = async (
         .sort((a: any, b: any) => a.order - b.order);
       
       columnTasks.forEach((task: any, index: number) => {
-        task.order = index;
+        if (task.order !== index) {
+          task.order = index;
+        }
       });
     });
 

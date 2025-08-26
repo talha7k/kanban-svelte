@@ -69,7 +69,7 @@ export function draggableTask(node: HTMLElement, data: { task: Task }) {
       });
     },
     onDragStart: () => {
-      dragState.update(state => ({ ...state, isDragging: true, movingTaskId: task.id }));
+      dragState.update(state => ({ ...state, isDragging: true, movingTaskId: task.id, isSaving: false }));
     },
     onDrop: () => {
       dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null, movingTaskId: null, isSaving: false });
@@ -94,13 +94,13 @@ export function droppableColumn(node: HTMLElement, data: { columnId: string }) {
     element: node,
     getData: (): DroppableColumnData => ({ columnId, type: 'column' }),
     onDragEnter: () => {
-      dragState.update(state => ({ ...state, isOverColumnId: columnId }));
+      dragState.update(state => ({ ...state, isOverColumnId: columnId, isSaving: false }));
     },
     onDragLeave: () => {
-      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null, isOverTaskId: null } : state));
+      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false } : state));
     },
     onDrop: () => {
-      dragState.update(state => ({ ...state, isOverColumnId: null, isOverTaskId: null }));
+      dragState.update(state => ({ ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false }));
     },
   });
 
@@ -122,13 +122,13 @@ export function droppableTask(node: HTMLElement, data: { taskId: string; columnI
     element: node,
     getData: (): DroppableTaskData => ({ taskId, columnId, type: 'task' }),
     onDragEnter: () => {
-      dragState.update(state => ({ ...state, isOverTaskId: taskId }));
+      dragState.update(state => ({ ...state, isOverTaskId: taskId, isSaving: false }));
     },
     onDragLeave: () => {
-      dragState.update(state => (state.isOverTaskId === taskId ? { ...state, isOverTaskId: null } : state));
+      dragState.update(state => (state.isOverTaskId === taskId ? { ...state, isOverTaskId: null, isSaving: false } : state));
     },
     onDrop: () => {
-      dragState.update(state => ({ ...state, isOverTaskId: null }));
+      dragState.update(state => ({ ...state, isOverTaskId: null, isSaving: false }));
     },
   });
 
