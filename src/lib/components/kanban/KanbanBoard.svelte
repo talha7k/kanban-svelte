@@ -13,7 +13,8 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 	import TaskCard from './TaskCard.svelte';
 
 	export let project: Project;
-	export const users: UserProfile[] = [];
+	export let users: UserProfile[] = [];
+	export let onProjectUpdate: () => Promise<void> = () => Promise.resolve();
 
 	let isLoading = false;
 	const tasksStore = writable<Task[]>([]);
@@ -101,8 +102,8 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 										toast.dismiss(savingToastId);
 										dragState.update(state => ({ ...state, isSaving: false }));
 
-										// Invalidate project queries to refresh data
-										await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+										// Refresh project data
+							await onProjectUpdate();
 				} catch (error) {
 					console.error('Error updating tasks after drag and drop:', error);
 					toast.error('Failed to save task position');
@@ -175,7 +176,7 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 				throw new Error('Failed to update task');
 			}
 
-			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+			await onProjectUpdate();
 		} catch (error) {
 			console.error('Error updating task:', error);
 		}

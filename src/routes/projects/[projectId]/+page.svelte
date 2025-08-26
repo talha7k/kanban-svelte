@@ -341,7 +341,7 @@
 		</div>
 		<div class="flex-1 min-h-0">
 			<!-- Allows KanbanBoard to take remaining height -->
-			<KanbanBoard {project} {users} />
+			<KanbanBoard {project} {users} onProjectUpdate={fetchProjectData} />
 		</div>
 		{#if $currentUser?.uid === project.ownerId && project}
 			<EditProjectDialog
