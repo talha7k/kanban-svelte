@@ -158,13 +158,19 @@
 		goto(`/projects/${projectId}`);
 	}
 
+	import { setSelectedTeamId } from '$lib/stores/team';
+
 	onMount(() => {
 		if (!$currentUser) {
 			goto('/login');
 			return;
 		}
 
-		if (!$selectedTeamId) {
+		// Set the team ID from URL params
+		const urlTeamId = $page.params.teamId;
+		if (urlTeamId) {
+			setSelectedTeamId(urlTeamId as TeamId);
+		} else if (!$selectedTeamId) {
 			goto('/teams');
 		}
 	});

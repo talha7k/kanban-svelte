@@ -35,10 +35,14 @@ export const dragState = writable<{
   isDragging: boolean;
   isOverColumnId: string | null;
   isOverTaskId: string | null;
+  movingTaskId: string | null;
+  isSaving: boolean;
 }>({
   isDragging: false,
   isOverColumnId: null,
   isOverTaskId: null,
+  movingTaskId: null,
+  isSaving: false,
 });
 
 /**
@@ -65,10 +69,10 @@ export function draggableTask(node: HTMLElement, data: { task: Task }) {
       });
     },
     onDragStart: () => {
-      dragState.update(state => ({ ...state, isDragging: true }));
+      dragState.update(state => ({ ...state, isDragging: true, movingTaskId: task.id }));
     },
     onDrop: () => {
-      dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null });
+      dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null, movingTaskId: null, isSaving: false });
     },
   });
 

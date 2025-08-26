@@ -193,8 +193,16 @@
 		}
 	}
 
+	import { setSelectedTeamId } from '$lib/stores/team';
+	import type { TeamId } from '$lib/types/types';
+
 	onMount(() => {
 		if ($currentUser?.uid) {
+			// Set the team ID from URL params
+			const urlTeamId = $page.params.teamId;
+			if (urlTeamId) {
+				setSelectedTeamId(urlTeamId as TeamId);
+			}
 			fetchTeamDetails();
 		}
 	});

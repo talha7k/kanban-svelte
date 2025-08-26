@@ -86,7 +86,7 @@ export const moveTaskInProjectServer = async (
     if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data();
-    const tasks = project?.tasks || [];
+    let tasks = [...(project?.tasks || [])];
     
     const taskToMoveIndex = tasks.findIndex((t: any) => t.id === taskId);
     if (taskToMoveIndex === -1) throw new Error('Task not found');
@@ -94,39 +94,50 @@ export const moveTaskInProjectServer = async (
     const taskToMove = tasks[taskToMoveIndex];
     const oldColumnId = taskToMove.columnId;
 
-    // Create a new tasks array
-    let updatedTasks = [...tasks];
-
     // Remove the task from its current position
-    updatedTasks.splice(taskToMoveIndex, 1);
+    tasks.splice(taskToMoveIndex, 1);
 
-    // Update the moved task's column and order
+    // Update the moved task's properties
     taskToMove.columnId = newColumnId;
     taskToMove.order = newOrder;
     taskToMove.updatedAt = new Date().toISOString();
 
-    // Note: Order adjustments are handled by the final sequential ordering step below
+    // Insert the task back into the array
+    tasks.push(taskToMove);
 
-    // Set the task's new order and column
-    taskToMove.order = newOrder;
-    taskToMove.columnId = newColumnId;
-    updatedTasks.push(taskToMove);
+    // Reorder tasks in the old column (if different from new column)
+    if (oldColumnId !== newColumnId) {
+      tasks
+        .filter((t: any) => t.columnId === oldColumnId && t.order > taskToMoveIndex)
+        .forEach((t: any) => t.order--);
+    }
 
-    // Ensure all orders are sequential within each column
+    // Reorder tasks in the new column
+    const newColumnTasks = tasks
+      .filter((t: any) => t.columnId === newColumnId)
+      .sort((a: any, b: any) => a.order - b.order);
+
+    // Adjust orders to make space for the moved task
+    newColumnTasks.forEach((task: any, index: number) => {
+      if (index >= newOrder) {
+        task.order = index + 1;
+      }
+    });
+
+    // Ensure sequential ordering within each column
     const columns = ['TODO', 'IN_PROGRESS', 'DONE'];
     columns.forEach(columnId => {
-      const columnTasks = updatedTasks
+      const columnTasks = tasks
         .filter((task: any) => task.columnId === columnId)
         .sort((a: any, b: any) => a.order - b.order);
       
-      // Reorder all tasks in the column to be sequential (0, 1, 2, ...)
       columnTasks.forEach((task: any, index: number) => {
         task.order = index;
       });
     });
 
     await projectRef.update({
-      tasks: updatedTasks,
+      tasks: tasks,
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
