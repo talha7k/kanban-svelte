@@ -23,18 +23,27 @@
 		Users2Icon,
 		PlusIcon,
 		PlusCircleIcon,
+		Settings,
+		MoreVertical,
 	} from '@lucide/svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
+	import { RoleBadge } from '$lib/components/badges';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuItem,
+		DropdownMenuSeparator,
+		DropdownMenuTrigger,
+	} from '$lib/components/ui/dropdown-menu';
 	import type { Project, UserProfile } from '$lib/types/types';
 
 	export let project: Project;
 	export let currentUserUid: string | undefined;
-	export const allUsers: UserProfile[] = [];
-	export const openEditProjectDialog: (project: Project) => void = () => {};
-	export const openManageMembersDialog: (project: Project) => void = () => {};
-	export const openDeleteProjectDialog: (project: Project) => void = () => {};
-	export const openViewMembersDialog: (project: Project) => void = () => {};
+	export let allUsers: UserProfile[] = [];
+	export let openEditProjectDialog: (project: Project) => void = () => {};
+	export let openManageMembersDialog: (project: Project) => void = () => {};
+	export let openDeleteProjectDialog: (project: Project) => void = () => {};
+	export let openViewMembersDialog: (project: Project) => void = () => {};
 
 	let isPending = false;
 
@@ -55,9 +64,7 @@
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
 			{#if currentUserUid === project.ownerId}
-				<Badge variant="outline" class="ml-2 border-primary text-primary">
-					<Crown class="mr-1.5 h-3.5 w-3.5" /> Owner
-				</Badge>
+				<RoleBadge role="owner" size="sm" />
 			{/if}
 		</div>
 		<CardDescription
@@ -73,31 +80,72 @@
 			</div>
 		</CardDescription>
 	</CardHeader>
-	<CardFooter class="flex flex-col justify-center items-center border-t">
-		<div class="flex flex-wrap gap-2 w-full mt-3 md:mt-0">
-			{#if currentUserUid === project.ownerId}
+	<CardFooter class="flex justify-between items-center border-t py-3">
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={(e) => {
+				e.stopPropagation();
+				openViewMembersDialog(project);
+			}}
+		>
+			<Eye class="mr-1.5 h-3.5 w-3.5" /> View Members
+		</Button>
+		
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
 				<Button
-					variant="outline"
+					variant="ghost"
 					size="sm"
-					onclick={() => openEditProjectDialog(project)}
+					onclick={(e) => e.stopPropagation()}
+					class="h-8 w-8 p-0"
 				>
-					<Pencil class="mr-1.5 h-3.5 w-3.5" /> Edit
+					<MoreVertical class="h-4 w-4" />
 				</Button>
-				<Button
-					variant="outline"
-					size="sm"
-					onclick={() => openManageMembersDialog(project)}
-				>
-					<PlusCircle class="mr-1.5 h-3.5 w-3.5" /> Members
-				</Button>
-			{/if}
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={() => openViewMembersDialog(project)}
-			>
-				<Eye class="mr-1.5 h-3.5 w-3.5" /> Members
-			</Button>
-		</div>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{#if currentUserUid === project.ownerId}
+					<DropdownMenuItem
+						onclick={(e) => {
+							e.stopPropagation();
+							openEditProjectDialog(project);
+						}}
+					>
+						<Pencil class="mr-2 h-4 w-4" />
+						Edit Project
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onclick={(e) => {
+							e.stopPropagation();
+							openManageMembersDialog(project);
+						}}
+					>
+						<PlusCircle class="mr-2 h-4 w-4" />
+						Manage Members
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						onclick={(e) => {
+							e.stopPropagation();
+							openDeleteProjectDialog(project);
+						}}
+						class="text-destructive"
+					>
+						<Trash2 class="mr-2 h-4 w-4" />
+						Delete Project
+					</DropdownMenuItem>
+				{:else}
+					<DropdownMenuItem
+						onclick={(e) => {
+							e.stopPropagation();
+							openViewMembersDialog(project);
+						}}
+					>
+						<Eye class="mr-2 h-4 w-4" />
+						View Members
+					</DropdownMenuItem>
+				{/if}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	</CardFooter>
 </Card>

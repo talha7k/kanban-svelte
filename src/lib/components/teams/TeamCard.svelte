@@ -42,7 +42,7 @@
 					{#if isOwner}
 						<Badge
 							variant="secondary"
-							class="bg-amber-100 text-amber-800 border-amber-200"
+							class="bg-amber-100 text-amber-500 border-orange-200"
 						>
 							<Crown class="w-3 h-3 mr-1" />
 							Owner

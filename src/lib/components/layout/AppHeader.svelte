@@ -5,7 +5,7 @@
 	import { currentUser, userProfile, authStore } from '$lib/stores/auth';
 	import KanbanIcon from '$lib/components/icons/KanbanIcon.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Github, LayoutDashboard, LogOut, UserCircle, LogIn, Settings, Users } from '@lucide/svelte';
+	import { Github, LogOut, UserCircle, LogIn, Settings, Users } from '@lucide/svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import {
 		DropdownMenu,
@@ -48,12 +48,6 @@
 						<a href="/teams" class="flex items-center">
 							<Users class="mr-2 h-4 w-4" />
 							Teams
-						</a>
-					</Button>
-					<Button variant="ghost">
-						<a href="/dashboard" class="flex items-center">
-							<LayoutDashboard class="mr-2 h-4 w-4" />
-							Dashboard
 						</a>
 					</Button>
 				{/if}

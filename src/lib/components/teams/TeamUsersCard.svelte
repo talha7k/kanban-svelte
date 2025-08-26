@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
-	import { Users, Loader2, Crown, Briefcase, ShieldCheck, UserCog } from '@lucide/svelte';
+	import { Users, Loader2, Briefcase } from '@lucide/svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { RoleBadge } from '$lib/components/badges';
 	import type { Project, UserProjectRole } from '$lib/types/types';
 
 	interface User {
@@ -48,31 +48,23 @@
 		return 'Overview of team members.';
 	}
 
-	function getUserRole(user: User): {
-		role: string;
-		variant: 'outline' | 'default' | 'secondary';
-		icon?: any;
-	} {
+	function getUserRole(user: User): 'owner' | 'manager' | 'member' {
 		if (selectedProject) {
 			// Project context - show project-specific roles
 			if (user.id === selectedProject.ownerId) {
-				return { role: 'Owner', variant: 'outline', icon: Crown };
+				return 'owner';
 			}
 			const projectRole = selectedProject.memberRoles?.[user.id] as UserProjectRole;
 			if (projectRole === 'manager') {
-				return { role: 'Manager', variant: 'default', icon: ShieldCheck };
+				return 'manager';
 			}
-			return { role: 'Member', variant: 'secondary', icon: UserCog };
+			return 'member';
 		} else {
 			// Team context - only show team owner badge
 			if (selectedTeam?.ownerId === user.id) {
-				return { role: 'Owner', variant: 'outline', icon: Crown };
+				return 'owner';
 			}
-			// For regular team members, show their general role or "Member"
-			return {
-				role: 'Member',
-				variant: 'secondary'
-			};
+			return 'member';
 		}
 	}
 </script>
@@ -121,7 +113,7 @@
 			<ScrollArea class="h-auto max-h-[350px] md:max-h-[500px] pr-4 overflow-y-auto">
 				<ul class="space-y-3">
 					{#each displayUsers as user (user.id)}
-						{@const userRoleInfo = getUserRole(user)}
+						
 						<li
 							class="flex items-start space-x-3 p-2 rounded-md bg-gradient-to-r from-blue-100 to-white hover:bg-muted/50"
 						>
@@ -145,17 +137,7 @@
 									>
 										{user.name}
 									</span>
-									<Badge
-										variant={userRoleInfo.variant}
-										class={`capitalize text-xs flex-shrink-0 ${
-											userRoleInfo.variant === 'outline' ? 'border-accent text-accent' : ''
-										}`}
-									>
-										{#if userRoleInfo.icon}
-											<svelte:component this={userRoleInfo.icon} class="mr-1.5 h-3.5 w-3.5" />
-										{/if}
-										{userRoleInfo.role}
-									</Badge>
+									<RoleBadge role={getUserRole(user)} size="sm" />
 								</div>
 								<p class="text-xs text-muted-foreground break-all" title={user.email || ''}>
 									{user.email}

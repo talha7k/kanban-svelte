@@ -75,8 +75,10 @@
 
 {#if isHomePage && !$currentUser}
 	<!-- Show landing page for unauthenticated users on home page -->
-	<LandingPage />
-	<Toaster />
+	<QueryClientProvider client={queryClient}>
+		<LandingPage />
+		<Toaster />
+	</QueryClientProvider>
 {:else if isLoading}
 	<div class="min-h-screen flex flex-col items-center justify-center bg-background p-4">
 		<div class="space-y-4 w-full max-w-md">
@@ -93,7 +95,15 @@
 	</div>
 {:else if !shouldShowContent && $currentUser && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
 	<!-- Team selection page should render here -->
-	{@render children()}
+	<QueryClientProvider client={queryClient}>
+		<div class="min-h-screen flex flex-col bg-background">
+			<AppHeader />
+			<main class="flex-1">
+				{@render children()}
+			</main>
+			<Toaster />
+		</div>
+	</QueryClientProvider>
 {:else if shouldShowContent}
 	<QueryClientProvider client={queryClient}>
 		<div class="min-h-screen flex flex-col bg-background">
@@ -106,8 +116,10 @@
 	</QueryClientProvider>
 {:else}
 	<!-- Login/Signup pages and other unauthenticated pages -->
-	<div class="min-h-screen bg-background">
-		{@render children()}
-		<Toaster />
-	</div>
+	<QueryClientProvider client={queryClient}>
+		<div class="min-h-screen bg-background">
+			{@render children()}
+			<Toaster />
+		</div>
+	</QueryClientProvider>
 {/if}

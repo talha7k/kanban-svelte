@@ -138,7 +138,6 @@
 
 	function openViewMembersDialog(project: Project) {
 		selectedProject = project;
-		isViewMembersDialogOpen = true;
 	}
 
 	function viewProject(projectId: string) {
