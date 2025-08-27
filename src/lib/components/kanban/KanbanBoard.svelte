@@ -223,7 +223,8 @@
 			}
 
 			// Update the task in the store with the new comment
-			const updatedTask = await response.json();
+			const responseData = await response.json();
+			const updatedTask = responseData.task;
 			tasksStore.update(tasks => 
 				tasks.map(task => 
 					task.id === taskId ? updatedTask : task
@@ -380,7 +381,6 @@
 		bind:isOpen={isEditDialogOpen}
 		taskToEdit={taskToEdit}
 		assignableUsers={users}
-		allTasksForDependencies={$tasksStore}
 		onEditTask={handleUpdateTask}
 		onOpenChange={(open) => {
 			isEditDialogOpen = open;

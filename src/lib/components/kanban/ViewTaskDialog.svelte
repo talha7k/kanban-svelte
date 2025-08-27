@@ -141,7 +141,7 @@
 							<Button variant="outline" size="icon" onclick={() => { onOpenChange(false); onEditTask(task);}} aria-label="Edit task" disabled={isSubmittingComment}>
 								<Edit2 class="h-3 w-3" />
 							</Button>
-							<Button variant="destructive" size="icon" onclick={() => { onDeleteTask(task.id);}} aria-label="Delete task" disabled={isSubmittingComment}>
+							<Button variant="destructive" size="icon" onclick={() => { onDeleteTask(task.id);}} aria-label="Delete task">
 								<Trash2 class="h-3 w-3" />
 							</Button>
 						</div>

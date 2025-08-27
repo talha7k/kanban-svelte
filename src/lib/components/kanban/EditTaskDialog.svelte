@@ -32,6 +32,11 @@
 	export let assignableUsers: UserProfile[];
 
 	export let isSubmitting: boolean = false;
+	export let isDeleteDialogOpen: boolean;
+	export let taskToDelete: Task | null;
+	export let isDeletingTask: boolean;
+	export let confirmDeleteTask: () => Promise<void>;
+	export let cancelDeleteTask: () => void;
 
 	let formData: TaskFormData = {
 		title: '',
@@ -158,6 +163,31 @@
 					</Button>
 				</DialogFooter>
 			</form>
+		</DialogContent>
+	</Dialog>
+
+	<!-- Delete Task Confirmation Dialog -->
+	<Dialog bind:open={isDeleteDialogOpen}>
+		<DialogContent class="sm:max-w-[425px]">
+			<DialogHeader>
+				<DialogTitle>Delete Task</DialogTitle>
+				<DialogDescription>
+					Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+				</DialogDescription>
+			</DialogHeader>
+			<DialogFooter>
+				<Button variant="outline" onclick={cancelDeleteTask} disabled={isDeletingTask}>
+					Cancel
+				</Button>
+				<Button variant="destructive" onclick={confirmDeleteTask} disabled={isDeletingTask}>
+					{#if isDeletingTask}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						Deleting...
+					{:else}
+						Delete Task
+					{/if}
+				</Button>
+			</DialogFooter>
 		</DialogContent>
 	</Dialog>
 {/if}

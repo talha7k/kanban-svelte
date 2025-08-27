@@ -43,13 +43,19 @@ export async function POST({ request }: { request: Request }) {
 
     const existingTask = tasks[taskIndex];
     
+    // Get user profile for comment metadata
+    const userRef = db.collection('users').doc(currentUserUid);
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
+    
     // Create new comment
     const newComment = {
       id: uuidv4(),
-      text: commentText,
+      content: commentText,
       userId: currentUserUid,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      userName: userData?.name || 'Unknown User',
+      avatarUrl: userData?.avatarUrl,
+      createdAt: new Date().toISOString()
     };
 
     // Add comment to task
