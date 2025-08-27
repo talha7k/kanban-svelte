@@ -48,8 +48,8 @@
 	// Handle team selection navigation
 	$effect(() => {
 		if (!$authLoading && !teamLoading && $currentUser && !$selectedTeamId) {
-			// Only redirect to teams if we're not already on the teams page
-			if ($page.url.pathname !== '/teams') {
+			// Only redirect to teams if we're not already on the teams page or a project page
+			if ($page.url.pathname !== '/teams' && !$page.url.pathname.startsWith('/projects/')) {
 				goto('/teams');
 			}
 		}
@@ -67,7 +67,8 @@
 	let isLoading = $derived($authLoading || ($currentUser && teamLoading));
 	let isTeamsPage = $derived($page.url.pathname === '/teams');
 	let isHomePage = $derived($page.url.pathname === '/');
-	let shouldShowContent = $derived($currentUser && ($selectedTeamId || isTeamsPage));
+	let isProjectPage = $derived($page.url.pathname.startsWith('/projects/'));
+	let shouldShowContent = $derived($currentUser && ($selectedTeamId || isTeamsPage || isProjectPage));
 	let shouldShowLanding = $derived(!$currentUser && isHomePage && !$authLoading);
 
 
