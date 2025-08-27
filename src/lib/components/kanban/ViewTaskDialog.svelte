@@ -36,15 +36,29 @@
 	let newComment = '';
 	let comments: CommentType[] = [];
 	let isSubmittingLocalComment = false;
+	let lastTaskId: string | null = null;
 
-	$: if (task?.comments) {
-		comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+	// Update comments when task changes or when task.comments changes
+	$: if (task) {
+		// If this is a different task, reset comments
+		if (lastTaskId !== task.id) {
+			lastTaskId = task.id;
+			comments = task.comments ? [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : [];
+		} else if (task.comments) {
+			// Same task, update comments if they exist
+			comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+		}
 	} else {
 		comments = [];
+		lastTaskId = null;
 	}
 
-	$: if (isOpen) {
+	$: if (isOpen && task) {
 		newComment = '';
+		// Ensure comments are loaded when dialog opens
+		if (task.comments) {
+			comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+		}
 	}
 
 	$: assignees = task?.assigneeUids?.map(uid => users.find(u => u.id === uid)).filter(Boolean) as UserProfile[] || [];
@@ -61,6 +75,10 @@
 				await onAddComment(task.id, newComment);
 				newComment = ''; // Clear the input after successful submission
 				toast.success('Your comment has been added successfully.');
+				// Force refresh comments after adding
+				if (task.comments) {
+					comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+				}
 			}
 		} catch (error) {
 			toast.error('Failed to add comment. Please try again.');
