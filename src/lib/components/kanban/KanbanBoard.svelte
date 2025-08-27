@@ -467,7 +467,7 @@
 										{task}
 										{users}
 										projectColumns={project.columns}
-										canManageTask={canManageTasks}
+										canManageTask={canManageTasks || (task.assigneeUids?.includes($currentUser?.uid || '') ?? false)}
 										onEdit={(t) => handleEditTask(t)}
 										onDelete={(taskId) => handleDeleteTask(taskId)}
 										onViewDetails={(t) => handleViewTaskDetails(t)}

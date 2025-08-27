@@ -11,7 +11,13 @@
 		Rocket,
 		Sparkles,
 		ArrowRight,
-		Check
+		Check,
+		Crown,
+		Shield,
+		X,
+		User,
+		Zap,
+		Eye
 	} from '@lucide/svelte';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -193,7 +199,7 @@
 					</Card>
 				</div>
 
-				<!-- Feature 6: Security & Privacy -->
+				<!-- Feature 6: Advanced Role-Based Access Control -->
 				<div class="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-1200">
 					<Card class="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 shadow-md bg-gradient-to-br from-card to-card/50">
 						<CardHeader>
@@ -201,17 +207,192 @@
 								<Lock class="w-6 h-6 text-primary" />
 							</div>
 							<CardTitle class="text-xl font-semibold mb-3">
-								Secure & Private
+								Advanced Permission System
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<CardDescription class="text-muted-foreground leading-relaxed">
-								Your data is protected with enterprise-grade security.
-								Role-based access control ensures team members only see
-								what they need to see.
+								Comprehensive role-based access control with granular permissions.
+								Team owners, managers, and members each have specific capabilities
+								tailored to their responsibilities.
 							</CardDescription>
 						</CardContent>
 					</Card>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- RBAC Features Section -->
+	<section class="py-24 bg-muted/30">
+		<div class="container mx-auto px-4">
+			<div class="text-center mb-16">
+				<h2 class="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+					Role-Based Access Control
+				</h2>
+				<p class="text-xl text-muted-foreground max-w-3xl mx-auto">
+					Granular permission system ensuring the right people have the right access
+				</p>
+			</div>
+
+			<div class="grid md:grid-cols-3 gap-8 mb-16">
+				<!-- Team Owner Permissions -->
+				<div class="animate-in fade-in-0 slide-in-from-left-4 duration-1000">
+					<Card class="h-full border-2 border-primary/20 hover:border-primary/40 transition-all duration-300">
+						<CardHeader>
+							<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+								<Crown class="w-6 h-6 text-primary" />
+							</div>
+							<CardTitle class="text-xl font-semibold mb-3">
+								Team Owner
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<ul class="space-y-2 text-sm text-muted-foreground">
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Full team management access
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Create and delete projects
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Manage team members and roles
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Complete task management
+								</li>
+							</ul>
+						</CardContent>
+					</Card>
+				</div>
+
+				<!-- Team Manager Permissions -->
+				<div class="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-200">
+					<Card class="h-full border-2 border-blue-200 hover:border-blue-400 transition-all duration-300">
+						<CardHeader>
+							<div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
+								<Shield class="w-6 h-6 text-blue-600" />
+							</div>
+							<CardTitle class="text-xl font-semibold mb-3">
+								Team Manager
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<ul class="space-y-2 text-sm text-muted-foreground">
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Create new projects
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Edit and manage tasks
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Assign tasks to team members
+								</li>
+								<li class="flex items-center gap-2">
+									<X class="w-4 h-4 text-red-500" />
+									Cannot delete projects
+								</li>
+							</ul>
+						</CardContent>
+					</Card>
+				</div>
+
+				<!-- Team Member Permissions -->
+				<div class="animate-in fade-in-0 slide-in-from-right-4 duration-1000 delay-400">
+					<Card class="h-full border-2 border-gray-200 hover:border-gray-400 transition-all duration-300">
+						<CardHeader>
+							<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center mb-4">
+								<User class="w-6 h-6 text-gray-600" />
+							</div>
+							<CardTitle class="text-xl font-semibold mb-3">
+								Team Member
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<ul class="space-y-2 text-sm text-muted-foreground">
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									View team projects and tasks
+								</li>
+								<li class="flex items-center gap-2">
+									<Check class="w-4 h-4 text-green-500" />
+									Move assigned tasks (progress tracking)
+								</li>
+								<li class="flex items-center gap-2">
+									<X class="w-4 h-4 text-red-500" />
+									Cannot create projects
+								</li>
+								<li class="flex items-center gap-2">
+									<X class="w-4 h-4 text-red-500" />
+									Cannot edit or delete tasks
+								</li>
+							</ul>
+						</CardContent>
+					</Card>
+				</div>
+			</div>
+
+			<!-- Smart Permission Features -->
+			<div class="bg-card rounded-2xl p-8 border">
+				<h3 class="text-2xl font-semibold mb-6 text-center">
+					Smart Permission Features
+				</h3>
+				<div class="grid md:grid-cols-2 gap-6">
+					<div class="flex items-start gap-4">
+						<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+							<Zap class="w-5 h-5 text-primary" />
+						</div>
+						<div>
+							<h4 class="font-semibold mb-2">Dynamic UI Controls</h4>
+							<p class="text-sm text-muted-foreground">
+								Interface elements automatically show/hide based on user permissions,
+								ensuring a clean and relevant experience.
+							</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+							<Eye class="w-5 h-5 text-primary" />
+						</div>
+						<div>
+							<h4 class="font-semibold mb-2">Context-Aware Access</h4>
+							<p class="text-sm text-muted-foreground">
+								Task assignees can move their tasks regardless of team role,
+								allowing flexible workflow management.
+							</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+							<Shield class="w-5 h-5 text-primary" />
+						</div>
+						<div>
+							<h4 class="font-semibold mb-2">Server-Side Security</h4>
+							<p class="text-sm text-muted-foreground">
+								All permissions are enforced at the server level,
+								ensuring data security and preventing unauthorized access.
+							</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+							<Users class="w-5 h-5 text-primary" />
+						</div>
+						<div>
+							<h4 class="font-semibold mb-2">Granular Team Control</h4>
+							<p class="text-sm text-muted-foreground">
+								Precise control over who can create, edit, delete, and manage
+								projects and tasks within your team.
+							</p>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

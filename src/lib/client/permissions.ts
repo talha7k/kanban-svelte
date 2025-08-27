@@ -131,6 +131,24 @@ export class ClientPermissionChecker {
   }
 
   /**
+   * Check if user can move a specific task (managers/owners or task assignee)
+   */
+  canMoveTask(task?: { assigneeId?: string }): boolean {
+    if (!this.userId || !this.project) return false;
+    
+    // If user is assigned to the task, they can move it
+    if (task?.assigneeId === this.userId) return true;
+    
+    // Otherwise, check if they have task management permissions
+    const userTeamRole = this.team ? getUserTeamRole(this.userId, this.team) : undefined;
+    const userProjectRole = getUserProjectRole(this.userId, this.project);
+    const isProjectOwner = this.project.ownerId === this.userId;
+    
+    const permissions = getProjectPermissions(userProjectRole, userTeamRole, isProjectOwner);
+    return permissions.canManageTasks;
+  }
+
+  /**
    * Check if user can manage team settings
    */
   canManageTeam(): boolean {
