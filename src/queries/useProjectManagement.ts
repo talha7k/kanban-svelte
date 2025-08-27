@@ -67,9 +67,9 @@ export function useProjectManagement(currentUserId?: string) {
     }
   });
 
-  const deleteProjectMutation = createMutation<void, Error, string>({
-    mutationFn: (projectId) => deleteProject(projectId),
-    onSuccess: (_, projectId) => {
+  const deleteProjectMutation = createMutation<void, Error, { projectId: string; teamId?: string }>({
+    mutationFn: ({ projectId }) => deleteProject(projectId),
+    onSuccess: (_, { projectId, teamId }) => {
       const project = get(projectToView);
       if (project) {
         toast.success(`Project "${project.name}" has been deleted.`);
@@ -79,6 +79,10 @@ export function useProjectManagement(currentUserId?: string) {
       projectToDeleteId.set(null);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.removeQueries({ queryKey: ['project', projectId] });
+      // Also invalidate team projects cache if project belongs to a team
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: ['teamProjects', teamId] });
+      }
     },
     onError: (error) => {
       console.error('Error deleting project:', error);
@@ -138,8 +142,8 @@ export function useProjectManagement(currentUserId?: string) {
     get(updateProjectMutation).mutate({ projectId, projectData });
   };
 
-  const handleDeleteProject = async (projectId: string) => {
-    get(deleteProjectMutation).mutate(projectId);
+  const handleDeleteProject = async (projectId: string, teamId?: string) => {
+    get(deleteProjectMutation).mutate({ projectId, teamId });
   };
 
   const handleAddUserToProject = async (projectId: string, userId: string) => {

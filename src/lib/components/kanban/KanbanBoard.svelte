@@ -14,6 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import TaskCard from './TaskCard.svelte';
 	import KanbanColumn from './KanbanColumn.svelte';
+	import DeleteTaskDialog from './DeleteTaskDialog.svelte';
 
 	export let project: Project;
 	export let users: UserProfile[] = [];
@@ -510,6 +511,15 @@
 			isViewDialogOpen = open;
 			if (!open) taskToView = null;
 		}}
+	/>
+
+	<!-- Delete Task Confirmation Dialog -->
+	<DeleteTaskDialog
+		bind:isOpen={isDeleteDialogOpen}
+		task={taskToDelete}
+		isDeleting={isDeletingTask}
+		onConfirm={confirmDeleteTask}
+		onCancel={cancelDeleteTask}
 	/>
 
 

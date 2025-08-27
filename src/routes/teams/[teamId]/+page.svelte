@@ -118,7 +118,7 @@
 	async function deleteProject() {
 		if (!selectedProject) return;
 
-		await handleDeleteProject(selectedProject.id);
+		await handleDeleteProject(selectedProject.id, selectedProject.teamId || $selectedTeamId || undefined);
 
 		selectedProject = null;
 		isDeleteProjectDialogOpen = false;

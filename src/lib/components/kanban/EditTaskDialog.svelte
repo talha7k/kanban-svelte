@@ -15,6 +15,7 @@
 	import type { TaskFormData } from '$lib/types/types';
 	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
 	import { Loader2 } from '@lucide/svelte';
+	import DeleteTaskDialog from './DeleteTaskDialog.svelte';
 
 	const taskFormSchema = z.object({
 		title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less.'),
@@ -184,29 +185,13 @@
 	</Dialog>
 
 	<!-- Delete Task Confirmation Dialog -->
-	<Dialog bind:open={isDeleteDialogOpen}>
-		<DialogContent class="sm:max-w-[425px]">
-			<DialogHeader>
-				<DialogTitle>Delete Task</DialogTitle>
-				<DialogDescription>
-					Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
-				</DialogDescription>
-			</DialogHeader>
-			<DialogFooter>
-				<Button variant="outline" onclick={cancelDeleteTask} disabled={isDeletingTask}>
-					Cancel
-				</Button>
-				<Button variant="destructive" onclick={confirmDeleteTask} disabled={isDeletingTask}>
-					{#if isDeletingTask}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						Deleting...
-					{:else}
-						Delete Task
-					{/if}
-				</Button>
-			</DialogFooter>
-		</DialogContent>
-	</Dialog>
+	<DeleteTaskDialog
+		bind:isOpen={isDeleteDialogOpen}
+		task={taskToDelete}
+		isDeleting={isDeletingTask}
+		onConfirm={confirmDeleteTask}
+		onCancel={cancelDeleteTask}
+	/>
 {/if}
 
     
