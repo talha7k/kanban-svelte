@@ -3,11 +3,11 @@ import { db } from '$lib/server/firebase';
 
 export async function DELETE({ request }: { request: Request }) {
   try {
-    const { projectId, taskId } = await request.json();
+    const { projectId, taskId, currentUserUid } = await request.json();
 
-    if (!projectId || !taskId) {
+    if (!projectId || !taskId || !currentUserUid) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId' },
+        { error: 'Missing required parameters: projectId, taskId, currentUserUid' },
         { status: 400 }
       );
     }
@@ -30,6 +30,15 @@ export async function DELETE({ request }: { request: Request }) {
     }
 
     const project = projectDoc.data();
+    
+    // Check if the current user is the project owner (only project managers can delete tasks)
+    if (project?.ownerId !== currentUserUid) {
+      return json(
+        { error: 'Only the project owner can delete tasks' },
+        { status: 403 }
+      );
+    }
+
     const tasks = project?.tasks || [];
     const taskIndex = tasks.findIndex((t: any) => t.id === taskId);
     

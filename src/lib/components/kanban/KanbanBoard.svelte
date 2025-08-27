@@ -149,6 +149,12 @@
 	async function confirmDeleteTask() {
 		if (!taskToDelete) return;
 
+		const userId = get(currentUser)?.uid;
+		if (!userId) {
+			toast.error('You must be logged in to delete tasks');
+			return;
+		}
+
 		isDeletingTask = true;
 		try {
 			const response = await fetch('/api/delete-task', {
@@ -158,7 +164,8 @@
 				},
 				body: JSON.stringify({
 					projectId: project.id,
-					taskId: taskToDelete.id
+					taskId: taskToDelete.id,
+					currentUserUid: userId
 				})
 			});
 
@@ -378,15 +385,21 @@
 
 	<!-- Edit Task Dialog -->
 	<EditTaskDialog
-		bind:isOpen={isEditDialogOpen}
-		taskToEdit={taskToEdit}
-		assignableUsers={users}
-		onEditTask={handleUpdateTask}
-		onOpenChange={(open) => {
-			isEditDialogOpen = open;
-			if (!open) taskToEdit = null;
-		}}
-	/>
+			bind:isOpen={isEditDialogOpen}
+			taskToEdit={taskToEdit}
+			assignableUsers={users}
+			onEditTask={handleUpdateTask}
+			onOpenChange={(open) => {
+				isEditDialogOpen = open;
+				if (!open) taskToEdit = null;
+			}}
+			bind:isDeleteDialogOpen={isDeleteDialogOpen}
+			bind:taskToDelete={taskToDelete}
+			bind:isDeletingTask={isDeletingTask}
+			{confirmDeleteTask}
+			{cancelDeleteTask}
+			onDeleteTask={handleDeleteTask}
+		/>
 
 	<!-- View Task Dialog -->
 	<ViewTaskDialog
@@ -404,30 +417,7 @@
 		}}
 	/>
 
-	<!-- Delete Task Confirmation Dialog -->
-	<Dialog bind:open={isDeleteDialogOpen}>
-		<DialogContent class="sm:max-w-[425px]">
-			<DialogHeader>
-				<DialogTitle>Delete Task</DialogTitle>
-				<DialogDescription>
-					Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
-				</DialogDescription>
-			</DialogHeader>
-			<DialogFooter>
-				<Button variant="outline" onclick={cancelDeleteTask} disabled={isDeletingTask}>
-					Cancel
-				</Button>
-				<Button variant="destructive" onclick={confirmDeleteTask} disabled={isDeletingTask}>
-					{#if isDeletingTask}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						Deleting...
-					{:else}
-						Delete Task
-					{/if}
-				</Button>
-			</DialogFooter>
-		</DialogContent>
-	</Dialog>
+
 </div>
 
 <style>

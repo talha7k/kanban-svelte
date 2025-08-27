@@ -37,6 +37,7 @@
 	export let isDeletingTask: boolean;
 	export let confirmDeleteTask: () => Promise<void>;
 	export let cancelDeleteTask: () => void;
+	export let onDeleteTask: (taskId: string) => void;
 
 	let formData: TaskFormData = {
 		title: '',
@@ -132,6 +133,12 @@
 		formData = { ...formData, [field]: value };
 	}
 
+	function handleDeleteTask() {
+		if (taskToEdit) {
+			onDeleteTask(taskToEdit.id);
+		}
+	}
+
 
 </script>
 
@@ -153,14 +160,19 @@
 					isEditing={true}
 				/>
 				
-				<DialogFooter class="mt-4">
-					<Button type="button" variant="outline" onclick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-					<Button type="submit" disabled={isSubmitting}>
-						{#if isSubmitting}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						{/if}
-						Save Changes
+				<DialogFooter class="mt-4 flex justify-between">
+					<Button type="button" variant="destructive" onclick={handleDeleteTask} disabled={isSubmitting}>
+						Delete Task
 					</Button>
+					<div class="flex gap-2">
+						<Button type="button" variant="outline" onclick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+						<Button type="submit" disabled={isSubmitting}>
+							{#if isSubmitting}
+								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							{/if}
+							Save Changes
+						</Button>
+					</div>
 				</DialogFooter>
 			</form>
 		</DialogContent>
