@@ -16,14 +16,21 @@
 	import { useProject } from '$queries/useProjectManagement';
 	import { useQueryClient } from '@tanstack/svelte-query';
 
+	// Server-loaded data
+	interface PageData {
+		project: Project;
+	}
+	
+	let { data }: { data: PageData } = $props();
+
 	// Get projectId from page params
 	const queryClient = useQueryClient();
 
 	// Use TanStack Query for project data
 	const projectQuery = useProject($page.params.projectId);
 	
-	// Reactive state variables
-	let project: Project | null = $derived($projectQuery.data || null);
+	// Reactive state variables - use client data if available, fallback to server data
+	let project: Project | null = $derived($projectQuery.data || data.project || null);
 	let users: UserProfile[] = $state([]);
 	let projectCreator: UserProfile | null = $state(null);
 	let isLoadingUsers = $state(true);
