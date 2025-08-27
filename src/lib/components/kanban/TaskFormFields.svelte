@@ -31,7 +31,8 @@
 	function handleAIDetailsGenerated(details: { title: string; description: string }) {
 		updateFormData('title', details.title);
 		updateFormData('description', details.description);
-		// Don't auto-close the dialog, let user review and close manually
+		// Close the AI dialog after applying the generated details
+		isAiDialogOpen = false;
 	}
 
 
@@ -58,7 +59,7 @@
 			<Label for="title">Title</Label>
 			<Dialog bind:open={isAiDialogOpen}>
 				<DialogTrigger>
-					<Button variant="outline" size="sm" class="ml-2">
+					<Button type="button" variant="outline" size="sm" class="ml-2">
 						Generate with AI
 					</Button>
 				</DialogTrigger>
