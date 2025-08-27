@@ -135,7 +135,7 @@
 				id="dueDate"
 				type="date"
 				bind:value={formData.dueDate}
-				class="w-full"
+				class="w-full [&::-webkit-calendar-picker-indicator]:ml-auto"
 			/>
 			{#if formErrors.dueDate}
 				<p class="text-xs text-destructive">{formErrors.dueDate}</p>
@@ -144,40 +144,16 @@
 	</div>
 	<div class="space-y-1">
 		<Label>Assignees</Label>
-		<Popover>
-			<PopoverTrigger>
-				<Button variant="outline" role="combobox" class="w-full justify-between">
-					{selectedAssignees.length > 0
-						? assignableUsers.filter(user => selectedAssignees.includes(user.id)).map(user => user.name).join(', ')
-						: "Select assignees..."}
-					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent class="w-[--radix-popover-trigger-width] p-0" style="z-index: 9999;">
-				<Command.Root>
-					<Command.Input placeholder="Search users..." />
-					<Command.List>
-						<Command.Empty>No users found in this project.</Command.Empty>
-						<Command.Group>
-							{#each assignableUsers as user (user.id)}
-								<Command.Item
-									value={user.name}
-									onSelect={() => toggleAssignee(user.id)}
-								>
-									<Check
-										class={cn(
-											"mr-2 h-4 w-4",
-											selectedAssignees.includes(user.id) ? "opacity-100" : "opacity-0"
-										)}
-									/>
-									{user.name}
-								</Command.Item>
-							{/each}
-						</Command.Group>
-					</Command.List>
-				</Command.Root>
-			</PopoverContent>
-		</Popover>
+		<UserSelectionCombobox
+			selectedUsers={assignableUsers.filter(user => selectedAssignees.includes(user.id))}
+			users={assignableUsers}
+			placeholder="Select assignees..."
+			emptyText="No users found in this project."
+			multiSelect={true}
+			showSubmitButton={false}
+			showAvatars={false}
+			onToggleUser={(user) => toggleAssignee(user.id)}
+		/>
 		{#if formErrors.assigneeUids}
 			<p class="text-xs text-destructive">{formErrors.assigneeUids}</p>
 		{/if}
@@ -193,7 +169,7 @@
 					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent class="w-[--radix-popover-trigger-width] p-0" style="z-index: 9999;">
+			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
 				<Command.Root>
 					<Command.Input placeholder="Search tasks..." />
 					<Command.List>

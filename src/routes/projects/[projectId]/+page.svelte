@@ -17,11 +17,10 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 
 	// Get projectId from page params
-	let projectId = $derived($page.params.projectId);
 	const queryClient = useQueryClient();
 
 	// Use TanStack Query for project data
-	const projectQuery = useProject(projectId);
+	const projectQuery = useProject($page.params.projectId);
 	
 	// Reactive state variables
 	let project: Project | null = $derived($projectQuery.data || null);
@@ -38,11 +37,11 @@
 
 	// Fetch users when project loads
 	async function fetchUsers() {
-		if (!projectId || !$currentUser) return;
+		if (!$page.params.projectId || !$currentUser) return;
 		
 		isLoadingUsers = true;
 		try {
-			const fetchedUsers = await getProjectRelevantUsers(projectId);
+			const fetchedUsers = await getProjectRelevantUsers($page.params.projectId);
 			users = fetchedUsers;
 			
 			if (project?.ownerId) {
@@ -59,8 +58,8 @@
 		}
 	}
 
-	function openDeleteProjectDialog(projectToDelete: Project) {
-		projectToDelete = projectToDelete;
+	function openDeleteProjectDialog(project: Project) {
+		projectToDelete = project;
 	}
 
 	async function handleDeleteProject() {
@@ -224,7 +223,7 @@
 	// Refresh function to reload project data
 	async function handleRefresh() {
 		try {
-			await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+			await queryClient.invalidateQueries({ queryKey: ['project', project?.id] });
 			toast.success('Project refreshed successfully');
 		} catch (error) {
 			console.error('Error refreshing project:', error);

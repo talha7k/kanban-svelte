@@ -97,6 +97,8 @@
 		
 		try {
 			await onEditTask(taskToEdit.id, formData);
+			// Close dialog after successful submission
+			onOpenChange(false);
 		} catch (error) {
 			console.error('Error submitting task edit:', error);
 		}
