@@ -27,6 +27,7 @@
 	// Edit dialog state
 	let isEditDialogOpen = false;
 	let taskToEdit: Task | null = null;
+	let isSubmittingTaskEdit = false;
 
 	// View dialog state
 	let isViewDialogOpen = false;
@@ -365,6 +366,7 @@
 		const userId = get(currentUser)?.uid;
 		if (!userId) return;
 
+		isSubmittingTaskEdit = true;
 		try {
 			// Optimistically update the UI first
 			tasksStore.update(tasks => 
@@ -396,6 +398,8 @@
 			toast.error('Failed to update task');
 			// Revert optimistic update on error
 			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+		} finally {
+			isSubmittingTaskEdit = false;
 		}
 	}
 </script>
@@ -488,6 +492,7 @@
 				isEditDialogOpen = open;
 				if (!open) taskToEdit = null;
 			}}
+			isSubmitting={isSubmittingTaskEdit}
 			bind:isDeleteDialogOpen={isDeleteDialogOpen}
 			bind:taskToDelete={taskToDelete}
 			bind:isDeletingTask={isDeletingTask}

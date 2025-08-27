@@ -61,7 +61,7 @@
 
 <div class="space-y-3 my-4">
 	{#if !generatedDetails}
-		<Button onclick={handleGenerateDetails} disabled={isLoading} variant="outline" size="sm">
+		<Button type="button" onclick={handleGenerateDetails} disabled={isLoading} variant="outline" size="sm">
 			<Wand2 class="mr-2 h-4 w-4" />
 			{isLoading ? 'Generating Details...' : 'Generate Task Details with AI'}
 		</Button>
@@ -85,6 +85,7 @@
 				<strong>Description:</strong> {generatedDetails.description}
 				<div class="flex gap-2 mt-3">
 					<Button 
+						type="button"
 						size="sm" 
 						variant="default"
 						onclick={() => {
@@ -97,6 +98,7 @@
 						Approve & Apply
 					</Button>
 					<Button 
+						type="button"
 						size="sm" 
 						variant="outline"
 						onclick={() => {
@@ -109,6 +111,7 @@
 						Cancel
 					</Button>
 					<Button 
+						type="button"
 						size="sm" 
 						variant="ghost"
 						onclick={handleGenerateDetails}

@@ -103,6 +103,9 @@
 		event.preventDefault();
 		if (!taskToEdit) return;
 		
+		// Prevent submission during form initialization
+		if (!isFormInitialized) return;
+		
 		if (!validateForm()) return;
 		
 		try {

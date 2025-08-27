@@ -57,7 +57,7 @@
 	<div class="space-y-1">
 		<div class="flex justify-between items-center">
 			<Label for="title">Title</Label>
-			<Dialog bind:open={isAiDialogOpen}>
+			<Dialog bind:open={isAiDialogOpen} onOpenChange={(open) => { isAiDialogOpen = open; }}>
 				<DialogTrigger>
 					<Button type="button" variant="outline" size="sm" class="ml-2">
 						Generate with AI
@@ -71,10 +71,15 @@
 						<div class="space-y-1">
 							<Label for="ai-brief">Brief Input</Label>
 							<Textarea
-								id="ai-brief"
-								bind:value={aiBrief}
-								placeholder="e.g., Create a new user authentication module with OAuth2 support."
-							/>
+							id="ai-brief"
+							bind:value={aiBrief}
+							placeholder="e.g., Create a new user authentication module with OAuth2 support."
+							on:keydown={(e: KeyboardEvent) => {
+								if (e.key === 'Enter' && !e.shiftKey) {
+									e.preventDefault();
+								}
+							}}
+						/>
 						</div>
 						<AITaskDetailGenerator 
 							briefInput={aiBrief} 
@@ -82,8 +87,8 @@
 						/>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onclick={() => isAiDialogOpen = false}>Cancel</Button>
-					</DialogFooter>
+				<Button type="button" variant="outline" onclick={() => isAiDialogOpen = false}>Cancel</Button>
+			</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</div>
