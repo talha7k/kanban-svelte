@@ -5,6 +5,41 @@ export type ColumnId = string;
 export type TeamId = string;
 
 export type UserProjectRole = "manager" | "member";
+export type UserTeamRole = "owner" | "manager" | "member";
+
+// Permission levels for different operations
+export type PermissionLevel = "owner" | "manager" | "member";
+
+// Specific permissions for different actions
+export interface TeamPermissions {
+  canCreateProject: boolean;
+  canManageTeam: boolean;
+  canInviteMembers: boolean;
+  canRemoveMembers: boolean;
+  canDeleteTeam: boolean;
+  canViewTeam: boolean;
+}
+
+export interface ProjectPermissions {
+  canViewProject: boolean;
+  canEditProject: boolean;
+  canDeleteProject: boolean;
+  canManageTasks: boolean;
+  canCreateTasks: boolean;
+  canAssignTasks: boolean;
+  canManageMembers: boolean;
+}
+
+// Authorization context for checking permissions
+export interface AuthorizationContext {
+  userId: UserId;
+  teamId?: TeamId;
+  projectId?: ProjectId;
+  userTeamRole?: UserTeamRole;
+  userProjectRole?: UserProjectRole;
+  isTeamOwner?: boolean;
+  isProjectOwner?: boolean;
+}
 
 export interface TaskFormData {
   title: string;
@@ -52,6 +87,7 @@ export interface Team {
   description?: string;
   ownerId: UserId;
   memberIds: UserId[];
+  memberRoles?: { [key: UserId]: UserTeamRole }; // Team-specific roles for members
   members?: UserProfile[]; // Optional: populated when fetching team details with member profiles
   createdAt: string;
   updatedAt: string;

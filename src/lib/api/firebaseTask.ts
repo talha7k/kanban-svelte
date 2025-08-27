@@ -1,7 +1,9 @@
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { auth, db } from '$lib/firebase';
-import type { Task, NewTaskData, ColumnId, ProjectDocument, Comment, NewCommentData, TaskId } from '$lib/types/types';
+import type { Task, NewTaskData, ColumnId, ProjectDocument, Comment, NewCommentData, TaskId, UserId, Project, Team } from '$lib/types/types';
 import { v4 as uuidv4 } from 'uuid';
+import { guardTaskManagement } from '$lib/auth/permissions';
+import { getTeam } from '$lib/api/firebaseTeam';
 
 // Task Functions
 export const addTaskToProject = async (projectId: string, taskData: NewTaskData, columnId: ColumnId, currentUserUid?: string): Promise<Task> => {
@@ -24,7 +26,19 @@ export const addTaskToProject = async (projectId: string, taskData: NewTaskData,
     const projectDoc = await getDoc(projectRef);
     if (!projectDoc.exists()) throw new Error('Project not found');
 
-    const project = projectDoc.data() as ProjectDocument;
+    const project = projectDoc.data() as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId) || undefined;
+    }
+    
+    try {
+      guardTaskManagement(userUid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
     const newTaskId = uuidv4();
 
     const newTask: Task = {
@@ -73,7 +87,19 @@ export const updateTaskInProject = async (projectId: string, taskId: string, tas
     const projectDoc = await getDoc(projectRef);
     if (!projectDoc.exists()) throw new Error('Project not found');
 
-    const project = projectDoc.data() as ProjectDocument;
+    const project = projectDoc.data() as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId) || undefined;
+    }
+    
+    try {
+      guardTaskManagement(currentUser.uid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
     const taskIndex = project.tasks.findIndex(t => t.id === taskId);
     if (taskIndex === -1) throw new Error('Task not found');
 
@@ -139,7 +165,19 @@ export const deleteTaskFromProject = async (projectId: string, taskId: string): 
     const projectDoc = await getDoc(projectRef);
     if (!projectDoc.exists()) throw new Error('Project not found');
 
-    const project = projectDoc.data() as ProjectDocument;
+    const project = projectDoc.data() as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId) || undefined;
+    }
+    
+    try {
+      guardTaskManagement(currentUser.uid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
     const updatedTasks = project.tasks.filter(t => t.id !== taskId);
 
     await updateDoc(projectRef, {
@@ -171,7 +209,19 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
     const projectDoc = await getDoc(projectRef);
     if (!projectDoc.exists()) throw new Error('Project not found');
 
-    const project = projectDoc.data() as ProjectDocument;
+    const project = projectDoc.data() as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId) || undefined;
+    }
+    
+    try {
+      guardTaskManagement(currentUser.uid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
     const taskToMoveIndex = project.tasks.findIndex(t => t.id === taskId);
     if (taskToMoveIndex === -1) throw new Error('Task not found');
 

@@ -20,8 +20,11 @@ import type {
   UserId,
   UserProjectRole,
   TeamId,
+  Team,
 } from "$lib/types/types";
 import { v4 as uuidv4 } from "uuid";
+import { guardProjectCreation } from "$lib/auth/permissions";
+import { getTeam } from "$lib/api/firebaseTeam";
 
 
 
@@ -35,14 +38,28 @@ export const createProject = async (
     throw new Error("Firebase auth not initialized");
   }
   const user = auth.currentUser;
-  if (!user || user.uid !== ownerId) {
-    throw new Error(
-      "User must be authenticated and match ownerId to create projects."
-    );
+  if (!user) {
+    throw new Error("User must be authenticated to create projects.");
   }
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
+
+  // If teamId is provided, check team permissions
+  if (teamId) {
+    const team = await getTeam(teamId);
+    if (!team) {
+      throw new Error("Team not found.");
+    }
+
+    // Use RBAC guard to check project creation permissions
+     try {
+       guardProjectCreation(user.uid as UserId, team);
+     } catch (error) {
+       throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot create project in this team'}`);
+     }
+  }
+
   try {
     const newProjectId = uuidv4();
     const defaultColumns: Column[] = [
@@ -52,12 +69,12 @@ export const createProject = async (
     ];
     const newProjectDoc = {
       ...projectData,
-      ownerId,
+      ownerId: user.uid, // Use authenticated user's ID
       teamId: teamId || null, // Ensure teamId is string or null
       columns: defaultColumns,
       tasks: [],
-      memberIds: [ownerId],
-      memberRoles: { [ownerId]: "manager" },
+      memberIds: [user.uid],
+      memberRoles: { [user.uid]: "manager" as UserProjectRole },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

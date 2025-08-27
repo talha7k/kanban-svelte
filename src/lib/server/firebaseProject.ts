@@ -1,22 +1,38 @@
 import { db } from '$lib/server/firebase';
-import type { Project } from '$lib/types/types';
+import type { Project, UserId, Team } from '$lib/types/types';
 import { v4 as uuidv4 } from 'uuid';
+import { guardTaskManagement } from '$lib/auth/permissions';
 
 // Server-side Project Functions using Firebase Admin
 
 export const getProjectByIdServer = async (projectId: string): Promise<Project | null> => {
-  if (!db) {
-    throw new Error("Firebase Firestore not initialized");
-  }
+  console.log('getProjectByIdServer called with:', projectId);
+  
+  const firestore = db(); // This will call the getter function and throw if not initialized
+  
   try {
-    const projectRef = db.collection('projects').doc(projectId);
+    console.log('Creating Firestore reference for project:', projectId);
+    const projectRef = firestore.collection('projects').doc(projectId);
+    
+    console.log('Fetching project document...');
     const projectSnap = await projectRef.get();
+    
+    console.log('Project document exists:', projectSnap.exists);
+    
     if (projectSnap.exists) {
-      return { id: projectSnap.id, ...projectSnap.data() } as Project;
+      const projectData = { id: projectSnap.id, ...projectSnap.data() } as Project;
+      console.log('Project data retrieved successfully:', projectData.id);
+      return projectData;
     }
+    
+    console.log('Project not found:', projectId);
     return null;
   } catch (error) {
     console.error("Error fetching project by ID:", error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };
@@ -27,16 +43,33 @@ export const addTaskToProjectServer = async (
   columnId: string, 
   currentUserUid: string
 ): Promise<any> => {
-  if (!db) {
-    throw new Error("Firebase Firestore not initialized");
-  }
+  const firestore = db(); // This will call the getter function and throw if not initialized
   
-  const projectRef = db.collection('projects').doc(projectId);
+  const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
     if (!projectDoc.exists) throw new Error('Project not found');
 
-    const project = projectDoc.data();
+    const project = { id: projectDoc.id, ...projectDoc.data() } as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      // For server-side, we need to fetch team data from Firestore
+      const teamRef = firestore.collection('teams').doc(project.teamId);
+      const teamDoc = await teamRef.get();
+      if (teamDoc.exists) {
+        team = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      }
+    }
+    
+    try {
+      guardTaskManagement(currentUserUid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
+    
+    const projectData = projectDoc.data();
     const newTaskId = uuidv4();
 
     const newTask = {
@@ -76,18 +109,35 @@ export const moveTaskInProjectServer = async (
   newOrder: number,
   currentUserUid: string
 ): Promise<void> => {
-  if (!db) {
-    throw new Error("Firebase Firestore not initialized");
-  }
+  const firestore = db(); // This will call the getter function and throw if not initialized
   
-  const projectRef = db.collection('projects').doc(projectId);
+  const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
     if (!projectDoc.exists) {
       throw new Error('Project not found');
     }
 
-    const project = projectDoc.data();
+    const project = { id: projectDoc.id, ...projectDoc.data() } as Project;
+    
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      // For server-side, we need to fetch team data from Firestore
+      const teamRef = firestore.collection('teams').doc(project.teamId);
+      const teamDoc = await teamRef.get();
+      if (teamDoc.exists) {
+        team = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      }
+    }
+    
+    try {
+      guardTaskManagement(currentUserUid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
+    
+    const projectData = projectDoc.data();
     let tasks = [...(project?.tasks || [])];
     
     const taskToMoveIndex = tasks.findIndex((t: any) => t.id === taskId);
