@@ -1,25 +1,30 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/firebase';
+import { requireAuth } from '$lib/server/auth';
 
 export async function PUT({ request }: { request: Request }) {
 	try {
-		const { projectId, taskId, commentId, newContent, currentUserUid } = await request.json();
+		// Authenticate user from request headers
+		const userId = await requireAuth({ request } as any);
+		
+		const { projectId, taskId, commentId, newContent } = await request.json();
 
-		if (!projectId || !taskId || !commentId || !newContent || !currentUserUid) {
+		if (!projectId || !taskId || !commentId || !newContent) {
 			return json(
-				{ error: 'Missing required parameters: projectId, taskId, commentId, newContent, currentUserUid' },
+				{ error: 'Missing required parameters: projectId, taskId, commentId, newContent' },
 				{ status: 400 }
 			);
 		}
 
-		if (!db) {
+		const firestore = db();
+		if (!firestore) {
 			return json(
 				{ error: 'Firebase Firestore not initialized' },
 				{ status: 500 }
 			);
 		}
 
-		const projectRef = db.collection('projects').doc(projectId);
+		const projectRef = firestore.collection('projects').doc(projectId);
 		const projectDoc = await projectRef.get();
 		
 		if (!projectDoc.exists) {
@@ -54,7 +59,7 @@ export async function PUT({ request }: { request: Request }) {
 		const comment = comments[commentIndex];
 		
 		// Check if user owns the comment
-		if (comment.userId !== currentUserUid) {
+		if (comment.userId !== userId) {
 			return json(
 				{ error: 'You can only edit your own comments' },
 				{ status: 403 }

@@ -1,19 +1,23 @@
 import { json } from '@sveltejs/kit';
 import { addApprovedTasksAction } from '$lib/server/actions/project.js';
+import { requireAuth } from '$lib/server/auth';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { projectId, tasks, currentUserUid } = await request.json();
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
+    
+    const { projectId, tasks } = await request.json();
 
-    if (!projectId || !tasks || !currentUserUid) {
+    if (!projectId || !tasks) {
       return json(
-        { error: 'Missing required parameters: projectId, tasks, or currentUserUid' },
+        { error: 'Missing required parameters: projectId or tasks' },
         { status: 400 }
       );
     }
 
-    const result = await addApprovedTasksAction(projectId, tasks, currentUserUid);
+    const result = await addApprovedTasksAction(projectId, tasks, userId);
     
     if (!result.success) {
       return json(

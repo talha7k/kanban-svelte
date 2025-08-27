@@ -1,19 +1,23 @@
 import { json } from '@sveltejs/kit';
 import { generateTasksAction } from '$lib/server/actions/project.js';
+import { requireAuth } from '$lib/server/auth';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { projectId, brief, currentUserUid, taskCount } = await request.json();
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
+    
+    const { projectId, brief, taskCount } = await request.json();
 
-    if (!projectId || !brief || !currentUserUid) {
+    if (!projectId || !brief) {
       return json(
-        { error: 'Missing required parameters: projectId, brief, or currentUserUid' },
+        { error: 'Missing required parameters: projectId or brief' },
         { status: 400 }
       );
     }
 
-    const tasks = await generateTasksAction(projectId, brief, currentUserUid, taskCount);
+    const tasks = await generateTasksAction(projectId, brief, userId, taskCount);
     
     return json({ tasks });
   } catch (error) {

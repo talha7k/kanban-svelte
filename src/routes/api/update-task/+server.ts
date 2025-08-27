@@ -1,25 +1,30 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/firebase';
+import { requireAuth } from '$lib/server/auth';
 
 export async function POST({ request }: { request: Request }) {
   try {
-    const { projectId, taskId, updatedFields, currentUserUid } = await request.json();
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
+    
+    const { projectId, taskId, updatedFields } = await request.json();
 
-    if (!projectId || !taskId || !updatedFields || !currentUserUid) {
+    if (!projectId || !taskId || !updatedFields) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId, updatedFields, currentUserUid' },
+        { error: 'Missing required parameters: projectId, taskId, updatedFields' },
         { status: 400 }
       );
     }
 
-    if (!db) {
+    const firestore = db();
+    if (!firestore) {
       return json(
         { error: 'Firebase Firestore not initialized' },
         { status: 500 }
       );
     }
 
-    const projectRef = db.collection('projects').doc(projectId);
+    const projectRef = firestore.collection('projects').doc(projectId);
     const projectDoc = await projectRef.get();
     
     if (!projectDoc.exists) {

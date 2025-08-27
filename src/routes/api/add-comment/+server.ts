@@ -1,14 +1,18 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/firebase';
+import { requireAuth } from '$lib/server/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST({ request }: { request: Request }) {
   try {
-    const { projectId, taskId, commentText, currentUserUid } = await request.json();
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
+    
+    const { projectId, taskId, commentText } = await request.json();
 
-    if (!projectId || !taskId || !commentText || !currentUserUid) {
+    if (!projectId || !taskId || !commentText) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId, commentText, currentUserUid' },
+        { error: 'Missing required parameters: projectId, taskId, commentText' },
         { status: 400 }
       );
     }
@@ -20,7 +24,8 @@ export async function POST({ request }: { request: Request }) {
       );
     }
 
-    const projectRef = db.collection('projects').doc(projectId);
+    const firestore = db();
+    const projectRef = firestore.collection('projects').doc(projectId);
     const projectDoc = await projectRef.get();
     
     if (!projectDoc.exists) {
@@ -44,7 +49,7 @@ export async function POST({ request }: { request: Request }) {
     const existingTask = tasks[taskIndex];
     
     // Get user profile for comment metadata
-    const userRef = db.collection('users').doc(currentUserUid);
+    const userRef = firestore.collection('users').doc(userId);
     const userDoc = await userRef.get();
     const userData = userDoc.data();
     
@@ -52,7 +57,7 @@ export async function POST({ request }: { request: Request }) {
     const newComment = {
       id: uuidv4(),
       content: commentText,
-      userId: currentUserUid,
+      userId: userId,
       userName: userData?.name || 'Unknown User',
       avatarUrl: userData?.avatarUrl,
       createdAt: new Date().toISOString()
