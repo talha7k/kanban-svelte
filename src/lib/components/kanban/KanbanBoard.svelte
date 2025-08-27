@@ -251,6 +251,99 @@
 		}
 	}
 
+	async function handleEditComment(taskId: string, commentId: string, newContent: string) {
+		const userId = get(currentUser)?.uid;
+		if (!userId) {
+			toast.error('You must be logged in to edit comments');
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/edit-comment', {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					taskId,
+					commentId,
+					newContent,
+					currentUserUid: userId
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to edit comment');
+			}
+
+			// Update the task in the store with the edited comment
+			const responseData = await response.json();
+			const updatedTask = responseData.task;
+			tasksStore.update(tasks => 
+				tasks.map(task => 
+					task.id === taskId ? updatedTask : task
+				)
+			);
+
+			// Update taskToView if it's the same task
+			if (taskToView?.id === taskId) {
+				taskToView = updatedTask;
+			}
+			toast.success('Comment updated successfully');
+		} catch (error) {
+			console.error('Error editing comment:', error);
+			toast.error('Failed to edit comment');
+			throw error;
+		}
+	}
+
+	async function handleDeleteComment(taskId: string, commentId: string) {
+		const userId = get(currentUser)?.uid;
+		if (!userId) {
+			toast.error('You must be logged in to delete comments');
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/delete-comment', {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					taskId,
+					commentId,
+					currentUserUid: userId
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to delete comment');
+			}
+
+			// Update the task in the store with the comment removed
+			const responseData = await response.json();
+			const updatedTask = responseData.task;
+			tasksStore.update(tasks => 
+				tasks.map(task => 
+					task.id === taskId ? updatedTask : task
+				)
+			);
+
+			// Update taskToView if it's the same task
+			if (taskToView?.id === taskId) {
+				taskToView = updatedTask;
+			}
+			toast.success('Comment deleted successfully');
+		} catch (error) {
+			console.error('Error deleting comment:', error);
+			toast.error('Failed to delete comment');
+			throw error;
+		}
+	}
+
 	async function handleMoveToNextColumn(task: Task) {
 		const currentColumnIndex = project.columns.findIndex(col => col.id === task.columnId);
 		if (currentColumnIndex < project.columns.length - 1) {
@@ -388,6 +481,7 @@
 			bind:isOpen={isEditDialogOpen}
 			taskToEdit={taskToEdit}
 			assignableUsers={users}
+			canManageTask={$currentUser?.uid === project.ownerId}
 			onEditTask={handleUpdateTask}
 			onOpenChange={(open) => {
 				isEditDialogOpen = open;
@@ -408,8 +502,9 @@
 		{users}
 		canManageTask={$currentUser?.uid === project.ownerId}
 		onAddComment={handleAddComment}
-		onEditTask={handleEditTask}
-		onDeleteTask={handleDeleteTask}
+		onEditComment={handleEditComment}
+		onDeleteComment={handleDeleteComment}
+		currentUserId={$currentUser?.uid}
 		{isSubmittingComment}
 		onOpenChange={(open) => {
 			isViewDialogOpen = open;

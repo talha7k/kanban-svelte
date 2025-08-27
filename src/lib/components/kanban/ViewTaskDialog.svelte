@@ -13,7 +13,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
-	import { CalendarDays, User, Tag, Users, MessageSquare, Edit2, Trash2, Info, Loader2, Clock } from '@lucide/svelte';
+	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock } from '@lucide/svelte';
 	import { format, parseISO, isValid, differenceInDays, isToday, isPast } from 'date-fns';
 	import CommentItem from './CommentItem.svelte';
 	import { onMount } from 'svelte';
@@ -29,8 +29,10 @@
 	export let users: UserProfile[];
 	export let canManageTask: boolean;
 	export let onAddComment: (taskId: string, commentText: string) => Promise<void> | void;
-	export let onEditTask: (task: Task) => void;
-	export let onDeleteTask: (taskId: string) => void;
+	export let onEditComment: ((taskId: string, commentId: string, newContent: string) => Promise<void>) | undefined = undefined;
+	export let onDeleteComment: ((taskId: string, commentId: string) => Promise<void>) | undefined = undefined;
+	export let currentUserId: string | undefined = undefined;
+
 	export let isSubmittingComment: boolean = false;
 
 	let newComment = '';
@@ -113,6 +115,32 @@
 	}
 
 	$: dueDateStatusText = getDueDateStatusText();
+
+	async function handleEditComment(commentId: string, newContent: string) {
+		if (!onEditComment || !task) return;
+		try {
+			await onEditComment(task.id, commentId, newContent);
+			// Force refresh comments after editing
+			if (task.comments) {
+				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			}
+		} catch (error) {
+			throw error;
+		}
+	}
+
+	async function handleDeleteComment(commentId: string) {
+		if (!onDeleteComment || !task) return;
+		try {
+			await onDeleteComment(task.id, commentId);
+			// Force refresh comments after deleting
+			if (task.comments) {
+				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			}
+		} catch (error) {
+			throw error;
+		}
+	}
 </script>
 
 {#if isOpen && task}
@@ -132,20 +160,10 @@
 						</Badge>
 					{/if}
 					{#if dueDateStatusText}
-						<span class="text-xs text-muted-foreground flex items-center">
-							<Clock class="h-3.5 w-3.5 mr-1.5" /> {dueDateStatusText}
-						</span>
-					{/if}
-					{#if canManageTask}
-						<div class="flex gap-2 mt-2">
-							<Button variant="outline" size="icon" onclick={() => { onOpenChange(false); onEditTask(task);}} aria-label="Edit task" disabled={isSubmittingComment}>
-								<Edit2 class="h-3 w-3" />
-							</Button>
-							<Button variant="destructive" size="icon" onclick={() => { onDeleteTask(task.id);}} aria-label="Delete task">
-								<Trash2 class="h-3 w-3" />
-							</Button>
-						</div>
-					{/if}
+					<span class="text-xs text-muted-foreground flex items-center">
+						<Clock class="h-3.5 w-3.5 mr-1.5" /> {dueDateStatusText}
+					</span>
+				{/if}
 				</div>
 			</DialogHeader>
 
@@ -221,7 +239,12 @@
 						<h3 class="font-semibold text-lg mb-2 text-foreground flex items-center flex-shrink-0"><MessageSquare class="h-5 w-5 mr-2" />Comments ({comments.length})</h3>
 						<div class="space-y-2 pr-4">
 							{#each comments as comment (comment.id)}
-								<CommentItem {comment} />
+								<CommentItem 
+									{comment} 
+									{currentUserId}
+									onEditComment={handleEditComment}
+									onDeleteComment={handleDeleteComment}
+								/>
 							{/each}
 							{#if comments.length === 0}
 								<p class="text-sm text-muted-foreground">No comments yet.</p>

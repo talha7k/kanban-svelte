@@ -30,6 +30,7 @@
 	export let onEditTask: (taskId: string, taskData: TaskFormData) => Promise<void> | void;
 	export let taskToEdit: Task | null;
 	export let assignableUsers: UserProfile[];
+	export let canManageTask: boolean = false;
 
 	export let isSubmitting: boolean = false;
 	export let isDeleteDialogOpen: boolean;
@@ -161,9 +162,13 @@
 				/>
 				
 				<DialogFooter class="mt-4 flex justify-between">
-					<Button type="button" variant="destructive" onclick={handleDeleteTask} disabled={isSubmitting}>
-						Delete Task
-					</Button>
+					{#if canManageTask}
+						<Button type="button" variant="destructive" onclick={handleDeleteTask} disabled={isSubmitting}>
+							Delete Task
+						</Button>
+					{:else}
+						<div></div>
+					{/if}
 					<div class="flex gap-2">
 						<Button type="button" variant="outline" onclick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
 						<Button type="submit" disabled={isSubmitting}>
