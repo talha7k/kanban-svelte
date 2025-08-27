@@ -26,7 +26,20 @@ function initializeFirebase() {
     }
 
     console.log('Parsing service account key...');
-    const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY) as ServiceAccount;
+    console.log('Service account key length:', FIREBASE_SERVICE_ACCOUNT_KEY?.length || 0);
+    console.log('Service account key preview:', FIREBASE_SERVICE_ACCOUNT_KEY?.substring(0, 100) + '...');
+    
+    const serviceAccountRaw = JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY);
+    console.log('Raw parsed service account keys:', Object.keys(serviceAccountRaw));
+    console.log('Raw project_id:', serviceAccountRaw.project_id);
+    
+    // Convert project_id to projectId if needed for Firebase Admin SDK
+    if (serviceAccountRaw.project_id && !serviceAccountRaw.projectId) {
+      serviceAccountRaw.projectId = serviceAccountRaw.project_id;
+    }
+    
+    const serviceAccount = serviceAccountRaw as ServiceAccount;
+    console.log('Final service account projectId:', serviceAccount.projectId);
     
     if (!serviceAccount.projectId) {
       throw new Error('Invalid service account: missing projectId');
