@@ -1,6 +1,6 @@
 
 <script lang="ts">
-	import type { Project, UserProfile, Task } from '$lib/types/types';
+	import type { Project, UserProfile, Task, Team } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '$lib/components/ui/dialog';
 	import { Plus, Loader2 } from '@lucide/svelte';
@@ -15,10 +15,18 @@
 	import TaskCard from './TaskCard.svelte';
 	import KanbanColumn from './KanbanColumn.svelte';
 	import DeleteTaskDialog from './DeleteTaskDialog.svelte';
+	import { createProjectPermissions } from '$lib/client/permissions';
 
-	export let project: Project;
-	export let users: UserProfile[] = [];
-	export let onProjectUpdate: () => Promise<void> = () => Promise.resolve();
+	let { project, users = [], team, onProjectUpdate = () => Promise.resolve() }: {
+		project: Project;
+		users?: UserProfile[];
+		team?: Team;
+		onProjectUpdate?: () => Promise<void>;
+	} = $props();
+
+	// Permission checks
+	const permissions = $derived(team ? createProjectPermissions(project, team) : null);
+	const canManageTasks = $derived($permissions?.canManageTasks() ?? false);
 
 	let isLoading = false;
 	const tasksStore = writable<Task[]>([]);
@@ -38,9 +46,11 @@
 	let isDeletingTask = false;
 
 	// Initialize tasks from project
-	$: if (project?.tasks) {
-		tasksStore.set(project.tasks);
-	}
+	$effect(() => {
+		if (project?.tasks) {
+			tasksStore.set(project.tasks);
+		}
+	});
 	
 
 	// Setup drag-and-drop monitor
@@ -454,18 +464,18 @@
 										use:droppableTask={{ taskId: task.id, columnId: column.id }}
 									>
 										<TaskCard
-											{task}
-											{users}
-											projectColumns={project.columns}
-											canManageTask={$currentUser?.uid === project.ownerId}
-											onEdit={(t) => handleEditTask(t)}
-											onDelete={(taskId) => handleDeleteTask(taskId)}
-											onViewDetails={(t) => handleViewTaskDetails(t)}
-											onMoveToNextColumn={(t) => handleMoveToNextColumn(t)}
-											onMoveToPreviousColumn={(t) => handleMoveToPreviousColumn(t)}
-											isSubmitting={$dragState.movingTaskId === task.id}
-											onUpdateTask={(taskId, updatedFields) => handleUpdateTask(taskId, updatedFields)}
-										/>
+										{task}
+										{users}
+										projectColumns={project.columns}
+										canManageTask={canManageTasks}
+										onEdit={(t) => handleEditTask(t)}
+										onDelete={(taskId) => handleDeleteTask(taskId)}
+										onViewDetails={(t) => handleViewTaskDetails(t)}
+										onMoveToNextColumn={(t) => handleMoveToNextColumn(t)}
+										onMoveToPreviousColumn={(t) => handleMoveToPreviousColumn(t)}
+										isSubmitting={$dragState.movingTaskId === task.id}
+										onUpdateTask={(taskId, updatedFields) => handleUpdateTask(taskId, updatedFields)}
+									/>
 									</div>
 								{/each}
 								

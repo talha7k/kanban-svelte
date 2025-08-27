@@ -33,6 +33,7 @@
 	import { useTeamManagement } from '$queries/useTeamManagement';
 	import { useProjectManagement, useTeamProjects } from '$queries/useProjectManagement';
 	import ProjectCard from '$lib/components/dashboard/ProjectCard.svelte';
+	import { createTeamPermissions } from '$lib/client/permissions';
 	import ManageMembersDialog from '$lib/components/dashboard/ManageMembersDialog.svelte';
 	import {
 		Dialog,
@@ -79,6 +80,13 @@
 	// Get team projects using the dedicated hook
   const teamProjectsQuery = useTeamProjects($selectedTeamId || undefined);
   const teamProjects = $derived($teamProjectsQuery?.data || []);
+
+	// Reactive statements for derived data
+	const currentTeam = $derived($teamData?.data || undefined);
+
+	// Permission checks
+	const teamPermissions = $derived(createTeamPermissions(currentTeam));
+	const canCreateProject = $derived($teamPermissions.canCreateProject());
 
 
 
@@ -215,10 +223,12 @@
 						{$teamData?.data?.description || 'Manage your team projects'}
 					</p>
 				</div>
-				<Button onclick={() => isCreateProjectDialogOpen = true}>
-					<PlusCircle class="mr-2 h-4 w-4" />
-					New Project
-				</Button>
+				{#if canCreateProject}
+					<Button onclick={() => isCreateProjectDialogOpen = true}>
+						<PlusCircle class="mr-2 h-4 w-4" />
+						New Project
+					</Button>
+				{/if}
 			</div>
 
 			<!-- Main Content Layout -->
@@ -231,12 +241,14 @@
 							<FolderKanban class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
 							<h3 class="text-lg font-semibold mb-2">No projects yet</h3>
 							<p class="text-muted-foreground mb-4">
-								Create your first project to get started
+								{canCreateProject ? 'Create your first project to get started' : 'No projects available. Contact your team owner or manager to create projects.'}
 							</p>
-							<Button onclick={() => isCreateProjectDialogOpen = true}>
-								<PlusCircle class="mr-2 h-4 w-4" />
-								Create Project
-							</Button>
+							{#if canCreateProject}
+								<Button onclick={() => isCreateProjectDialogOpen = true}>
+									<PlusCircle class="mr-2 h-4 w-4" />
+									Create Project
+								</Button>
+							{/if}
 						</div>
 					{:else}
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -244,6 +256,7 @@
 							<ProjectCard
 								{project}
 								currentUserUid={$currentUser?.uid}
+								team={currentTeam}
 								allUsers={$teamMembersData?.data || []}
 								openEditProjectDialog={openEditDialog}
 								openDeleteProjectDialog={openDeleteDialog}

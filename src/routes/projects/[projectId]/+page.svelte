@@ -15,10 +15,12 @@
 	import GenerateTasksDialog from '$lib/components/project/GenerateTasksDialog.svelte';
 	import { useProject } from '$queries/useProjectManagement';
 	import { useQueryClient } from '@tanstack/svelte-query';
+	import { createProjectPermissions } from '$lib/client/permissions';
 
 	// Server-loaded data
 	interface PageData {
 		project: Project;
+		team?: any;
 	}
 	
 	let { data }: { data: PageData } = $props();
@@ -31,6 +33,11 @@
 	
 	// Reactive state variables - use client data if available, fallback to server data
 	let project: Project | null = $derived($projectQuery.data || data.project || null);
+
+	// Permission checks
+	const permissions = $derived(project ? createProjectPermissions(project, data.team) : null);
+	const canEditProject = $derived($permissions?.canEditProject() ?? false);
+	const canManageTasks = $derived($permissions?.canManageTasks() ?? false);
 	let users: UserProfile[] = $state([]);
 	let projectCreator: UserProfile | null = $state(null);
 	let isLoadingUsers = $state(true);
@@ -312,7 +319,7 @@
 						</div>
 					</div>
 					<div class="flex flex-col sm:flex-row gap-2">
-						{#if $currentUser?.uid === project.ownerId}
+						{#if canEditProject}
 							<Button
 								variant="secondary"
 								onclick={() => (isEditProjectDialogOpen = true)}
@@ -322,6 +329,8 @@
 								<Edit2 class="h-5 w-5" />
 								Project
 							</Button>
+						{/if}
+						{#if canManageTasks}
 							<Button
 								variant="default"
 								onclick={() => (isGenerateTasksDialogOpen = true)}
@@ -337,9 +346,9 @@
 		</div>
 		<div class="flex-1 min-h-0">
 			<!-- Allows KanbanBoard to take remaining height -->
-			<KanbanBoard {project} {users} />
+			<KanbanBoard {project} {users} team={data.team} />
 		</div>
-		{#if $currentUser?.uid === project.ownerId && project}
+		{#if canEditProject && project}
 			<EditProjectDialog
 				isOpen={isEditProjectDialogOpen}
 				onOpenChange={(open) => isEditProjectDialogOpen = open}

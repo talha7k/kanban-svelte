@@ -35,15 +35,24 @@
 		DropdownMenuSeparator,
 		DropdownMenuTrigger,
 	} from '$lib/components/ui/dropdown-menu';
-	import type { Project, UserProfile } from '$lib/types/types';
+	import type { Project, UserProfile, Team } from '$lib/types/types';
+	import { createProjectPermissions } from '$lib/client/permissions';
 
 	export let project: Project;
 	export let currentUserUid: string | undefined;
+	export let team: Team | undefined;
 	export let allUsers: UserProfile[] = [];
 	export let openEditProjectDialog: (project: Project) => void = () => {};
 	export let openManageMembersDialog: (project: Project) => void = () => {};
 	export let openDeleteProjectDialog: (project: Project) => void = () => {};
 	export let openViewMembersDialog: (project: Project) => void = () => {};
+
+	// Create reactive permission checker
+	$: permissions = createProjectPermissions(project, team);
+	$: canEdit = $permissions.canEditProject();
+	$: canDelete = $permissions.canDeleteProject();
+	$: canManageMembers = $permissions.canManageProjectMembers();
+	$: isOwner = $permissions.isProjectOwner();
 
 	let isPending = false;
 	let isLoadingMembers = false;
@@ -81,8 +90,10 @@
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
 			<div class="flex items-center space-x-2">
-				{#if currentUserUid === project.ownerId}
+				{#if isOwner}
 					<RoleBadge role="owner" size="sm" />
+				{/if}
+				{#if canEdit || canManageMembers || canDelete}
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<Button
@@ -95,37 +106,45 @@
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem
-								onclick={(e) => {
-									e.stopPropagation();
-									openEditProjectDialog(project);
-								}}
-							>
-								<Pencil class="mr-2 h-4 w-4" />
-								Edit Project
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								onclick={handleManageMembers}
-								disabled={isLoadingMembers}
-							>
-								{#if isLoadingMembers}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-								{:else}
-									<PlusCircle class="mr-2 h-4 w-4" />
-								{/if}
-								Manage Members
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								onclick={(e) => {
-									e.stopPropagation();
-									openDeleteProjectDialog(project);
-								}}
-								class="text-destructive"
-							>
-								<Trash2 class="mr-2 h-4 w-4" />
-								Delete Project
-							</DropdownMenuItem>
+							{#if canEdit}
+								<DropdownMenuItem
+									onclick={(e) => {
+										e.stopPropagation();
+										openEditProjectDialog(project);
+									}}
+								>
+									<Pencil class="mr-2 h-4 w-4" />
+									Edit Project
+								</DropdownMenuItem>
+							{/if}
+							{#if canManageMembers}
+								<DropdownMenuItem
+									onclick={handleManageMembers}
+									disabled={isLoadingMembers}
+								>
+									{#if isLoadingMembers}
+										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									{:else}
+										<PlusCircle class="mr-2 h-4 w-4" />
+									{/if}
+									Manage Members
+								</DropdownMenuItem>
+							{/if}
+							{#if canEdit && canDelete}
+								<DropdownMenuSeparator />
+							{/if}
+							{#if canDelete}
+								<DropdownMenuItem
+									onclick={(e) => {
+										e.stopPropagation();
+										openDeleteProjectDialog(project);
+									}}
+									class="text-destructive"
+								>
+									<Trash2 class="mr-2 h-4 w-4" />
+									Delete Project
+								</DropdownMenuItem>
+							{/if}
 						</DropdownMenuContent>
 					</DropdownMenu>
 				{/if}

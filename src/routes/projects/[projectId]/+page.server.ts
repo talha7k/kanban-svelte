@@ -28,14 +28,15 @@ export const load: ServerLoad = async ({ params, request }) => {
 			throw error(404, 'Project not found');
 		}
 		
+		// Get team data for permission checks
+		let team: Team | undefined;
+		if (project.teamId) {
+			team = await getTeam(project.teamId) || undefined;
+		}
+		
 		// Check project access permissions if user is authenticated
 		if (userId) {
 			try {
-				let team: Team | undefined;
-				if (project.teamId) {
-					team = await getTeam(project.teamId) || undefined;
-				}
-				
 				guardProjectAccess(userId, project as Project, team);
 			} catch (authError) {
 				console.error('Project access denied:', authError);
@@ -45,7 +46,8 @@ export const load: ServerLoad = async ({ params, request }) => {
 		
 		console.log('Project loaded successfully:', project.id);
 		return {
-			project
+			project,
+			team
 		};
 	} catch (err) {
 		console.error('Error loading project:', err);
