@@ -1,9 +1,12 @@
 import { json } from '@sveltejs/kit';
 import { moveTaskInProjectServer } from '$lib/server/firebaseProject';
 
+console.log('move-task +server.ts loaded');
+
 export async function POST({ request }: { request: Request }) {
   try {
     const { projectId, taskId, newColumnId, newOrder, currentUserUid } = await request.json();
+    console.log(`[API/move-task] Received request for projectId: ${projectId}, taskId: ${taskId}, newColumnId: ${newColumnId}, newOrder: ${newOrder}, currentUserUid: ${currentUserUid}`);
 
     if (!projectId || !taskId || newColumnId === undefined || newOrder === undefined || !currentUserUid) {
       return json(

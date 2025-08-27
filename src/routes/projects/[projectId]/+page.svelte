@@ -221,6 +221,17 @@
 		}
 	});
 
+	// Refresh function to reload project data
+	async function handleRefresh() {
+		try {
+			await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+			toast.success('Project refreshed successfully');
+		} catch (error) {
+			console.error('Error refreshing project:', error);
+			toast.error('Failed to refresh project');
+		}
+	}
+
 	// Access control check
 	let hasAccess = $derived(
 		project && $currentUser && (
@@ -251,9 +262,9 @@
 	<div class="flex flex-col items-center justify-center h-full text-destructive p-8">
 		<h2 class="text-2xl font-semibold mb-2">Error</h2>
 		<p>{error}</p>
-		<Button onclick={() => queryClient.invalidateQueries({ queryKey: ['project', projectId] })} variant="outline" class="mt-4">
-				Try Reloading
-			</Button>
+		<Button onclick={handleRefresh} variant="outline" class="mt-4">
+			Try Reloading
+		</Button>
 		<Button onclick={() => goto('/dashboard')} variant="link" class="mt-2">
 			Go to Dashboard
 		</Button>

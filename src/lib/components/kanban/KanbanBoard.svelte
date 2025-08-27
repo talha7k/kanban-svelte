@@ -14,7 +14,7 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 
 	export let project: Project;
 	export let users: UserProfile[] = [];
-
+	export let onProjectUpdate: () => Promise<void> = () => Promise.resolve();
 
 	let isLoading = false;
 	const tasksStore = writable<Task[]>([]);
@@ -97,13 +97,12 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 					}
 
 					// Wait for all move operations to complete
-										await Promise.all(movePromises);
-										toast.success('Task position saved successfully');
-										toast.dismiss(savingToastId);
-										dragState.update(state => ({ ...state, isSaving: false }));
+												await Promise.all(movePromises);
+												toast.success('Task position saved successfully');
+												toast.dismiss(savingToastId);
+												dragState.update(state => ({ ...state, isSaving: false }));
 
-																// Invalidate project queries to refresh data
-							await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+												// No need to invalidate queries - we already have optimistic updates
 				} catch (error) {
 					console.error('Error updating tasks after drag and drop:', error);
 					toast.error('Failed to save task position');
@@ -159,6 +158,13 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 		if (!userId) return;
 
 		try {
+			// Optimistically update the UI first
+			tasksStore.update(tasks => 
+				tasks.map(task => 
+					task.id === taskId ? { ...task, ...updatedFields } : task
+				)
+			);
+
 			const response = await fetch('/api/update-task', {
 				method: 'POST',
 				headers: {
@@ -176,9 +182,12 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 				throw new Error('Failed to update task');
 			}
 
-			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+			toast.success('Task updated successfully');
 		} catch (error) {
 			console.error('Error updating task:', error);
+			toast.error('Failed to update task');
+			// Revert optimistic update on error
+			await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 		}
 	}
 </script>
@@ -218,12 +227,17 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 						>
 							<h3 class="font-medium mb-4">{column.title}</h3>
 							<div class="space-y-2 min-h-[100px]">
-								{#each $tasksStore.filter(task => task.columnId === column.id) as task (task.id)}
+								{#each $tasksStore.filter(task => task.columnId === column.id).sort((a, b) => a.order - b.order) as task, index (task.id)}
+									<!-- Insertion preview indicator BEFORE the target task -->
+									{#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}
+										<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200 mb-2"></div>
+									{/if}
+									
 									<div
-										class:opacity-50={$dragState.isDragging || $dragState.movingTaskId === task.id}
-										class:ring-2={$dragState.isOverTaskId === task.id}
-										class:ring-primary={$dragState.isOverTaskId === task.id}
-										class:ring-offset-2={$dragState.isOverTaskId === task.id}
+										class="transition-all duration-200"
+										class:opacity-50={$dragState.isDragging && $dragState.movingTaskId === task.id}
+										class:transform={$dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId && index >= $tasksStore.filter(t => t.columnId === column.id).sort((a, b) => a.order - b.order).findIndex(t => t.id === $dragState.insertionPreview?.afterTaskId)}
+										class:translate-y-4={$dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId && index >= $tasksStore.filter(t => t.columnId === column.id).sort((a, b) => a.order - b.order).findIndex(t => t.id === $dragState.insertionPreview?.afterTaskId)}
 										use:draggableTask={{ task }}
 										use:droppableTask={{ taskId: task.id, columnId: column.id }}
 									>
@@ -242,6 +256,11 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 										/>
 									</div>
 								{/each}
+								
+								<!-- Insertion preview at end of column -->
+								{#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && !$dragState.insertionPreview.afterTaskId}
+									<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"></div>
+								{/if}
 							</div>
 						</div>
 					{/each}

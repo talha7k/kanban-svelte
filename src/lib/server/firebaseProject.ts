@@ -96,51 +96,14 @@ export const moveTaskInProjectServer = async (
     }
 
     const taskToMove = tasks[taskToMoveIndex];
-    const oldColumnId = taskToMove.columnId;
 
-    // Remove the task from its current position
-    tasks.splice(taskToMoveIndex, 1);
-
-    // Update the moved task's properties
+    // Update the moved task's properties with the exact order from client
     taskToMove.columnId = newColumnId;
     taskToMove.order = newOrder;
     taskToMove.updatedAt = new Date().toISOString();
 
-    // Insert the task back into the array
-    tasks.push(taskToMove);
-
-    // Reorder tasks in the old column (if different from new column)
-    if (oldColumnId !== newColumnId) {
-      tasks
-        .filter((t: any) => t.columnId === oldColumnId && t.order > taskToMove.order)
-        .forEach((t: any) => t.order--);
-    }
-
-    // Reorder tasks in the new column
-    const newColumnTasks = tasks
-      .filter((t: any) => t.columnId === newColumnId)
-      .sort((a: any, b: any) => a.order - b.order);
-
-    // Adjust orders to make space for the moved task
-    newColumnTasks.forEach((task: any, index: number) => {
-      if (task.id !== taskId && task.order >= newOrder) {
-        task.order = task.order + 1;
-      }
-    });
-
-    // Ensure sequential ordering within each column
-    const columns = ['TODO', 'IN_PROGRESS', 'DONE'];
-    columns.forEach(columnId => {
-      const columnTasks = tasks
-        .filter((task: any) => task.columnId === columnId)
-        .sort((a: any, b: any) => a.order - b.order);
-      
-      columnTasks.forEach((task: any, index: number) => {
-        if (task.order !== index) {
-          task.order = index;
-        }
-      });
-    });
+    // Update the task in the array (no need to remove and re-add)
+    tasks[taskToMoveIndex] = taskToMove;
 
     await projectRef.update({
       tasks: tasks,

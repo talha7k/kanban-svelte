@@ -37,12 +37,17 @@ export const dragState = writable<{
   isOverTaskId: string | null;
   movingTaskId: string | null;
   isSaving: boolean;
+  insertionPreview: {
+    columnId: string;
+    afterTaskId: string | null;
+  } | null;
 }>({
   isDragging: false,
   isOverColumnId: null,
   isOverTaskId: null,
   movingTaskId: null,
   isSaving: false,
+  insertionPreview: null,
 });
 
 /**
@@ -72,7 +77,7 @@ export function draggableTask(node: HTMLElement, data: { task: Task }) {
       dragState.update(state => ({ ...state, isDragging: true, movingTaskId: task.id, isSaving: false }));
     },
     onDrop: () => {
-      dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null, movingTaskId: null, isSaving: false });
+      dragState.set({ isDragging: false, isOverColumnId: null, isOverTaskId: null, movingTaskId: null, isSaving: false, insertionPreview: null });
     },
   });
 
@@ -94,13 +99,13 @@ export function droppableColumn(node: HTMLElement, data: { columnId: string }) {
     element: node,
     getData: (): DroppableColumnData => ({ columnId, type: 'column' }),
     onDragEnter: () => {
-      dragState.update(state => ({ ...state, isOverColumnId: columnId, isSaving: false }));
+      dragState.update(state => ({ ...state, isOverColumnId: columnId, isSaving: false, insertionPreview: { columnId, afterTaskId: null } }));
     },
     onDragLeave: () => {
-      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false } : state));
+      dragState.update(state => (state.isOverColumnId === columnId ? { ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false, insertionPreview: null } : state));
     },
     onDrop: () => {
-      dragState.update(state => ({ ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false }));
+      dragState.update(state => ({ ...state, isOverColumnId: null, isOverTaskId: null, isSaving: false, insertionPreview: null }));
     },
   });
 
@@ -122,13 +127,13 @@ export function droppableTask(node: HTMLElement, data: { taskId: string; columnI
     element: node,
     getData: (): DroppableTaskData => ({ taskId, columnId, type: 'task' }),
     onDragEnter: () => {
-      dragState.update(state => ({ ...state, isOverTaskId: taskId, isSaving: false }));
+      dragState.update(state => ({ ...state, isOverTaskId: taskId, isSaving: false, insertionPreview: { columnId, afterTaskId: taskId } }));
     },
     onDragLeave: () => {
-      dragState.update(state => (state.isOverTaskId === taskId ? { ...state, isOverTaskId: null, isSaving: false } : state));
+      dragState.update(state => (state.isOverTaskId === taskId ? { ...state, isOverTaskId: null, isSaving: false, insertionPreview: null } : state));
     },
     onDrop: () => {
-      dragState.update(state => ({ ...state, isOverTaskId: null, isSaving: false }));
+      dragState.update(state => ({ ...state, isOverTaskId: null, isSaving: false, insertionPreview: null }));
     },
   });
 
@@ -202,61 +207,72 @@ export function setupKanbanMonitor(
         .sort((a, b) => a.order - b.order);
 
       let newOrder = 0;
+      let insertIndex = 0;
+      
       if (insertAfterTaskId) {
-        const targetTask = tasksInNewColumn.find(t => t.id === insertAfterTaskId);
-        if (targetTask) {
-          newOrder = targetTask.order + 1;
+        const targetTaskIndex = tasksInNewColumn.findIndex(t => t.id === insertAfterTaskId);
+        if (targetTaskIndex !== -1) {
+          // Insert BEFORE the target task (where the indicator shows)
+          if (targetTaskIndex === 0) {
+            // Insert at the beginning
+            newOrder = tasksInNewColumn[0].order - 1;
+            insertIndex = 0;
+          } else {
+            // Insert between previous task and target task
+            const prevOrder = tasksInNewColumn[targetTaskIndex - 1].order;
+            const targetOrder = tasksInNewColumn[targetTaskIndex].order;
+            newOrder = (prevOrder + targetOrder) / 2;
+            insertIndex = targetTaskIndex;
+          }
         } else {
-          newOrder = tasksInNewColumn.length;
+          // Target task not found, add to end
+          newOrder = tasksInNewColumn.length > 0 ? tasksInNewColumn[tasksInNewColumn.length - 1].order + 1 : 0;
+          insertIndex = tasksInNewColumn.length;
         }
       } else {
-        // Add to beginning of column
-        newOrder = 0;
+        // Add to end of column
+        newOrder = tasksInNewColumn.length > 0 ? tasksInNewColumn[tasksInNewColumn.length - 1].order + 1 : 0;
+        insertIndex = tasksInNewColumn.length;
       }
 
-      // Insert the task back into the finalTasks array at the correct position
-      // We'll let the server handle the exact positioning based on newOrder
+      // Update the moved task
       movedTask.order = newOrder;
-      finalTasks.push(movedTask);
-
-      // Build updates for all affected tasks
-      const updates: { taskId: string; changes: Partial<Task> }[] = [];
       
-      // Always update the moved task
-      updates.push({
-        taskId: movedTask.id,
-        changes: { order: newOrder, columnId: newColumnId },
-      });
+      // Insert the task at the correct position in finalTasks
+      const finalTasksWithoutMoved = finalTasks.filter(t => t.id !== movedTask.id);
+      finalTasksWithoutMoved.push(movedTask);
 
-      // Update orders for all tasks in both old and new columns
+      // Build the final task state with proper sequential ordering
+      const finalTaskState = [...finalTasksWithoutMoved];
+      
+      // Reorder all tasks in affected columns to have sequential orders
       const affectedColumns = [newColumnId];
       if (draggedTask.columnId !== newColumnId) {
         affectedColumns.push(draggedTask.columnId);
       }
 
       affectedColumns.forEach(columnId => {
-        const columnTasks = finalTasks
+        const columnTasks = finalTaskState
           .filter(t => t.columnId === columnId)
           .sort((a, b) => a.order - b.order);
 
         columnTasks.forEach((task, index) => {
-          // Skip the moved task as it's already in updates
-          if (task.id !== movedTask.id) {
-            updates.push({
-              taskId: task.id,
-              changes: { order: index },
-            });
-          }
+          task.order = index;
         });
       });
 
-      // Build the final task state
-      const finalTaskState = [...finalTasks];
-      updates.forEach(update => {
-        const taskIndex = finalTaskState.findIndex(t => t.id === update.taskId);
-        if (taskIndex !== -1) {
-          finalTaskState[taskIndex] = { ...finalTaskState[taskIndex], ...update.changes };
-        }
+      // Build updates for persistence - only send the moved task's new position
+      const updates: { taskId: string; changes: Partial<Task> }[] = [];
+      
+      // Find the final order of the moved task after reordering
+      const finalMovedTaskOrder = finalTaskState
+        .filter(t => t.columnId === newColumnId)
+        .sort((a, b) => a.order - b.order)
+        .findIndex(t => t.id === movedTask.id);
+      
+      updates.push({
+        taskId: movedTask.id,
+        changes: { order: finalMovedTaskOrder, columnId: newColumnId },
       });
 
       if (updates.length > 0) {
