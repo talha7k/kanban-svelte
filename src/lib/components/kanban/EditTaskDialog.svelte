@@ -23,7 +23,6 @@
 		assigneeUids: z.array(z.string()).optional(),
 		dueDate: z.string().optional(),
 		tags: z.array(z.string()).optional(),
-		dependentTaskTitles: z.array(z.string()).optional(),
 	});
 
 	export let isOpen: boolean;
@@ -31,7 +30,7 @@
 	export let onEditTask: (taskId: string, taskData: TaskFormData) => Promise<void> | void;
 	export let taskToEdit: Task | null;
 	export let assignableUsers: UserProfile[];
-	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
+
 	export let isSubmitting: boolean = false;
 
 	let formData: TaskFormData = {
@@ -39,37 +38,40 @@
 		description: '',
 		priority: 'NONE',
 		assigneeUids: [],
-		dependentTaskTitles: [],
 		tags: [],
 		dueDate: undefined,
 	};
 
 	let currentTaskDataForAI: Partial<TaskFormData> = {};
 	let formErrors: Record<string, string> = {};
+	let isFormInitialized = false;
 
 	$: {
 		currentTaskDataForAI = {
 			title: formData.title,
 			description: formData.description,
 			dueDate: formData.dueDate,
-			dependentTaskTitles: formData.dependentTaskTitles,
 		};
 	}
 
-	// Reset form when taskToEdit changes or dialog opens/closes
-	$: if (taskToEdit && isOpen) {
+	// Initialize form when dialog opens with a task
+	$: if (taskToEdit && isOpen && !isFormInitialized) {
 		formData = {
-			title: taskToEdit.title,
-			description: taskToEdit.description || '',
-			priority: taskToEdit.priority,
-			assigneeUids: taskToEdit.assigneeUids || [],
-			dueDate: taskToEdit.dueDate || undefined,
-			tags: taskToEdit.tags || [],
-			dependentTaskTitles: taskToEdit.dependentTaskTitles || [],
-		};
+				title: taskToEdit.title,
+				description: taskToEdit.description || '',
+				priority: taskToEdit.priority,
+				assigneeUids: taskToEdit.assigneeUids || [],
+				dueDate: taskToEdit.dueDate || undefined,
+				tags: taskToEdit.tags || [],
+			};
 		currentTaskDataForAI = formData;
-	} else if (!isOpen) {
+		isFormInitialized = true;
+	}
+
+	// Reset form when dialog closes
+	$: if (!isOpen) {
 		resetForm();
+		isFormInitialized = false;
 	}
 
 	function validateForm(): boolean {
@@ -110,7 +112,6 @@
 			description: '',
 			priority: 'NONE',
 			assigneeUids: [],
-			dependentTaskTitles: [],
 			tags: [],
 			dueDate: undefined,
 		};
@@ -126,10 +127,7 @@
 		formData = { ...formData, [field]: value };
 	}
 
-	// Filter out the current task from dependencies
-	$: filteredTasksForDependencies = taskToEdit 
-		? allTasksForDependencies.filter(t => t.id !== taskToEdit.id)
-		: allTasksForDependencies;
+
 </script>
 
 {#if isOpen && taskToEdit}
@@ -145,7 +143,6 @@
 				<TaskFormFields 
 					bind:formData 
 					{assignableUsers} 
-					allTasksForDependencies={filteredTasksForDependencies}
 					{formErrors}
 					{updateFormData}
 					isEditing={true}

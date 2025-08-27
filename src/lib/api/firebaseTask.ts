@@ -35,7 +35,7 @@ export const addTaskToProject = async (projectId: string, taskData: NewTaskData,
       reporterId: taskData.reporterId === undefined ? null : taskData.reporterId,
       dueDate: taskData.dueDate === undefined  || taskData.dueDate === '' ? null : taskData.dueDate,
       tags: taskData.tags === undefined ? [] : taskData.tags,
-      dependentTaskTitles: taskData.dependentTaskTitles === undefined ? [] : taskData.dependentTaskTitles,
+      
       id: newTaskId,
       projectId,
       columnId,
@@ -93,7 +93,7 @@ export const updateTaskInProject = async (projectId: string, taskId: string, tas
     // Explicitly handle array fields to ensure they are empty arrays if undefined, not null
     updatePayload.assigneeUids = taskUpdateData.assigneeUids === null ? [] : (taskUpdateData.assigneeUids ?? existingTask.assigneeUids ?? []);
     updatePayload.tags = taskUpdateData.tags === null ? [] : (taskUpdateData.tags ?? existingTask.tags ?? []);
-    updatePayload.dependentTaskTitles = taskUpdateData.dependentTaskTitles === null ? [] : (taskUpdateData.dependentTaskTitles ?? existingTask.dependentTaskTitles ?? []);
+    
     updatePayload.comments = taskUpdateData.comments === null ? [] : (taskUpdateData.comments ?? existingTask.comments ?? []);
     
     // Ensure optional string fields that might be empty string are set to null instead

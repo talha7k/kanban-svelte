@@ -26,7 +26,7 @@ export async function generateTasksAction(projectId: string, brief: string, curr
       assigneeUids: [],
       dueDate: null,
       tags: [],
-      dependentTaskTitles: [],
+      
     }));
   } catch (error) {
     console.error('Error in generateTasksAction:', error);
@@ -56,7 +56,7 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
           assigneeUids: taskData.assigneeUids,
           dueDate: taskData.dueDate,
           tags: taskData.tags,
-          dependentTaskTitles: taskData.dependentTaskTitles,
+          
         }, taskData.columnId || project.columns[0]?.id || 'todo', currentUserUid);
         addedTasksCount++;
       } catch (error) {

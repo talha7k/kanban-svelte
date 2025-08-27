@@ -2,15 +2,18 @@
 <script lang="ts">
 	import type { Project, UserProfile, Task } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
-import { Plus, Loader2 } from '@lucide/svelte';
-import EditTaskDialog from './EditTaskDialog.svelte';
-import { onMount } from 'svelte';
-import { writable, get } from 'svelte/store';
-import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, dragState } from '$queries/useDragAndDrop';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '$lib/components/ui/dialog';
+	import { Plus, Loader2 } from '@lucide/svelte';
+	import EditTaskDialog from './EditTaskDialog.svelte';
+	import ViewTaskDialog from './ViewTaskDialog.svelte';
+	import { onMount } from 'svelte';
+	import { writable, get } from 'svelte/store';
+	import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, dragState } from '$queries/useDragAndDrop';
 	import { queryClient } from '$lib/queryClient';
 	import { currentUser } from '$lib/stores/auth';
 	import { toast } from 'svelte-sonner';
 	import TaskCard from './TaskCard.svelte';
+	import KanbanColumn from './KanbanColumn.svelte';
 
 	export let project: Project;
 	export let users: UserProfile[] = [];
@@ -23,6 +26,14 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 	// Edit dialog state
 	let isEditDialogOpen = false;
 	let taskToEdit: Task | null = null;
+
+	// View dialog state
+	let isViewDialogOpen = false;
+	let taskToView: Task | null = null;
+	let isSubmittingComment = false;
+	let isDeleteDialogOpen = false;
+	let taskToDelete: Task | null = null;
+	let isDeletingTask = false;
 
 	// Initialize tasks from project
 	$: if (project?.tasks) {
@@ -128,13 +139,108 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 	}
 
 	function handleDeleteTask(taskId: string) {
-		console.log('Delete task:', taskId);
-		// TODO: Implement task delete functionality
+		const task = $tasksStore.find(t => t.id === taskId);
+		if (task) {
+			taskToDelete = task;
+			isDeleteDialogOpen = true;
+		}
+	}
+
+	async function confirmDeleteTask() {
+		if (!taskToDelete) return;
+
+		isDeletingTask = true;
+		try {
+			const response = await fetch('/api/delete-task', {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					taskId: taskToDelete.id
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to delete task');
+			}
+
+			// Remove task from store
+			tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id));
+			
+			// Close dialogs if the deleted task was being viewed
+			if (taskToView?.id === taskToDelete.id) {
+				isViewDialogOpen = false;
+				taskToView = null;
+			}
+
+			toast.success('Task deleted successfully');
+			isDeleteDialogOpen = false;
+			taskToDelete = null;
+		} catch (error) {
+			console.error('Error deleting task:', error);
+			toast.error('Failed to delete task');
+		} finally {
+			isDeletingTask = false;
+		}
+	}
+
+	function cancelDeleteTask() {
+		isDeleteDialogOpen = false;
+		taskToDelete = null;
 	}
 
 	function handleViewTaskDetails(task: Task) {
-		console.log('View task:', task.id);
-		// TODO: Implement task details view
+		taskToView = task;
+		isViewDialogOpen = true;
+	}
+
+	async function handleAddComment(taskId: string, commentText: string) {
+		const userId = get(currentUser)?.uid;
+		if (!userId) {
+			toast.error('You must be logged in to add comments');
+			return;
+		}
+
+		isSubmittingComment = true;
+		try {
+			const response = await fetch('/api/add-comment', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					projectId: project.id,
+					taskId,
+					commentText,
+					currentUserUid: userId
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to add comment');
+			}
+
+			// Update the task in the store with the new comment
+			const updatedTask = await response.json();
+			tasksStore.update(tasks => 
+				tasks.map(task => 
+					task.id === taskId ? updatedTask : task
+				)
+			);
+
+			// Update the taskToView if it's the same task
+			if (taskToView?.id === taskId) {
+				taskToView = updatedTask;
+			}
+
+		} catch (error) {
+			console.error('Error adding comment:', error);
+			throw error; // Re-throw to let ViewTaskDialog handle the error
+		} finally {
+			isSubmittingComment = false;
+		}
 	}
 
 	async function handleMoveToNextColumn(task: Task) {
@@ -281,6 +387,47 @@ import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, drag
 			if (!open) taskToEdit = null;
 		}}
 	/>
+
+	<!-- View Task Dialog -->
+	<ViewTaskDialog
+		bind:isOpen={isViewDialogOpen}
+		task={taskToView}
+		{users}
+		canManageTask={$currentUser?.uid === project.ownerId}
+		onAddComment={handleAddComment}
+		onEditTask={handleEditTask}
+		onDeleteTask={handleDeleteTask}
+		{isSubmittingComment}
+		onOpenChange={(open) => {
+			isViewDialogOpen = open;
+			if (!open) taskToView = null;
+		}}
+	/>
+
+	<!-- Delete Task Confirmation Dialog -->
+	<Dialog bind:open={isDeleteDialogOpen}>
+		<DialogContent class="sm:max-w-[425px]">
+			<DialogHeader>
+				<DialogTitle>Delete Task</DialogTitle>
+				<DialogDescription>
+					Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+				</DialogDescription>
+			</DialogHeader>
+			<DialogFooter>
+				<Button variant="outline" onclick={cancelDeleteTask} disabled={isDeletingTask}>
+					Cancel
+				</Button>
+				<Button variant="destructive" onclick={confirmDeleteTask} disabled={isDeletingTask}>
+					{#if isDeletingTask}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						Deleting...
+					{:else}
+						Delete Task
+					{/if}
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
 </div>
 
 <style>

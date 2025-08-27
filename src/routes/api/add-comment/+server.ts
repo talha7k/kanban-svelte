@@ -1,13 +1,14 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/firebase';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST({ request }: { request: Request }) {
   try {
-    const { projectId, taskId, updatedFields, currentUserUid } = await request.json();
+    const { projectId, taskId, commentText, currentUserUid } = await request.json();
 
-    if (!projectId || !taskId || !updatedFields || !currentUserUid) {
+    if (!projectId || !taskId || !commentText || !currentUserUid) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId, updatedFields, currentUserUid' },
+        { error: 'Missing required parameters: projectId, taskId, commentText, currentUserUid' },
         { status: 400 }
       );
     }
@@ -42,25 +43,21 @@ export async function POST({ request }: { request: Request }) {
 
     const existingTask = tasks[taskIndex];
     
-    // Create updated task object
-    const updatedTask = {
-      ...existingTask,
-      ...updatedFields,
-      updatedAt: new Date().toISOString(),
+    // Create new comment
+    const newComment = {
+      id: uuidv4(),
+      text: commentText,
+      userId: currentUserUid,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    // Handle array fields to ensure they are empty arrays if undefined
-    if (updatedFields.assigneeUids !== undefined) {
-      updatedTask.assigneeUids = updatedFields.assigneeUids || [];
-    }
-    if (updatedFields.tags !== undefined) {
-      updatedTask.tags = updatedFields.tags || [];
-    }
-
-    // Ensure optional string fields are handled properly
-    if (updatedFields.description === '') updatedTask.description = null;
-    if (updatedFields.dueDate === '') updatedTask.dueDate = null;
-    if (updatedFields.reporterId === '') updatedTask.reporterId = null;
+    // Add comment to task
+    const updatedTask = {
+      ...existingTask,
+      comments: [...(existingTask.comments || []), newComment],
+      updatedAt: new Date().toISOString()
+    };
 
     const updatedTasks = [...tasks];
     updatedTasks[taskIndex] = updatedTask;
@@ -72,9 +69,9 @@ export async function POST({ request }: { request: Request }) {
 
     return json({ success: true, task: updatedTask });
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error('Error adding comment:', error);
     return json(
-      { error: error instanceof Error ? error.message : 'Failed to update task' },
+      { error: error instanceof Error ? error.message : 'Failed to add comment' },
       { status: 500 }
     );
   }

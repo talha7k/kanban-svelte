@@ -195,16 +195,7 @@
 						</div>
 					{/if}
 
-					{#if task.dependentTaskTitles && task.dependentTaskTitles.length > 0}
-						<div>
-							<h3 class="font-semibold text-sm mb-1 text-muted-foreground flex items-center"><Info class="h-4 w-4 mr-2" />Dependent Tasks</h3>
-							<div class="flex flex-wrap gap-2">
-								{#each task.dependentTaskTitles as depTitle (depTitle)}
-									<Badge variant="outline" class="bg-primary/10 border-primary/30 text-primary">{depTitle}</Badge>
-								{/each}
-							</div>
-						</div>
-					{/if}
+
 
 					<Separator class="my-4" />
 

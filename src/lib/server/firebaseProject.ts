@@ -48,7 +48,7 @@ export const addTaskToProjectServer = async (
       reporterId: taskData.reporterId || currentUserUid,
       dueDate: taskData.dueDate || null,
       tags: taskData.tags || [],
-      dependentTaskTitles: taskData.dependentTaskTitles || [],
+      
       columnId,
       order: project?.tasks?.length || 0,
       createdAt: new Date().toISOString(),

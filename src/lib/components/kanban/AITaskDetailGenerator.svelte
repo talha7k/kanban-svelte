@@ -8,12 +8,16 @@
 
 	export let briefInput: string;
 	export let onDetailsGenerated: ((details: GenerateTaskDetailsOutput) => void) | undefined = undefined;
+	export let onCancel: (() => void) | undefined = undefined;
 
 	let isLoading = false;
 	let generatedDetails: GenerateTaskDetailsOutput | null = null;
 	let error: string | null = null;
 
 	async function handleGenerateDetails() {
+		// Reset previous results when generating new ones
+		generatedDetails = null;
+		error = null;
 		isLoading = true;
 		error = null;
 		generatedDetails = null;
@@ -39,9 +43,6 @@
 			
 			if (result.success && result.details) {
 				generatedDetails = result.details;
-				if (onDetailsGenerated) {
-					onDetailsGenerated(result.details);
-				}
 				toast.success(`AI Task Details Generated - Title: ${result.details.title}`);
 			} else if (result.error) {
 				throw new Error(result.error);
@@ -59,10 +60,12 @@
 </script>
 
 <div class="space-y-3 my-4">
-	<Button onclick={handleGenerateDetails} disabled={isLoading} variant="outline" size="sm">
-		<Wand2 class="mr-2 h-4 w-4" />
-		{isLoading ? 'Generating Details...' : 'Generate Task Details with AI'}
-	</Button>
+	{#if !generatedDetails}
+		<Button onclick={handleGenerateDetails} disabled={isLoading} variant="outline" size="sm">
+			<Wand2 class="mr-2 h-4 w-4" />
+			{isLoading ? 'Generating Details...' : 'Generate Task Details with AI'}
+		</Button>
+	{/if}
 
 	{#if error}
 		<Alert variant="destructive">
@@ -80,6 +83,40 @@
 				<strong>Title:</strong> {generatedDetails.title}
 				<br />
 				<strong>Description:</strong> {generatedDetails.description}
+				<div class="flex gap-2 mt-3">
+					<Button 
+						size="sm" 
+						variant="default"
+						onclick={() => {
+							if (onDetailsGenerated && generatedDetails) {
+								onDetailsGenerated(generatedDetails);
+							}
+							generatedDetails = null;
+						}}
+					>
+						Approve & Apply
+					</Button>
+					<Button 
+						size="sm" 
+						variant="outline"
+						onclick={() => {
+							generatedDetails = null;
+							if (onCancel) {
+								onCancel();
+							}
+						}}
+					>
+						Cancel
+					</Button>
+					<Button 
+						size="sm" 
+						variant="ghost"
+						onclick={handleGenerateDetails}
+						disabled={isLoading}
+					>
+						Regenerate
+					</Button>
+				</div>
 			</AlertDescription>
 		</Alert>
 	{/if}

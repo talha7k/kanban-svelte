@@ -13,7 +13,6 @@ export interface TaskFormData {
   assigneeUids?: string[];
   dueDate?: string; // YYYY-MM-DD string
   tags?: string[];
-  dependentTaskTitles?: string[];
 }
 
 export interface UserProfile {
@@ -71,7 +70,6 @@ export interface Task {
   dueDate?: string | null; // YYYY-MM-DD, allow null for Firestore
   tags?: string[];
   comments?: Comment[];
-  dependentTaskTitles?: string[]; // For AI priority suggestion
   createdAt: string; // ISO string date
   updatedAt: string; // ISO string date
 }

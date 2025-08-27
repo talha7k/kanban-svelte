@@ -17,21 +17,21 @@
 	import UserSelectionCombobox from '../dashboard/UserSelectionCombobox.svelte';
 
 	export let assignableUsers: UserProfile[];
-	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
+	
 	export const isEditing: boolean = false;
 	export let formErrors: Record<string, string> = {};
 	export let updateFormData: (field: keyof TaskFormData, value: any) => void;
 	export let formData: TaskFormData;
 
 	$: selectedAssignees = formData.assigneeUids || [];
-	$: selectedDependencies = formData.dependentTaskTitles || [];
+	
 	let aiBrief = '';
 	let isAiDialogOpen = false;
 
 	function handleAIDetailsGenerated(details: { title: string; description: string }) {
 		updateFormData('title', details.title);
 		updateFormData('description', details.description);
-		isAiDialogOpen = false;
+		// Don't auto-close the dialog, let user review and close manually
 	}
 
 
@@ -47,13 +47,7 @@
 		updateFormData('assigneeUids', newSelection);
 	}
 
-	function toggleDependentTask(taskTitle: string) {
-		const currentSelection = formData.dependentTaskTitles || [];
-		const newSelection = currentSelection.includes(taskTitle)
-			? currentSelection.filter(title => title !== taskTitle)
-			: [...currentSelection, taskTitle];
-		updateFormData('dependentTaskTitles', newSelection);
-	}
+	
 
 
 </script>
@@ -158,46 +152,7 @@
 			<p class="text-xs text-destructive">{formErrors.assigneeUids}</p>
 		{/if}
 	</div>
-	<div class="space-y-1">
-		<Label>Dependent Tasks (for AI)</Label>
-		<Popover>
-			<PopoverTrigger>
-				<Button variant="outline" role="combobox" class="w-full justify-between">
-					{selectedDependencies.length > 0
-						? selectedDependencies.join(', ')
-						: "Select dependent tasks..."}
-					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
-				<Command.Root>
-					<Command.Input placeholder="Search tasks..." />
-					<Command.List>
-						<Command.Empty>No tasks found.</Command.Empty>
-						<Command.Group>
-							{#each allTasksForDependencies as taskDep (taskDep.id)}
-								<Command.Item
-									value={taskDep.title}
-									onSelect={() => toggleDependentTask(taskDep.title)}
-								>
-									<Check
-										class={cn(
-											"mr-2 h-4 w-4",
-											selectedDependencies.includes(taskDep.title) ? "opacity-100" : "opacity-0"
-										)}
-									/>
-									{taskDep.title}
-								</Command.Item>
-							{/each}
-						</Command.Group>
-					</Command.List>
-				</Command.Root>
-			</PopoverContent>
-		</Popover>
-		{#if formErrors.dependentTaskTitles}
-			<p class="text-xs text-destructive">{formErrors.dependentTaskTitles}</p>
-		{/if}
-	</div>
+
 </div>
 
     

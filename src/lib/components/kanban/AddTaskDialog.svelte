@@ -23,7 +23,6 @@
 		assigneeUids: z.array(z.string()).optional(),
 		dueDate: z.string().optional(),
 		tags: z.array(z.string()).optional(),
-		dependentTaskTitles: z.array(z.string()).optional(),
 	});
 
 	export let isOpen: boolean;
@@ -31,7 +30,7 @@
 	export let onAddTask: (taskData: TaskFormData, columnId: string) => Promise<void> | void;
 	export let columnId: string | null;
 	export let assignableUsers: UserProfile[];
-	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
+	
 	export let isSubmitting: boolean = false;
 
 	let formData: TaskFormData = {
@@ -39,7 +38,6 @@
 		description: '',
 		priority: 'NONE',
 		assigneeUids: [],
-		dependentTaskTitles: [],
 		tags: [],
 		dueDate: undefined,
 	};
@@ -52,7 +50,6 @@
 			title: formData.title,
 			description: formData.description,
 			dueDate: formData.dueDate,
-			dependentTaskTitles: formData.dependentTaskTitles,
 		};
 	}
 
@@ -94,7 +91,6 @@
 			description: '',
 			priority: 'NONE',
 			assigneeUids: [],
-			dependentTaskTitles: [],
 			tags: [],
 			dueDate: undefined,
 		};
@@ -131,7 +127,6 @@
 				<TaskFormFields 
 					bind:formData 
 					{assignableUsers} 
-					{allTasksForDependencies}
 					{formErrors}
 					{updateFormData}
 				/>
