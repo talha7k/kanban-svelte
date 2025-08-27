@@ -192,6 +192,10 @@
 				if (result.updatedProject) {
 					project = result.updatedProject;
 				}
+				// Invalidate the project query to refresh the KanbanBoard
+				if (project) {
+					await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+				}
 				toast.success('Tasks Added', {
 					description: `Successfully added ${result.addedTasksCount} task${
 						result.addedTasksCount !== 1 ? 's' : ''
