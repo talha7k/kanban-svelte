@@ -5,14 +5,15 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+
 	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
 	import { Check, ChevronsUpDown, X } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 	import { Command } from 'bits-ui';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '$lib/components/ui/dialog';
 	import type { TaskFormData } from '$lib/types/types';
+	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
 
 	export let assignableUsers: UserProfile[];
 	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
@@ -32,11 +33,7 @@
 		isAiDialogOpen = false;
 	}
 
-	function handlePriorityChange(value: string | undefined) {
-		if (value) {
-			updateFormData('priority', value as Task['priority']);
-		}
-	}
+
 
 
 
@@ -83,8 +80,14 @@
 								placeholder="e.g., Create a new user authentication module with OAuth2 support."
 							/>
 						</div>
-						<!-- AITaskDetailGenerator component removed due to missing dependencies -->
+						<AITaskDetailGenerator 
+							briefInput={aiBrief} 
+							onDetailsGenerated={handleAIDetailsGenerated}
+						/>
 					</div>
+					<DialogFooter>
+						<Button variant="outline" onclick={() => isAiDialogOpen = false}>Cancel</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</div>
@@ -108,7 +111,7 @@
 			<p class="text-xs text-destructive">{formErrors.description}</p>
 		{/if}
 	</div>
-	<div class="grid grid-cols-2 gap-4">
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<div class="space-y-1">
 			<Label for="priority">Priority</Label>
 			<select 
@@ -149,7 +152,7 @@
 					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
+			<PopoverContent class="w-[--radix-popover-trigger-width] p-0" style="z-index: 9999;">
 				<Command.Root>
 					<Command.Input placeholder="Search users..." />
 					<Command.List>
@@ -189,7 +192,7 @@
 					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent class="w-[--radix-popover-trigger-width] p-0">
+			<PopoverContent class="w-[--radix-popover-trigger-width] p-0" style="z-index: 9999;">
 				<Command.Root>
 					<Command.Input placeholder="Search tasks..." />
 					<Command.List>

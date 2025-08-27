@@ -12,6 +12,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { Loader2 } from '@lucide/svelte';
+	import TaskApprovalDialog from './TaskApprovalDialog.svelte';
 
 	export let isOpen: boolean = false;
 	export let onOpenChange: (isOpen: boolean) => void;
@@ -33,8 +34,8 @@
 		}
 	}
 
-	async function handleApprove() {
-		await onAddTasks(generatedTasks);
+	async function handleApprove(selectedTasks: Omit<Task, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>[]) {
+		await onAddTasks(selectedTasks);
 		// Reset state after successful addition
 		briefInput = '';
 		taskCount = 3;
@@ -100,36 +101,20 @@
 					{/if}
 				</Button>
 			</DialogFooter>
-		{:else}
-			<DialogHeader>
-				<DialogTitle>Review Generated Tasks</DialogTitle>
-				<DialogDescription>
-					Review the generated tasks and add them to your project.
-				</DialogDescription>
-			</DialogHeader>
 
-			<div class="space-y-3 max-h-96 overflow-y-auto">
-				{#each generatedTasks as task, index (index)}
-					<div class="border rounded p-3">
-						<h4 class="font-medium">{task.title}</h4>
-						{#if task.description}
-							<p class="text-sm text-muted-foreground mt-1">{task.description}</p>
-						{/if}
-					</div>
-				{/each}
-			</div>
-
-			<DialogFooter>
-				<Button variant="outline" onclick={handleBack}>Back</Button>
-				<Button onclick={handleApprove} disabled={isAddingTasks}>
-					{#if isAddingTasks}
-						<Loader2 class="h-4 w-4 animate-spin mr-2" />
-						Adding Tasks...
-					{:else}
-						Add All Tasks
-					{/if}
-				</Button>
-			</DialogFooter>
 		{/if}
 	</DialogContent>
 </Dialog>
+
+<TaskApprovalDialog
+	isOpen={currentStep === 'approve'}
+	onOpenChange={(open) => {
+		if (!open) {
+			currentStep = 'generate';
+		}
+	}}
+	{generatedTasks}
+	onApprove={handleApprove}
+	onBack={handleBack}
+	isAdding={isAddingTasks}
+/>
