@@ -21,6 +21,7 @@
 	import { Loader2, Users, X, Check, ChevronsUpDown, UserPlus, ShieldCheck, UserCog } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 	import { currentUser } from '$lib/stores/auth';
+	import UserSelectionCombobox from './UserSelectionCombobox.svelte';
 
 	export let project: Project;
 	export let allUsers: UserProfile[];
@@ -200,78 +201,22 @@
 
 			{#if !readonly}
 				<h3 class="text-sm font-semibold mb-2 text-muted-foreground">Add New Member</h3>
-				<div class="flex items-center space-x-2">
-					<Popover open={openCombobox} onOpenChange={(open) => openCombobox = open}>
-						<PopoverTrigger>
-							<Button
-								variant="outline"
-								role="combobox"
-								aria-expanded={openCombobox}
-								class="w-full justify-between flex-1 h-10 px-3"
-								disabled={isSubmitting || nonMemberUsers.length === 0}
-							>
-								<span class="truncate">
-									{#if selectedUsersToAdd.length > 0}
-										{selectedUsersToAdd.length} user(s) selected
-									{:else if nonMemberUsers.length === 0}
-										No users to add
-									{:else}
-										Select user...
-									{/if}
-								</span>
-								<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent class="w-full p-0" align="start">
-						<Command.Root class="w-full">
-							<Command.Input
-								placeholder="Search users..."
-								bind:value={searchTerm}
-								class="h-10 px-3 w-full"
-							/>
-							<Command.Empty class="py-6 text-center text-sm text-muted-foreground">
-								No users found.
-							</Command.Empty>
-							<Command.List class="max-h-64 overflow-auto w-full">
-								<Command.Group class="w-full">
-									{#each filteredNonMembers as user (user.id)}
-										<Command.Item
-											value={user.name}
-											onSelect={() => toggleUserSelection(user)}
-											class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent w-full"
-										>
-											<div class="flex items-center gap-2 flex-1 w-full">
-												<Check
-													class={cn(
-														'h-4 w-4',
-														selectedUsersToAdd.some(u => u.id === user.id) ? 'opacity-100' : 'opacity-0'
-													)}
-												/>
-												<Avatar class="h-6 w-6">
-													<AvatarImage src={user.avatarUrl} alt={user.name} />
-													<AvatarFallback>{user.name?.substring(0, 1).toUpperCase()}</AvatarFallback>
-												</Avatar>
-												<div class="flex flex-col flex-1 min-w-0">
-													<span class="text-sm font-medium truncate">{user.name}</span>
-													<span class="text-xs text-muted-foreground truncate">{user.email}</span>
-												</div>
-											</div>
-										</Command.Item>
-									{/each}
-								</Command.Group>
-							</Command.List>
-						</Command.Root>
-					</PopoverContent>
-					</Popover>
-					<Button onclick={handleAddMember} disabled={isSubmitting || selectedUsersToAdd.length === 0}>
-						{#if isSubmitting}
-							<Loader2 class="h-4 w-4 animate-spin" />
-						{:else}
-							<UserPlus class="h-4 w-4" />
-						{/if}
-						<span class="ml-2">Add ({selectedUsersToAdd.length})</span>
-					</Button>
-				</div>
+				<UserSelectionCombobox
+					bind:openCombobox
+					bind:selectedUsers={selectedUsersToAdd}
+					users={filteredNonMembers}
+					bind:searchTerm
+					{isSubmitting}
+					disabled={isSubmitting || nonMemberUsers.length === 0}
+					placeholder="Select user..."
+					emptyText="No users found."
+					multiSelect={true}
+					showSubmitButton={true}
+					submitButtonText="Add"
+					showAvatars={true}
+					onToggleUser={toggleUserSelection}
+					onSubmit={handleAddMember}
+				/>
 			{/if}
 		</div>
 

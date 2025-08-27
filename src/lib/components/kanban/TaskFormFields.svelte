@@ -14,6 +14,7 @@
 	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '$lib/components/ui/dialog';
 	import type { TaskFormData } from '$lib/types/types';
 	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
+	import UserSelectionCombobox from '../dashboard/UserSelectionCombobox.svelte';
 
 	export let assignableUsers: UserProfile[];
 	export let allTasksForDependencies: Pick<Task, 'id' | 'title'>[];
