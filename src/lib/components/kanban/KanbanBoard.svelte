@@ -29,27 +29,27 @@ import AddTaskDialog from './AddTaskDialog.svelte';
 	const permissions = $derived(team ? createProjectPermissions(project, team) : null);
 	const canManageTasks = $derived($permissions?.canManageTasks() ?? false);
 
-	let isLoading = false;
+	let isLoading = $state(false);
 	const tasksStore = writable<Task[]>([]);
 	let cleanupMonitor: () => void;
 	
 	// Edit dialog state
-	let isEditDialogOpen = false;
-	let taskToEdit: Task | null = null;
-	let isSubmittingTaskEdit = false;
+	let isEditDialogOpen = $state(false);
+	let taskToEdit: Task | null = $state(null);
+	let isSubmittingTaskEdit = $state(false);
 
 	// View dialog state
-let isViewDialogOpen = false;
-let taskToView: Task | null = null;
-let isSubmittingComment = false;
-let isDeleteDialogOpen = false;
-let taskToDelete: Task | null = null;
-let isDeletingTask = false;
+let isViewDialogOpen = $state(false);
+let taskToView: Task | null = $state(null);
+let isSubmittingComment = $state(false);
+let isDeleteDialogOpen = $state(false);
+let taskToDelete: Task | null = $state(null);
+let isDeletingTask = $state(false);
 
 // Add task dialog state
-let isAddDialogOpen = false;
-let selectedColumnId: string | null = null;
-let isSubmittingTaskAdd = false;
+let isAddDialogOpen = $state(false);
+let selectedColumnId: string | null = $state(null);
+let isSubmittingTaskAdd = $state(false);
 
 	// Initialize tasks from project
 	$effect(() => {
@@ -153,27 +153,30 @@ let isSubmittingTaskAdd = false;
 }
 
 async function handleAddTaskSubmit(taskData: any, columnId: string) {
-	const userId = get(currentUser)?.uid;
-	if (!userId) {
+	const user = get(currentUser);
+	if (!user) {
 		toast.error('You must be logged in to add tasks');
 		return;
 	}
 
 	isSubmittingTaskAdd = true;
 	try {
+		// Get Firebase ID token for authentication
+		const idToken = await user.getIdToken();
+		
 		const response = await fetch('/api/add-task', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${idToken}`
 			},
 			body: JSON.stringify({
 				projectId: project.id,
 				taskData: {
 					...taskData,
-					reporterId: userId
+					reporterId: user.uid
 				},
-				columnId,
-				currentUserUid: userId
+				columnId
 			})
 		});
 
@@ -213,23 +216,26 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 	async function confirmDeleteTask() {
 		if (!taskToDelete) return;
 
-		const userId = get(currentUser)?.uid;
-		if (!userId) {
+		const user = get(currentUser);
+		if (!user) {
 			toast.error('You must be logged in to delete tasks');
 			return;
 		}
 
 		isDeletingTask = true;
 		try {
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+			
 			const response = await fetch('/api/delete-task', {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
-					taskId: taskToDelete.id,
-					currentUserUid: userId
+					taskId: taskToDelete.id
 				})
 			});
 
@@ -268,24 +274,27 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 	}
 
 	async function handleAddComment(taskId: string, commentText: string) {
-		const userId = get(currentUser)?.uid;
-		if (!userId) {
+		const user = get(currentUser);
+		if (!user) {
 			toast.error('You must be logged in to add comments');
 			return;
 		}
 
 		isSubmittingComment = true;
 		try {
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+			
 			const response = await fetch('/api/add-comment', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
 					taskId,
-					commentText,
-					currentUserUid: userId
+					commentText
 				})
 			});
 
@@ -316,24 +325,27 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 	}
 
 	async function handleEditComment(taskId: string, commentId: string, newContent: string) {
-		const userId = get(currentUser)?.uid;
-		if (!userId) {
+		const user = get(currentUser);
+		if (!user) {
 			toast.error('You must be logged in to edit comments');
 			return;
 		}
 
 		try {
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+			
 			const response = await fetch('/api/edit-comment', {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
 					taskId,
 					commentId,
-					newContent,
-					currentUserUid: userId
+					newContent
 				})
 			});
 
@@ -363,23 +375,26 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 	}
 
 	async function handleDeleteComment(taskId: string, commentId: string) {
-		const userId = get(currentUser)?.uid;
-		if (!userId) {
+		const user = get(currentUser);
+		if (!user) {
 			toast.error('You must be logged in to delete comments');
 			return;
 		}
 
 		try {
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+			
 			const response = await fetch('/api/delete-comment', {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
 					taskId,
-					commentId,
-					currentUserUid: userId
+					commentId
 				})
 			});
 
@@ -425,8 +440,11 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 	}
 
 	async function handleUpdateTask(taskId: string, updatedFields: Partial<Task>) {
-		const userId = get(currentUser)?.uid;
-		if (!userId) return;
+		const user = get(currentUser);
+		if (!user) {
+			toast.error('You must be logged in to update tasks');
+			return;
+		}
 
 		isSubmittingTaskEdit = true;
 		try {
@@ -437,16 +455,19 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 				)
 			);
 
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+			
 			const response = await fetch('/api/update-task', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
 					taskId,
-					updatedFields,
-					currentUserUid: userId
+					updatedFields
 				})
 			});
 

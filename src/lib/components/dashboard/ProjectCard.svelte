@@ -39,9 +39,7 @@
 	import { createProjectPermissions } from '$lib/client/permissions';
 
 	export let project: Project;
-	export let currentUserUid: string | undefined;
 	export let team: Team | undefined;
-	export let allUsers: UserProfile[] = [];
 	export let openEditProjectDialog: (project: Project) => void = () => {};
 	export let openManageMembersDialog: (project: Project) => void = () => {};
 	export let openDeleteProjectDialog: (project: Project) => void = () => {};

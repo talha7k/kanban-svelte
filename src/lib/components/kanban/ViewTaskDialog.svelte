@@ -27,13 +27,10 @@
 	export let onOpenChange: (isOpen: boolean) => void;
 	export let task: Task | null;
 	export let users: UserProfile[];
-	export let canManageTask: boolean;
 	export let onAddComment: (taskId: string, commentText: string) => Promise<void> | void;
 	export let onEditComment: ((taskId: string, commentId: string, newContent: string) => Promise<void>) | undefined = undefined;
 	export let onDeleteComment: ((taskId: string, commentId: string) => Promise<void>) | undefined = undefined;
 	export let currentUserId: string | undefined = undefined;
-
-	export let isSubmittingComment: boolean = false;
 
 	let newComment = '';
 	let comments: CommentType[] = [];

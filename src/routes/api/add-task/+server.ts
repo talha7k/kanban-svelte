@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { addTaskToProject } from '$lib/api/firebaseTask';
+import { addTaskToProject } from '$lib/server/firebaseTask';
 import { requireAuth } from '$lib/server/auth';
 import type { RequestHandler } from './$types';
 import type { NewTaskData } from '$lib/types/types';

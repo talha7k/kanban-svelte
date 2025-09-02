@@ -23,8 +23,6 @@
 	export let isLoadingUsers: boolean;
 	export let allUsers: User[];
 	export let selectedTeam: Team | null;
-	export let selectedProject: Project | null = null;
-	export let onClearSelectedProject: (() => void) | undefined = undefined;
 
 	// Always show team members regardless of project selection
 	// Project member management is handled by ManageMembersDialog

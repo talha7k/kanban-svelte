@@ -19,7 +19,8 @@ export async function DELETE({ request }: { request: Request }) {
 			);
 		}
 
-		const projectRef = db.collection('projects').doc(projectId);
+		const firestore = db();
+		const projectRef = firestore.collection('projects').doc(projectId);
 		const projectDoc = await projectRef.get();
 		
 		if (!projectDoc.exists) {
