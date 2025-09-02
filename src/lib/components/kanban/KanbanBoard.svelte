@@ -235,7 +235,8 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 				},
 				body: JSON.stringify({
 					projectId: project.id,
-					taskId: taskToDelete.id
+					taskId: taskToDelete.id,
+					currentUserUid: user.uid
 				})
 			});
 

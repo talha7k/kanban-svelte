@@ -255,9 +255,7 @@
 						{#each teamProjects as project (project.id)}
 							<ProjectCard
 								{project}
-								currentUserUid={$currentUser?.uid}
 								team={currentTeam}
-								allUsers={$teamMembersData?.data || []}
 								openEditProjectDialog={openEditDialog}
 								openDeleteProjectDialog={openDeleteDialog}
 								openManageMembersDialog={openManageMembersDialog}
