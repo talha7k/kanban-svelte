@@ -259,7 +259,7 @@
 
 	let isLoading = $derived((!data.project && $projectQuery.isLoading) || isLoadingUsers);
 	let error = $derived(
-		$projectQuery.error?.message || 
+		(!data.project && $projectQuery.error?.message) || 
 			(!hasAccess && project ? 'You do not have access to this project.' : null)
 	);
 </script>
