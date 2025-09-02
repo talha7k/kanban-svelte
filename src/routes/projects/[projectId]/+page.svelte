@@ -31,8 +31,8 @@
 	// Use TanStack Query for project data
 	const projectQuery = useProject($page.params.projectId);
 	
-	// Reactive state variables - use client data if available, fallback to server data
-	let project: Project | null = $derived($projectQuery.data || data.project || null);
+	// Use server data initially, then switch to query data after hydration
+	let project: Project | null = $derived(data.project || $projectQuery.data || null);
 
 	// Permission checks
 	const permissions = $derived(project ? createProjectPermissions(project, data.team) : null);
@@ -257,7 +257,7 @@
 		)
 	);
 
-	let isLoading = $derived($projectQuery.isLoading || isLoadingUsers);
+	let isLoading = $derived((!data.project && $projectQuery.isLoading) || isLoadingUsers);
 	let error = $derived(
 		$projectQuery.error?.message || 
 			(!hasAccess && project ? 'You do not have access to this project.' : null)
