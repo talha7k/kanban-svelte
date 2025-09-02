@@ -91,14 +91,14 @@
 
 
 	async function createProject() {
-		if (!newProjectName.trim() || !$selectedTeamId) return;
+		if (!newProjectName.trim() || !$selectedTeamId || !$currentUser?.uid) return;
 
 		const projectData: NewProjectData = {
 			name: newProjectName.trim(),
 			description: newProjectDescription.trim()
 		};
 
-		await handleCreateProject(projectData, $selectedTeamId);
+		await handleCreateProject(projectData, $currentUser.uid, $selectedTeamId);
 
 		// Reset form
 		newProjectName = '';

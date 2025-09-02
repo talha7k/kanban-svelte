@@ -5,7 +5,8 @@
 	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '$lib/components/ui/dialog';
 	import { Plus, Loader2 } from '@lucide/svelte';
 	import EditTaskDialog from './EditTaskDialog.svelte';
-	import ViewTaskDialog from './ViewTaskDialog.svelte';
+import ViewTaskDialog from './ViewTaskDialog.svelte';
+import AddTaskDialog from './AddTaskDialog.svelte';
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
 	import { draggableTask, droppableColumn, droppableTask, setupKanbanMonitor, dragState } from '$queries/useDragAndDrop';
@@ -38,12 +39,17 @@
 	let isSubmittingTaskEdit = false;
 
 	// View dialog state
-	let isViewDialogOpen = false;
-	let taskToView: Task | null = null;
-	let isSubmittingComment = false;
-	let isDeleteDialogOpen = false;
-	let taskToDelete: Task | null = null;
-	let isDeletingTask = false;
+let isViewDialogOpen = false;
+let taskToView: Task | null = null;
+let isSubmittingComment = false;
+let isDeleteDialogOpen = false;
+let taskToDelete: Task | null = null;
+let isDeletingTask = false;
+
+// Add task dialog state
+let isAddDialogOpen = false;
+let selectedColumnId: string | null = null;
+let isSubmittingTaskAdd = false;
 
 	// Initialize tasks from project
 	$effect(() => {
@@ -141,9 +147,55 @@
 		};
 	});
 
-	function handleAddTask() {
-		console.log('Add task clicked');
+	function handleAddTask(event?: MouseEvent, columnId?: string) {
+	selectedColumnId = columnId || project.columns[0]?.id || null;
+	isAddDialogOpen = true;
+}
+
+async function handleAddTaskSubmit(taskData: any, columnId: string) {
+	const userId = get(currentUser)?.uid;
+	if (!userId) {
+		toast.error('You must be logged in to add tasks');
+		return;
 	}
+
+	isSubmittingTaskAdd = true;
+	try {
+		const response = await fetch('/api/add-task', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				projectId: project.id,
+				taskData: {
+					...taskData,
+					reporterId: userId
+				},
+				columnId,
+				currentUserUid: userId
+			})
+		});
+
+		if (!response.ok) {
+			throw new Error('Failed to add task');
+		}
+
+		const result = await response.json();
+		const newTask = result.task;
+
+		// Update the tasks store with the new task
+		tasksStore.update(tasks => [...tasks, newTask]);
+
+		toast.success('Task added successfully');
+	} catch (error) {
+		console.error('Error adding task:', error);
+		toast.error('Failed to add task');
+		throw error;
+	} finally {
+		isSubmittingTaskAdd = false;
+	}
+}
 
 	function handleEditTask(task: Task) {
 		taskToEdit = task;
@@ -537,6 +589,18 @@
 		onCancel={cancelDeleteTask}
 	/>
 
+	<!-- Add Task Dialog -->
+	<AddTaskDialog
+		bind:isOpen={isAddDialogOpen}
+		onOpenChange={(open) => {
+			isAddDialogOpen = open;
+			if (!open) selectedColumnId = null;
+		}}
+		onAddTask={handleAddTaskSubmit}
+		columnId={selectedColumnId}
+		assignableUsers={users}
+		isSubmitting={isSubmittingTaskAdd}
+	/>
 
 </div>
 
