@@ -392,10 +392,11 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
-					projectId: project.id,
-					taskId,
-					commentId
-				})
+				projectId: project.id,
+				taskId,
+				commentId,
+				currentUserUid: user.uid
+			})
 			});
 
 			if (!response.ok) {
@@ -589,12 +590,10 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 		bind:isOpen={isViewDialogOpen}
 		task={taskToView}
 		{users}
-		canManageTask={$currentUser?.uid === project.ownerId}
 		onAddComment={handleAddComment}
 		onEditComment={handleEditComment}
 		onDeleteComment={handleDeleteComment}
 		currentUserId={$currentUser?.uid}
-		{isSubmittingComment}
 		onOpenChange={(open) => {
 			isViewDialogOpen = open;
 			if (!open) taskToView = null;

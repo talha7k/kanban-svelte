@@ -3,7 +3,7 @@ import type { ServerLoad } from '@sveltejs/kit';
 import { getProjectByIdServer } from '$lib/server/firebaseProject';
 import { optionalAuth } from '$lib/server/auth';
 import { guardProjectAccess } from '$lib/auth/permissions';
-import { getTeam } from '$lib/api/firebaseTeam';
+import { getTeam } from '$lib/server/firebaseTeam';
 import type { Project, Team } from '$lib/types/types';
 
 export const load: ServerLoad = async ({ params, request }) => {
