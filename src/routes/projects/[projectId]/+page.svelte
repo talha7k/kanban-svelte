@@ -51,7 +51,7 @@
 
 	// Fetch users when project loads
 	async function fetchUsers() {
-		if (!$page.params.projectId || !$currentUser) return;
+		if (!$page.params.projectId || $authLoading || !$currentUser) return;
 		
 		isLoadingUsers = true;
 		try {
@@ -77,7 +77,7 @@
 	}
 
 	async function handleDeleteProject() {
-		if (!projectToDelete || !$currentUser || $currentUser.uid !== projectToDelete.ownerId) {
+		if (!projectToDelete || $authLoading || !$currentUser || $currentUser.uid !== projectToDelete.ownerId) {
 			toast.error('Permission Denied', {
 				description: 'Only the project owner can delete a project.'
 			});
@@ -109,7 +109,7 @@
 		description?: string;
 		teamId?: string | null;
 	}) {
-		if (!project || !$currentUser || $currentUser.uid !== project.ownerId) {
+		if (!project || $authLoading || !$currentUser || $currentUser.uid !== project.ownerId) {
 			toast.error('Permission Denied', {
 				description: 'Only the project owner can edit details.'
 			});
@@ -136,7 +136,7 @@
 	}
 
 	async function handleGenerateTasks(brief: string, taskCount: number) {
-		if (!project) return [];
+		if (!project || $authLoading || !$currentUser) return [];
 		isGeneratingTasks = true;
 		try {
 			const response = await fetch('/api/generate-tasks', {
@@ -147,7 +147,7 @@
 				body: JSON.stringify({
 					projectId: project.id,
 					brief,
-					currentUserUid: $currentUser!.uid,
+					currentUserUid: $currentUser.uid,
 					taskCount
 				})
 			});
@@ -174,7 +174,7 @@
 	async function handleAddTasks(
 		tasks: Omit<Task, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>[]
 	) {
-		if (!project) return;
+		if (!project || $authLoading || !$currentUser) return;
 		isAddingTasks = true;
 		try {
 			// Add projectId to each task
@@ -191,7 +191,7 @@
 				body: JSON.stringify({
 					projectId: project.id,
 					tasks: tasksWithProjectId,
-					currentUserUid: $currentUser!.uid
+					currentUserUid: $currentUser.uid
 				})
 			});
 			
@@ -231,9 +231,9 @@
 		}
 	}
 
-	// Fetch users when project data is available
+	// Fetch users when project data is available and auth is loaded
 	$effect(() => {
-		if (project) {
+		if (project && !$authLoading && $currentUser) {
 			fetchUsers();
 		}
 	});
@@ -249,18 +249,18 @@
 		}
 	}
 
-	// Access control check
+	// Access control check - only check access after auth is loaded
 	let hasAccess = $derived(
-		project && $currentUser && (
+		!$authLoading && project && $currentUser && (
 			project.memberIds?.includes($currentUser.uid) ||
 			project.ownerId === $currentUser.uid
 		)
 	);
 
-	let isLoading = $derived((!data.project && $projectQuery.isLoading) || isLoadingUsers);
+	let isLoading = $derived($authLoading || (!data.project && $projectQuery.isLoading) || isLoadingUsers);
 	let error = $derived(
 		(!data.project && $projectQuery.error?.message) || 
-			(!hasAccess && project ? 'You do not have access to this project.' : null)
+			(!$authLoading && !hasAccess && project ? 'You do not have access to this project.' : null)
 	);
 </script>
 
