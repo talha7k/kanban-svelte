@@ -76,7 +76,7 @@
 				</span>
 			</div>
 			
-			<div class="space-y-3">
+			<div class="space-y-3 px-2">
 				{#each generatedTasks as task, index (index)}
 					<Card class={`transition-all p-3 ${
 						selectedTaskIds.has(index) ? 'ring-1' : 'opacity-70'

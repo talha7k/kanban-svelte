@@ -136,13 +136,22 @@
 	}
 
 	async function handleGenerateTasks(brief: string, taskCount: number) {
-		if (!project || $authLoading || !$currentUser) return [];
+		if (!project || !$currentUser) {
+			toast.error('Error', {
+				description: 'Project or user information not available'
+			});
+			return [];
+		}
 		isGeneratingTasks = true;
 		try {
+			// Get Firebase ID token for authentication
+			const idToken = await $currentUser.getIdToken();
+			
 			const response = await fetch('/api/generate-tasks', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,
@@ -183,10 +192,14 @@
 				projectId: project!.id
 			}));
 			
+			// Get Firebase ID token for authentication
+			const idToken = await $currentUser.getIdToken();
+			
 			const response = await fetch('/api/add-approved-tasks', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
 				body: JSON.stringify({
 					projectId: project.id,

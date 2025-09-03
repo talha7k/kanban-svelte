@@ -5,7 +5,7 @@ import { ai } from '$lib/server/ai/genkit';
 
 const GenerateProjectTasksInputSchema = z.object({
   brief: z.string().describe('A brief description or list of requirements for the project tasks.'),
-  taskCount: z.number().min(1).max(5).describe('The number of tasks to generate (1-5).'),
+  taskCount: z.number().min(1).max(10).describe('The number of tasks to generate (1-10).'),
 });
 export type GenerateProjectTasksInput = z.infer<
   typeof GenerateProjectTasksInputSchema
