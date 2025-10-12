@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { navigating } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		Card,
@@ -58,7 +59,7 @@
 	function handleNavigateToProject() {
 		isPending = true;
 		goto(`/projects/${project.id}`);
-		isPending = false;
+		// Note: isPending will be reset when component unmounts or navigation completes
 	}
 
 	function handleManageMembers(e: MouseEvent) {
@@ -85,6 +86,11 @@
 		onclick={handleNavigateToProject}
 		class="pb-3 cursor-pointer relative"
 	>
+		{#if isPending}
+			<div class="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-t-lg">
+				<Loader2 class="h-6 w-6 animate-spin text-primary" />
+			</div>
+		{/if}
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
 			<div class="flex items-center space-x-2">

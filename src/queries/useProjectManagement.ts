@@ -20,6 +20,7 @@ import {
 } from '$lib/api/firebaseProject';
 import { getProjectRelevantUsers } from '$lib/api/firebaseUser';
 import { toast } from 'svelte-sonner';
+import { withLoading } from '$lib/utils/loading';
 
 export function useProjectManagement(currentUserId?: string) {
   const queryClient = useQueryClient();
@@ -34,8 +35,8 @@ export function useProjectManagement(currentUserId?: string) {
 
   // Project CRUD Mutations
   const createProjectMutation = createMutation<Project, Error, { projectData: NewProjectData; ownerId: string; teamId?: TeamId }>({
-    mutationFn: ({ projectData, ownerId, teamId }) => 
-      createProject(projectData, ownerId, teamId),
+    mutationFn: ({ projectData, ownerId, teamId }) =>
+      withLoading(() => createProject(projectData, ownerId, teamId)),
     onSuccess: (newProject) => {
       toast.success(`Project "${newProject.name}" has been created.`);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -50,8 +51,8 @@ export function useProjectManagement(currentUserId?: string) {
   });
 
   const updateProjectMutation = createMutation<Project, Error, { projectId: string; projectData: { name?: string; description?: string; teamId?: TeamId | null } }>({
-    mutationFn: ({ projectId, projectData }) => 
-      updateProjectDetails(projectId, projectData),
+    mutationFn: ({ projectId, projectData }) =>
+      withLoading(() => updateProjectDetails(projectId, projectData)),
     onSuccess: (updatedProject) => {
       projectToEdit.set(null);
       toast.success(`Project "${updatedProject.name}" has been updated.`);
@@ -68,7 +69,7 @@ export function useProjectManagement(currentUserId?: string) {
   });
 
   const deleteProjectMutation = createMutation<void, Error, { projectId: string; teamId?: string }>({
-    mutationFn: ({ projectId }) => deleteProject(projectId),
+    mutationFn: ({ projectId }) => withLoading(() => deleteProject(projectId)),
     onSuccess: (_, { projectId, teamId }) => {
       const project = get(projectToView);
       if (project) {
@@ -92,8 +93,8 @@ export function useProjectManagement(currentUserId?: string) {
 
   // User Management Mutations
   const addUserToProjectMutation = createMutation<void, Error, { projectId: string; userId: string }>({
-    mutationFn: ({ projectId, userId }) => 
-      addUserToProject(projectId, userId),
+    mutationFn: ({ projectId, userId }) =>
+      withLoading(() => addUserToProject(projectId, userId)),
     onSuccess: (_, { projectId, userId }) => {
       toast.success('User has been added to the project.');
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
@@ -106,8 +107,8 @@ export function useProjectManagement(currentUserId?: string) {
   });
 
   const removeUserFromProjectMutation = createMutation<void, Error, { projectId: string; userId: string }>({
-    mutationFn: ({ projectId, userId }) => 
-      removeUserFromProject(projectId, userId),
+    mutationFn: ({ projectId, userId }) =>
+      withLoading(() => removeUserFromProject(projectId, userId)),
     onSuccess: (_, { projectId, userId }) => {
       toast.success('User has been removed from the project.');
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
@@ -120,8 +121,8 @@ export function useProjectManagement(currentUserId?: string) {
   });
 
   const updateUserRoleMutation = createMutation<void, Error, { projectId: string; userId: string; newRole: UserProjectRole }>({
-    mutationFn: ({ projectId, userId, newRole }) => 
-      updateProjectUserRole(projectId, userId, newRole),
+    mutationFn: ({ projectId, userId, newRole }) =>
+      withLoading(() => updateProjectUserRole(projectId, userId, newRole)),
     onSuccess: (_, { projectId, userId, newRole }) => {
       toast.success(`User role has been updated to ${newRole}.`);
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });

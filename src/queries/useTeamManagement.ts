@@ -4,6 +4,7 @@ import { get } from 'svelte/store';
 import { currentUser } from '$lib/stores/auth';
 import { getTeamsForUser, createTeam, updateTeam, deleteTeam, addMemberToTeam, removeMemberFromTeam, getTeam, getTeamMembers } from '$lib/api/firebaseTeam';
 import type { Team, UserId, UserProfile } from '$lib/types/types';
+import { withLoading } from '$lib/utils/loading';
 
 // Query keys
 export const teamKeys = {
@@ -30,12 +31,12 @@ export function useTeams() {
 // Create team mutation
 export function useCreateTeam() {
   const queryClient = useQueryClient();
-  
+
   return createMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       const user = get(currentUser);
       if (!user?.uid) throw new Error('User not authenticated');
-      return await createTeam(name, user.uid as UserId, description || '');
+      return await withLoading(() => createTeam(name, user.uid as UserId, description || ''));
     },
     onSuccess: (newTeam) => {
       // Update the teams list
@@ -60,11 +61,13 @@ export function useCreateTeam() {
 // Update team mutation
 export function useUpdateTeam() {
   const queryClient = useQueryClient();
-  
+
   return createMutation({
     mutationFn: async ({ teamId, updates }: { teamId: string; updates: Partial<Team> }) => {
-      await updateTeam(teamId, updates);
-      return { teamId, updates };
+      return await withLoading(async () => {
+        await updateTeam(teamId, updates);
+        return { teamId, updates };
+      });
     },
     onSuccess: ({ teamId, updates }) => {
       // Invalidate and refetch the specific team
@@ -90,11 +93,13 @@ export function useUpdateTeam() {
 // Delete team mutation
 export function useDeleteTeam() {
   const queryClient = useQueryClient();
-  
+
   return createMutation({
     mutationFn: async (teamId: string) => {
-      await deleteTeam(teamId);
-      return teamId;
+      return await withLoading(async () => {
+        await deleteTeam(teamId);
+        return teamId;
+      });
     },
     onSuccess: (teamId) => {
       // Invalidate teams list

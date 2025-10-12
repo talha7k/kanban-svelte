@@ -88,7 +88,9 @@
 
 		isDeletingProject = true;
 		try {
-			await deleteProject(projectToDelete.id);
+			await withLoading(async () => {
+				await deleteProject(projectToDelete.id);
+			});
 			toast.success('Project Deleted', {
 				description: `"${projectToDelete.name}" has been successfully deleted.`
 			});

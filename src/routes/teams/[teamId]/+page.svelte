@@ -33,6 +33,7 @@
 	import { useTeamManagement } from '$queries/useTeamManagement';
 	import { useProjectManagement, useTeamProjects } from '$queries/useProjectManagement';
 	import ProjectCard from '$lib/components/dashboard/ProjectCard.svelte';
+	import { withLoading } from '$lib/utils/loading';
 	import { createTeamPermissions } from '$lib/client/permissions';
 	import ManageMembersDialog from '$lib/components/dashboard/ManageMembersDialog.svelte';
 	import {
@@ -98,7 +99,9 @@
 			description: newProjectDescription.trim()
 		};
 
-		await handleCreateProject(projectData, $currentUser.uid, $selectedTeamId);
+		await withLoading(async () => {
+			await handleCreateProject(projectData, $currentUser.uid, $selectedTeamId);
+		});
 
 		// Reset form
 		newProjectName = '';
@@ -114,7 +117,9 @@
 			description: newProjectDescription.trim()
 		};
 
-		await handleUpdateProject(selectedProject.id, updateData);
+		await withLoading(async () => {
+			await handleUpdateProject(selectedProject.id, updateData);
+		});
 
 		// Reset form
 		newProjectName = '';
@@ -126,7 +131,9 @@
 	async function deleteProject() {
 		if (!selectedProject) return;
 
-		await handleDeleteProject(selectedProject.id, selectedProject.teamId || $selectedTeamId || undefined);
+		await withLoading(async () => {
+			await handleDeleteProject(selectedProject.id, selectedProject.teamId || $selectedTeamId || undefined);
+		});
 
 		selectedProject = null;
 		isDeleteProjectDialogOpen = false;
