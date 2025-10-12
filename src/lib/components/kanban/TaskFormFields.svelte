@@ -35,7 +35,6 @@
     export let assignableUsers: UserProfile[];
     export let selectedCardType: CardType | null = null;
 
-    export let isEditing = false;
     export let readonly = false;
     export let formErrors: Record<string, string> = {};
     export let updateFormData: (field: keyof TaskFormData, value: any) => void;
@@ -218,10 +217,11 @@
                             </Badge>
                         {:else if readonly}
                             {#if field.type === "dropdown"}
+                                {@const Icon = getFieldTypeIcon(field.type)}
                                 <Popover>
                                     <PopoverTrigger>
                                         <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
-                                            <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                            <Icon class="h-3 w-3" />
                                             {field.name}: {formData.fieldValues[field.id] || "Not set"}
                                             {#if field.config.required && hasAssignees}
                                                 <span class="ml-1 text-red-500">*</span>
@@ -240,8 +240,9 @@
                                     </PopoverContent>
                                 </Popover>
                             {:else}
+                                {@const Icon = getFieldTypeIcon(field.type)}
                                 <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
-                                    <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                    <Icon class="h-3 w-3" />
                                     {field.name}: {formData.fieldValues[field.id] || "Not set"}
                                     {#if field.config.required && hasAssignees}
                                         <span class="ml-1 text-red-500">*</span>
@@ -249,10 +250,11 @@
                                 </Badge>
                             {/if}
                         {:else}
+                            {@const Icon = getFieldTypeIcon(field.type)}
                             <Popover>
                                 <PopoverTrigger>
                                     <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
-                                        <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                        <Icon class="h-3 w-3" />
                                         {field.name}
                                         {#if field.config.required && hasAssignees}
                                             <span class="ml-1 text-red-500">*</span>

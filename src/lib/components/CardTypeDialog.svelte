@@ -168,11 +168,12 @@
                    <span class="font-medium">{field.name}</span>
                    {#if field.type === 'dropdown'}
                      <Popover>
-                       <PopoverTrigger>
-                         <Badge variant="secondary" class="cursor-pointer hover:opacity-80 flex items-center gap-1">
-                           <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
-                           {getFieldTypeLabel(field.type)}
-                         </Badge>
+                        <PopoverTrigger>
+                            {@const Icon = getFieldTypeIcon(field.type)}
+                            <Badge variant="secondary" class="cursor-pointer hover:opacity-80 flex items-center gap-1">
+                              <Icon class="h-3 w-3" />
+                              {getFieldTypeLabel(field.type)}
+                           </Badge>
                        </PopoverTrigger>
                        <PopoverContent class="w-80">
                          <div class="space-y-2">
@@ -185,11 +186,12 @@
                          </div>
                        </PopoverContent>
                      </Popover>
-                   {:else}
-                     <Badge variant="secondary" class="flex items-center gap-1">
-                       <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
-                       {getFieldTypeLabel(field.type)}
-                     </Badge>
+                    {:else}
+                       {@const Icon = getFieldTypeIcon(field.type)}
+                       <Badge variant="secondary" class="flex items-center gap-1">
+                         <Icon class="h-3 w-3" />
+                         {getFieldTypeLabel(field.type)}
+                      </Badge>
                    {/if}
                    {#if field.config.required}
                      <span class="text-red-500">*</span>

@@ -549,10 +549,11 @@
                     <div class="space-y-2">
                       <h4 class="text-sm font-medium text-muted-foreground">Fields:</h4>
                       <div class="flex flex-wrap gap-2">
-                         {#each cardType.fields as field (field.id)}
-                           <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
-                             <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
-                             {field.name}
+                          {#each cardType.fields as field (field.id)}
+                            {@const Icon = getFieldTypeIcon(field.type)}
+                             <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
+                               <Icon class="h-3 w-3" />
+                               {field.name}
                              {#if field.config.required}
                                <span class="ml-1 text-red-500">*</span>
                              {/if}

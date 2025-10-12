@@ -345,18 +345,20 @@
 								{#each selectedCardType.fields as field (field.id)}
 									{#if field.name !== "title" && field.name !== "description"}
 										{#if field.type === "fixed"}
+											{@const Icon = getFieldTypeIcon(field.type)}
 											<Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1">
-												<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+												<Icon class="h-3 w-3" />
 												{field.name}: {field.config?.value || "N/A"}
 												{#if field.config?.required && task?.assigneeUids?.length}
 													<span class="ml-1 text-red-500">*</span>
 												{/if}
 											</Badge>
 										{:else}
+											{@const Icon = getFieldTypeIcon(field.type)}
 											<Popover>
 												<PopoverTrigger>
 													<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
-														<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+														<Icon class="h-3 w-3" />
 														{field.name}: {getFieldDisplayValue(field, task)}
 														{#if field.config?.required && task?.assigneeUids?.length}
 															<span class="ml-1 text-red-500">*</span>
