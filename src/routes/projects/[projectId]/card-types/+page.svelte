@@ -51,6 +51,15 @@
   let isEditDialogOpen = $state(false);
   let editingCardType: CardType | null = $state(null);
 
+  // Field management states
+  let addFields: CardTypeField[] = $state([]);
+  let editFields: CardTypeField[] = $state([]);
+  let newFieldName: string = $state('');
+  let newFieldType: FieldType = $state('text_input');
+  let newFieldRequired: boolean = $state(false);
+  let newFieldOptions: string = $state('');
+  let isAddFieldDialogOpen: boolean = $state(false);
+
   // Sync card types with project data
   $effect(() => {
     if (project?.cardTypes) {
@@ -245,7 +254,23 @@
     isEditDialogOpen = true;
   }
 
+  function handleAddField() {
+    if (!newFieldName.trim()) return;
 
+    const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : [];
+
+    const newField: CardTypeField = {
+      id: crypto.randomUUID(),
+      name: newFieldName.trim(),
+      type: newFieldType,
+      order: editFields.length,
+      config: {
+        required: newFieldRequired,
+        ...(newFieldType === 'text_input' && { placeholder: '' }),
+        ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
+        ...(newFieldType === 'dropdown' && { options }),
+        ...(newFieldType === 'textarea' && { placeholder: '' }),
+      },
     };
 
     editFields = [...editFields, newField];
@@ -286,15 +311,6 @@
 
   function handleRemoveFieldForAdd(fieldId: string) {
     addFields = addFields.filter(f => f.id !== fieldId);
-  }
-    };
-
-    editFields = [...editFields, newField];
-    newFieldName = '';
-    newFieldType = 'text_input';
-    newFieldRequired = false;
-    newFieldOptions = '';
-    isAddFieldDialogOpen = false;
   }
 
   function handleRemoveField(fieldId: string) {
@@ -337,32 +353,6 @@
       toast.success('Card type updated successfully');
       isEditDialogOpen = false;
       editingCardType = null;
-    } catch (error) {
-      console.error('Error updating card type:', error);
-      toast.error('Error updating card type', {
-        description: error instanceof Error ? error.message : 'Could not update card type.'
-      });
-    } finally {
-      isSubmitting = false;
-    }
-  }
-
-        const result = await response.json();
-
-        // Update local state
-        cardTypes = cardTypes.map(ct => ct.id === editingCardType!.id ? result.cardType : ct);
-
-        // Invalidate project query to refresh data
-        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-        toast.success('Card type updated successfully');
-        isEditDialogOpen = false;
-        editingCardType = null;
-        editName = '';
-        editDescription = '';
-        editColor = '#3b82f6';
-        editFields = [];
-      });
     } catch (error) {
       console.error('Error updating card type:', error);
       toast.error('Error updating card type', {
