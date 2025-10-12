@@ -4,7 +4,8 @@
 	import { page } from '$app/stores';
 	import { currentUser, authLoading } from '$lib/stores/auth';
 	import { toast } from 'svelte-sonner';
-	import { getTeam, updateTeam, addMemberToTeam, removeMemberFromTeam, deleteTeam, getTeamMembers } from '$lib/api/firebaseTeam';
+ 	import { getTeam, updateTeam, addMemberToTeam, removeMemberFromTeam, getTeamMembers } from '$lib/api/firebaseTeam';
+ 	import { useTeamManagement } from '$queries/useTeamManagement';
 	import { getUserProfileByEmail, getUserProfile } from '$lib/api/firebaseUser';
 	import { getProjectsForTeam } from '$lib/api/firebaseProject';
 	import type { Team, UserId, UserProfile, Project } from '$lib/types/types';
@@ -15,8 +16,11 @@
 	import { Loader2, UserPlus, Trash2, AlertTriangle, Edit2 } from '@lucide/svelte';
 	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '$lib/components/ui/dialog';
 
-	// Get teamId from page params
-	let teamId = $derived($page.params.teamId);
+ 	// Get teamId from page params
+ 	let teamId = $derived($page.params.teamId);
+
+ 	// Team management
+ 	const { deleteTeamMutation } = useTeamManagement(teamId);
 
 	// State variables
 	let team: Team | null = $state(null);
@@ -173,25 +177,29 @@
 		}
 	}
 
-	async function handleDeleteTeam() {
-		if (!team || !$currentUser) return;
-		isDeletingTeam = true;
-		try {
-			await deleteTeam(team.id);
-			toast.success('Team Deleted', {
-				description: 'Team has been successfully deleted.'
-			});
-			goto('/teams');
-		} catch (error) {
-			console.error('Error deleting team:', error);
-			toast.error('Deletion Failed', {
-				description: 'Could not delete team.'
-			});
-		} finally {
-			isDeletingTeam = false;
-			isDeleteTeamDialogOpen = false;
-		}
-	}
+ 	async function handleDeleteTeam() {
+ 		if (!team || !$currentUser) return;
+ 		isDeletingTeam = true;
+
+ 		$deleteTeamMutation.mutate(team.id, {
+ 			onSuccess: () => {
+ 				toast.success('Team Deleted', {
+ 					description: 'Team has been successfully deleted.'
+ 				});
+ 				goto('/teams');
+ 			},
+ 			onError: (error) => {
+ 				console.error('Error deleting team:', error);
+ 				toast.error('Deletion Failed', {
+ 					description: 'Could not delete team.'
+ 				});
+ 			},
+ 			onSettled: () => {
+ 				isDeletingTeam = false;
+ 				isDeleteTeamDialogOpen = false;
+ 			}
+ 		});
+ 	}
 
 	import { setSelectedTeamId } from '$lib/stores/team';
 	import type { TeamId } from '$lib/types/types';

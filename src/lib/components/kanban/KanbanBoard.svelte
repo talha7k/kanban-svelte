@@ -254,12 +254,8 @@
                 const result = await response.json();
                 const newTask = result.task;
 
-                // Update the tasks store with the new task
-                tasksStore.update((tasks) =>
-                    [...tasks, newTask].filter(
-                        (task) => task && typeof task === "object" && task.id,
-                    ),
-                );
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 toast.success("Task added successfully");
             });
@@ -317,15 +313,8 @@
                     throw new Error("Failed to delete task");
                 }
 
-                // Remove task from store
-                tasksStore.update((tasks) =>
-                    tasks
-                        .filter((t) => t.id !== taskToDelete!.id)
-                        .filter(
-                            (task) =>
-                                task && typeof task === "object" && task.id,
-                        ),
-                );
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 // Close dialogs if the deleted task was being viewed
                 if (taskToView?.id === taskToDelete!.id) {
@@ -392,17 +381,8 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                // Update the task in the store with the new comment
-                tasksStore.update((tasks) =>
-                    tasks
-                        .map((task) =>
-                            task.id === taskId ? updatedTask : task,
-                        )
-                        .filter(
-                            (task) =>
-                                task && typeof task === "object" && task.id,
-                        ),
-                );
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 // Update the taskToView if it's the same task
                 if (taskToView?.id === taskId) {
@@ -459,16 +439,8 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                tasksStore.update((tasks) =>
-                    tasks
-                        .map((task) =>
-                            task.id === taskId ? updatedTask : task,
-                        )
-                        .filter(
-                            (task) =>
-                                task && typeof task === "object" && task.id,
-                        ),
-                );
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 // Update taskToView if it's the same task
                 if (taskToView?.id === taskId) {
@@ -522,16 +494,8 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                tasksStore.update((tasks) =>
-                    tasks
-                        .map((task) =>
-                            task.id === taskId ? updatedTask : task,
-                        )
-                        .filter(
-                            (task) =>
-                                task && typeof task === "object" && task.id,
-                        ),
-                );
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 // Update taskToView if it's the same task
                 if (taskToView?.id === taskId) {
