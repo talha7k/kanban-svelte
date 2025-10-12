@@ -72,18 +72,7 @@
 		try {
 			taskFormSchema.parse(formData);
 
-			// Validate custom fields if card type is selected
-			if (selectedCardType && selectedCardType.fields) {
-				const hasAssignees = formData.assigneeUids && formData.assigneeUids.length > 0;
-				for (const field of selectedCardType.fields) {
-					if (field.name !== 'Title' && field.name !== 'Description' && field.config?.required && hasAssignees) {
-						const fieldValue = formData.fieldValues[field.id];
-						if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-							formErrors[`field-${field.id}`] = `${field.name} is required when task has assignees`;
-						}
-					}
-				}
-			}
+			// Note: Custom fields are not validated as required since employees submit information incrementally
 
 			// Check if there are any errors
 			return Object.keys(formErrors).length === 0;

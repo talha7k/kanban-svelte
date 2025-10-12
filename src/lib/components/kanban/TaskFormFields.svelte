@@ -112,7 +112,7 @@
 <div class="grid grid-cols-2 gap-4 py-4">
     {#if selectedCardType && selectedCardType.fields.some((f) => f.name === "title" && f.type === "fixed")}
         <div class="space-y-1 col-span-2">
-            <Label for="title">Title *</Label>
+            <Label for="title">Title</Label>
             <div class="px-3 py-2 bg-muted rounded-md text-sm">
                 {selectedCardType.fields.find((f) => f.name === "title")?.config
                     ?.value || "N/A"}
@@ -120,7 +120,7 @@
         </div>
     {:else if readonly}
         <div class="space-y-1 col-span-2">
-            <Label for="title">Title *</Label>
+            <Label for="title">Title</Label>
             <div class="px-3 py-2 bg-muted rounded-md text-sm">
                 {formData.title || "Not set"}
             </div>
@@ -128,7 +128,7 @@
     {:else}
         <div class="space-y-1 col-span-2">
             <div class="flex justify-between items-center">
-                <Label for="title">Title *</Label>
+                <Label for="title">Title</Label>
                   <Button
                       type="button"
                       variant="outline"
@@ -143,7 +143,6 @@
                 id="title"
                 bind:value={formData.title}
                 placeholder="e.g., Implement feature X"
-                required
             />
             {#if formErrors.title}
                 <p class="text-xs text-destructive">{formErrors.title}</p>
@@ -211,9 +210,7 @@
                         {#if field.type === "fixed"}
                             <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200">
                                 {field.name}: {field.config.value || "N/A"}
-                                {#if field.config.required && hasAssignees}
-                                    <span class="ml-1 text-red-500">*</span>
-                                {/if}
+
                             </Badge>
                         {:else if readonly}
                             {#if field.type === "dropdown"}
@@ -223,9 +220,7 @@
                                         <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
                                             <Icon class="h-3 w-3" />
                                             {field.name}: {formData.fieldValues[field.id] || "Not set"}
-                                            {#if field.config.required && hasAssignees}
-                                                <span class="ml-1 text-red-500">*</span>
-                                            {/if}
+
                                         </Badge>
                                     </PopoverTrigger>
                                     <PopoverContent class="w-80">
@@ -244,22 +239,17 @@
                                 <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
                                     <Icon class="h-3 w-3" />
                                     {field.name}: {formData.fieldValues[field.id] || "Not set"}
-                                    {#if field.config.required && hasAssignees}
-                                        <span class="ml-1 text-red-500">*</span>
-                                    {/if}
+
                                 </Badge>
                             {/if}
                         {:else}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Popover>
                                 <PopoverTrigger>
-                                    <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
-                                        <Icon class="h-3 w-3" />
-                                        {field.name}
-                                        {#if field.config.required && hasAssignees}
-                                            <span class="ml-1 text-red-500">*</span>
-                                        {/if}
-                                    </Badge>
+                                     <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                         <Icon class="h-3 w-3" />
+                                         {field.name}
+                                     </Badge>
                                 </PopoverTrigger>
                                 <PopoverContent class="w-80">
                                     <div class="space-y-2">
@@ -269,7 +259,7 @@
                                                 id="field-{field.id}"
                                                 bind:value={formData.fieldValues[field.id]}
                                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                required={field.config.required && hasAssignees}
+
                                             >
                                                 <option value="">Select {field.name.toLowerCase()}</option>
                                                 {#each field.config.options || [] as option}
@@ -281,7 +271,7 @@
                                                 id="field-{field.id}"
                                                 bind:value={formData.fieldValues[field.id]}
                                                 placeholder={field.config.placeholder || ""}
-                                                required={field.config.required && hasAssignees}
+
                                             />
                                         {:else if field.type === "number_input"}
                                             <Input
@@ -291,21 +281,21 @@
                                                 placeholder={field.config.placeholder || ""}
                                                 min={field.config.min}
                                                 max={field.config.max}
-                                                required={field.config.required && hasAssignees}
+
                                             />
                                         {:else if field.type === "date_input"}
                                             <Input
                                                 id="field-{field.id}"
                                                 type="date"
                                                 bind:value={formData.fieldValues[field.id]}
-                                                required={field.config.required && hasAssignees}
+
                                             />
                                         {:else if field.type === "textarea"}
                                             <Textarea
                                                 id="field-{field.id}"
                                                 bind:value={formData.fieldValues[field.id]}
                                                 placeholder={field.config.placeholder || ""}
-                                                required={field.config.required && hasAssignees}
+
                                             />
                                         {:else if field.type === "checkbox"}
                                             <div class="flex items-center space-x-2">
@@ -314,7 +304,7 @@
                                                     type="checkbox"
                                                     bind:checked={formData.fieldValues[field.id]}
                                                     class="h-4 w-4 rounded border border-input"
-                                                    required={field.config.required && hasAssignees}
+    
                                                 />
                                                 <label
                                                     for="field-{field.id}"

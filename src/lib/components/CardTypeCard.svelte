@@ -147,9 +147,6 @@
                <Badge variant="secondary" class="{getFieldTypeColor(field.type)} text-xs px-1.5 py-0.5 flex items-center gap-1">
                  <Icon class="h-2.5 w-2.5" />
                  {field.name}
-               {#if field.config.required}
-                 <span class="ml-0.5 text-red-500">*</span>
-               {/if}
              </Badge>
            {/each}
         </div>

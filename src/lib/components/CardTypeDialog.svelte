@@ -30,7 +30,6 @@
   let isAddFieldDialogOpen = $state(false);
   let newFieldName = $state('');
   let newFieldType: FieldType = $state('text_input');
-  let newFieldRequired = $state(false);
   let newFieldOptions = $state('');
 
   // AI generation dialog states
@@ -91,7 +90,6 @@
       type: newFieldType,
       order: fields.length,
       config: {
-        required: newFieldRequired,
         // Add default config based on type
         ...(newFieldType === 'text_input' && { placeholder: '' }),
         ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
@@ -103,7 +101,6 @@
     fields = [...fields, newField];
     newFieldName = '';
     newFieldType = 'text_input';
-    newFieldRequired = false;
     newFieldOptions = '';
     isAddFieldDialogOpen = false;
   }
@@ -274,11 +271,8 @@
                        <Badge variant="secondary" class="flex items-center gap-1">
                          <Icon class="h-3 w-3" />
                          {getFieldTypeLabel(field.type)}
-                      </Badge>
-                   {/if}
-                   {#if field.config.required}
-                     <span class="text-red-500">*</span>
-                   {/if}
+                       </Badge>
+                    {/if}
                  </div>
                 <Button type="button" variant="ghost" size="sm" onclick={() => handleRemoveField(field.id)}>
                   <Trash2 class="h-4 w-4" />
@@ -348,18 +342,9 @@
           />
         </div>
       {/if}
-      <div class="flex items-center space-x-2">
-        <input
-          id="field-required"
-          type="checkbox"
-          bind:checked={newFieldRequired}
-          class="h-4 w-4 rounded border border-input"
-        />
-        <Label for="field-required">Required</Label>
-      </div>
     </div>
     <DialogFooter>
-      <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldRequired = false; newFieldOptions = ''; }}>
+      <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldOptions = ''; }}>
         Cancel
       </Button>
        <Button onclick={handleAddField} disabled={!newFieldName.trim()}>

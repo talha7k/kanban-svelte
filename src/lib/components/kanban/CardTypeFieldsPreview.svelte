@@ -54,18 +54,14 @@
                 <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 text-xs flex items-center gap-1">
                     <Icon class="h-3 w-3" />
                     {field.name}: {field.config?.value || "N/A"}
-                    {#if field.config?.required && hasAssignees}
-                        <span class="ml-1 text-red-500">*</span>
-                    {/if}
+
                 </Badge>
             {:else}
                 {@const Icon = getFieldTypeIcon(field.type)}
                 <Badge variant="secondary" class="{getFieldTypeColor(field.type)} text-xs flex items-center gap-1">
                     <Icon class="h-3 w-3" />
                     {field.name}
-                    {#if field.config?.required && hasAssignees}
-                        <span class="ml-1 text-red-500">*</span>
-                    {/if}
+
                 </Badge>
             {/if}
         {/if}
