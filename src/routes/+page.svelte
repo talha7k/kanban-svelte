@@ -12,10 +12,10 @@
       <h1 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
         Welcome to Kanban
       </h1>
-      <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        Organize your projects and tasks with our intuitive kanban board system. 
-        Collaborate with your team and boost productivity.
-      </p>
+       <p class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+         Organize your projects and tasks with our flexible kanban board system.
+         Create and manage teams, build projects with custom columns, define task types with structured input fields, and adapt workflows to your team's needs.
+       </p>
     </div>
 
     <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -24,36 +24,39 @@
           <CardTitle>Team Collaboration</CardTitle>
           <CardDescription>Work together seamlessly</CardDescription>
         </CardHeader>
-        <CardContent>
-          <p class="text-gray-600 dark:text-gray-300">
-            Invite team members, assign tasks, and track progress in real-time.
-          </p>
-        </CardContent>
+         <CardContent>
+           <p class="text-gray-600 dark:text-gray-300">
+             Create and manage teams, build projects, and add team members with specific roles.
+             Assign tasks, track progress, and collaborate seamlessly in real-time.
+           </p>
+         </CardContent>
       </Card>
 
-      <Card class="text-center">
-        <CardHeader>
-          <CardTitle>Visual Boards</CardTitle>
-          <CardDescription>See your workflow</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p class="text-gray-600 dark:text-gray-300">
-            Drag and drop tasks between columns to manage your project workflow visually.
-          </p>
-        </CardContent>
-      </Card>
+       <Card class="text-center">
+         <CardHeader>
+           <CardTitle>Flexible Boards</CardTitle>
+           <CardDescription>Customize your workflow</CardDescription>
+         </CardHeader>
+         <CardContent>
+           <p class="text-gray-600 dark:text-gray-300">
+             Create unlimited columns and drag-and-drop tasks to manage your project workflow visually.
+             Adapt your board to any methodology or process.
+           </p>
+         </CardContent>
+       </Card>
 
-      <Card class="text-center">
-        <CardHeader>
-          <CardTitle>Powerful Analytics</CardTitle>
-          <CardDescription>Track your progress</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p class="text-gray-600 dark:text-gray-300">
-            Get insights into team performance and project completion rates.
-          </p>
-        </CardContent>
-      </Card>
+       <Card class="text-center">
+         <CardHeader>
+           <CardTitle>Custom Task Types</CardTitle>
+           <CardDescription>Define your own workflows</CardDescription>
+         </CardHeader>
+         <CardContent>
+           <p class="text-gray-600 dark:text-gray-300">
+             Create custom card types with any input fields you need. Define patterns for task completion
+             and ensure consistent, structured work across your team.
+           </p>
+         </CardContent>
+       </Card>
     </div>
 
     <div class="text-center mt-12">
