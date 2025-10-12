@@ -655,10 +655,10 @@
             </div>
         {/if}
         <div class="flex flex-col h-full">
-            <div class="flex-1 p-4 h-full">
+            <div class="flex-1 p-4 h-full overflow-x-auto">
                 <!-- Fixed Header Row -->
                 <div
-                    class="flex gap-4 sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b pb-2"
+                    class="flex gap-4 sticky top-0 z-30 bg-background/95 backdrop-blur-sm pb-2"
                 >
                     {#each project.columns as column (column.id)}
                         <div class="w-80 flex-shrink-0">
@@ -673,7 +673,7 @@
 
                 <!-- Scrollable Content -->
                 <div
-                    class="flex gap-4 overflow-x-auto h-full pb-4 items-stretch"
+                    class="flex gap-4 h-full pb-4 items-stretch"
                 >
                     {#each project.columns as column (column.id)}
                         <div
@@ -686,16 +686,19 @@
                                 column.id}
                             use:droppableColumn={{ columnId: column.id }}
                         >
-                            <div class="space-y-2 flex-1 pt-2">
+                             <div class="flex-1 pt-2">
                                 {#each $tasksStore
                                     .filter((task) => task.columnId === column.id)
                                     .sort((a, b) => a.order - b.order) as task, index (task.id)}
                                     <!-- Insertion preview indicator BEFORE the target task -->
-                                    {#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}
-                                        <div class="relative mb-2">
-                                            <div
-                                                class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"
-                                            ></div>
+                                     {#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}
+                                         <div class="relative mb-2" use:droppableTask={{
+                                             taskId: task.id,
+                                             columnId: column.id,
+                                         }}>
+                                             <div
+                                                 class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"
+                                             ></div>
                                             {#if $dragState.movingTaskId}
                                                 {@const movingTask =
                                                     $tasksStore.find(
@@ -716,62 +719,35 @@
                                         </div>
                                     {/if}
 
-                                    <div
-                                        class="transition-all duration-200"
-                                        class:opacity-50={$dragState.isDragging &&
-                                            $dragState.movingTaskId === task.id}
-                                        class:transform={$dragState.insertionPreview &&
-                                            $dragState.insertionPreview
-                                                .columnId === column.id &&
-                                            $dragState.insertionPreview
-                                                .afterTaskId &&
-                                            index >=
-                                                $tasksStore
-                                                    .filter(
-                                                        (t) =>
-                                                            t.columnId ===
-                                                            column.id,
-                                                    )
-                                                    .sort(
-                                                        (a, b) =>
-                                                            a.order - b.order,
-                                                    )
-                                                    .findIndex(
-                                                        (t) =>
-                                                            t.id ===
-                                                            $dragState
-                                                                .insertionPreview
-                                                                ?.afterTaskId,
-                                                    )}
-                                        class:translate-y-4={$dragState.insertionPreview &&
-                                            $dragState.insertionPreview
-                                                .columnId === column.id &&
-                                            $dragState.insertionPreview
-                                                .afterTaskId &&
-                                            index >=
-                                                $tasksStore
-                                                    .filter(
-                                                        (t) =>
-                                                            t.columnId ===
-                                                            column.id,
-                                                    )
-                                                    .sort(
-                                                        (a, b) =>
-                                                            a.order - b.order,
-                                                    )
-                                                    .findIndex(
-                                                        (t) =>
-                                                            t.id ===
-                                                            $dragState
-                                                                .insertionPreview
-                                                                ?.afterTaskId,
-                                                    )}
-                                        use:draggableTask={{ task }}
-                                        use:droppableTask={{
-                                            taskId: task.id,
-                                            columnId: column.id,
-                                        }}
-                                    >
+                                     {@const columnTasks = $tasksStore
+                                         .filter(
+                                             (t) =>
+                                                 t.columnId === column.id &&
+                                                 t.id !== $dragState.movingTaskId,
+                                         )
+                                         .sort((a, b) => a.order - b.order)}
+                                     {@const insertionIndex = $dragState.insertionPreview &&
+                                         $dragState.insertionPreview.columnId === column.id &&
+                                         $dragState.insertionPreview.afterTaskId
+                                         ? columnTasks.findIndex(
+                                             (t) =>
+                                                 t.id ===
+                                                 $dragState.insertionPreview
+                                                     ?.afterTaskId,
+                                         )
+                                         : -1}
+                                     <div
+                                         class="transition-all duration-200 mb-2"
+                                         class:opacity-50={$dragState.isDragging &&
+                                             $dragState.movingTaskId === task.id}
+                                         class:transform={insertionIndex !== -1 && index >= insertionIndex}
+                                         class:translate-y-4={insertionIndex !== -1 && index >= insertionIndex}
+                                         use:draggableTask={{ task }}
+                                         use:droppableTask={{
+                                             taskId: task.id,
+                                             columnId: column.id,
+                                         }}
+                                     >
                                         <TaskCard
                                             {task}
                                             {users}
