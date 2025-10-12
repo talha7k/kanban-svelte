@@ -84,12 +84,12 @@
 		isDeletingProject = true;
 		try {
 			await withLoading(async () => {
-				await deleteProject(projectToDelete.id);
+				await deleteProject(projectToDelete!.id);
 			});
 			toast.success('Project Deleted', {
-				description: `"${projectToDelete.name}" has been successfully deleted.`
+				description: `"${projectToDelete!.name}" has been successfully deleted.`
 			});
-			goto('/teams/' + projectToDelete.teamId);
+			goto('/teams/' + projectToDelete!.teamId);
 		} catch (error) {
 			console.error('Error deleting project:', error);
 			const errorMessage =
@@ -154,7 +154,7 @@
 						'Authorization': `Bearer ${idToken}`
 					},
 					body: JSON.stringify({
-						projectId: project.id,
+						projectId: project!.id,
 						brief,
 						currentUserUid: $currentUser.uid,
 						taskCount
@@ -206,7 +206,7 @@
 						'Authorization': `Bearer ${idToken}`
 					},
 					body: JSON.stringify({
-						projectId: project.id,
+						projectId: project!.id,
 						tasks: tasksWithProjectId,
 						currentUserUid: $currentUser.uid
 					})

@@ -243,7 +243,7 @@ let isSubmittingTaskAdd = $state(false);
 					},
 					body: JSON.stringify({
 						projectId: project.id,
-						taskId: taskToDelete.id,
+						taskId: taskToDelete!.id,
 						currentUserUid: user.uid
 					})
 				});
@@ -256,7 +256,7 @@ let isSubmittingTaskAdd = $state(false);
 				tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id));
 
 				// Close dialogs if the deleted task was being viewed
-				if (taskToView?.id === taskToDelete.id) {
+				if (taskToView?.id === taskToDelete!.id) {
 					isViewDialogOpen = false;
 					taskToView = null;
 				}
@@ -628,7 +628,7 @@ let isSubmittingTaskAdd = $state(false);
 		onUpdateTask={handleUpdateTask}
 		assignableUsers={users}
 		canManageTask={canManageTasks}
-		onOpenChange={(open) => {
+		onOpenChange={(open: boolean) => {
 			isViewDialogOpen = open;
 			if (!open) taskToView = null;
 		}}

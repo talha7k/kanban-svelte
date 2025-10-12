@@ -154,6 +154,7 @@
 	// Custom fields state
 	let fieldValues: Record<string, any> = $state({});
 	let isSubmittingFieldUpdate = $state(false);
+	let openPopovers = $state<Record<string, boolean>>({});
 
 	let selectedCardType = $derived(cardTypes.find((ct) => ct.id === task.cardTypeId) || null);
 
@@ -231,6 +232,7 @@
 				}
 			}
 			await onUpdateTask(task.id, { fieldValues: fullFieldValues });
+			openPopovers[fieldId] = false;
 		} catch (error) {
 			console.error('Failed to update custom fields:', error);
 		} finally {
@@ -284,7 +286,7 @@
 								{/if}
 							</Badge>
 						{:else}
-							<Popover>
+							<Popover bind:open={openPopovers[field.id]}>
 								<PopoverTrigger>
 									<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 text-xs flex items-center gap-1">
 										<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
@@ -367,6 +369,7 @@
 												size="sm"
 												onclick={() => {
 													fieldValues = { ...(task.fieldValues || {}) };
+													openPopovers[field.id] = false;
 												}}
 											>
 												Reset

@@ -162,7 +162,7 @@ export interface Task {
 // Used for creating a task, some fields are auto-generated
 export type NewTaskData = Omit<
   Task,
-  "id" | "columnId" | "updatedAt" | "comments" | "projectId" | "createdAt" | "order"
+  "id" | "columnId" | "updatedAt" | "comments" | "projectId" | "createdAt"
 >;
 
 export interface Column {

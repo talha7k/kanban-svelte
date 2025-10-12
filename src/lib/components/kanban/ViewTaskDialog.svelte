@@ -32,7 +32,7 @@
 	import { Input } from '$lib/components/ui/input';
 
 	let {
-		isOpen,
+		isOpen = $bindable(),
 		onOpenChange,
 		task,
 		users,

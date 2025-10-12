@@ -132,7 +132,7 @@
     try {
       await withLoading(async () => {
         const idToken = await $currentUser.getIdToken();
-        const response = await fetch(`/api/projects/${project.id}/columns/${editingColumn.id}`, {
+        const response = await fetch(`/api/projects/${project.id}/columns/${editingColumn!.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -179,8 +179,8 @@
       await withLoading(async () => {
         const idToken = await $currentUser.getIdToken();
         const url = targetColumnId
-          ? `/api/projects/${project.id}/columns/${deletingColumn.id}?targetColumnId=${targetColumnId}`
-          : `/api/projects/${project.id}/columns/${deletingColumn.id}`;
+          ? `/api/projects/${project.id}/columns/${deletingColumn!.id}?targetColumnId=${targetColumnId}`
+          : `/api/projects/${project.id}/columns/${deletingColumn!.id}`;
 
         const response = await fetch(url, {
           method: 'DELETE',
