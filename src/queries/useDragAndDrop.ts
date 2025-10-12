@@ -162,14 +162,13 @@ export function setupKanbanMonitor(
     },
     onDrop({ location, source }) {
       const targets = location.current.dropTargets;
-      if (!targets || targets.length === 0) return; // Dropped outside a valid target
+      if (!targets || targets.length === 0) return;
 
       const sourceData = source.data as DraggableTaskData;
       if (sourceData.type !== 'task') return;
-      
+
       const draggedTask = sourceData.task;
-      
-      // Find the target - prioritize task drops for reordering, fallback to column drops
+
       let targetTask = targets.find(t => (t.data as DroppableTaskData).type === 'task');
       let targetColumn = targets.find(t => (t.data as DroppableColumnData).type === 'column');
 
@@ -177,116 +176,65 @@ export function setupKanbanMonitor(
       let insertAfterTaskId: string | null = null;
 
       if (targetTask) {
-        // Dropping on another task for reordering
         const targetTaskData = targetTask.data as DroppableTaskData;
         newColumnId = targetTaskData.columnId;
         insertAfterTaskId = targetTaskData.taskId;
       } else if (targetColumn) {
-        // Dropping on a column (empty space or end of column)
         const targetColumnData = targetColumn.data as DroppableColumnData;
         newColumnId = targetColumnData.columnId;
-        insertAfterTaskId = null; // Will add to end
+        insertAfterTaskId = null;
       } else {
-        return; // No valid target
+        return;
       }
 
-      // --- Calculate the new state ---
-      const finalTasks = [...initialTasks];
-      const draggedTaskIndex = finalTasks.findIndex(t => t.id === draggedTask.id);
-      
-      if (draggedTaskIndex === -1) return;
-
-      // Remove the task from its original position
-      const [movedTask] = finalTasks.splice(draggedTaskIndex, 1);
-      movedTask.columnId = newColumnId;
-
-      // Find the new position
-      const tasksInNewColumn = finalTasks
-        .filter(t => t.columnId === newColumnId)
+      // --- Start of Corrected Logic ---
+      const tasksInNewColumn = initialTasks
+        .filter(t => t.columnId === newColumnId && t.id !== draggedTask.id)
         .sort((a, b) => a.order - b.order);
 
-      let newOrder = 0;
-      let insertIndex = 0;
-      
+      let newOrder: number;
+
       if (insertAfterTaskId) {
-        const targetTaskIndex = tasksInNewColumn.findIndex(t => t.id === insertAfterTaskId);
-        if (targetTaskIndex !== -1) {
-          // Insert BEFORE the target task (where the indicator shows)
-          if (targetTaskIndex === 0) {
-            // Insert at the beginning
-            newOrder = tasksInNewColumn[0].order - 1;
-            insertIndex = 0;
-          } else {
-            // Insert between previous task and target task
-            const prevOrder = tasksInNewColumn[targetTaskIndex - 1].order;
-            const targetOrder = tasksInNewColumn[targetTaskIndex].order;
-            newOrder = (prevOrder + targetOrder) / 2;
-            insertIndex = targetTaskIndex;
-          }
+        const targetIndex = tasksInNewColumn.findIndex(t => t.id === insertAfterTaskId);
+        if (targetIndex === 0) {
+          // Dropped at the beginning of the list
+          newOrder = (tasksInNewColumn[0]?.order ?? 1) / 2;
         } else {
-          // Target task not found, add to end
-          newOrder = tasksInNewColumn.length > 0 ? tasksInNewColumn[tasksInNewColumn.length - 1].order + 1 : 0;
-          insertIndex = tasksInNewColumn.length;
+          // Dropped between two tasks
+          const prevTask = tasksInNewColumn[targetIndex - 1];
+          const nextTask = tasksInNewColumn[targetIndex];
+          newOrder = (prevTask.order + nextTask.order) / 2;
         }
       } else {
-        // Add to end of column
-        newOrder = tasksInNewColumn.length > 0 ? tasksInNewColumn[tasksInNewColumn.length - 1].order + 1 : 0;
-        insertIndex = tasksInNewColumn.length;
+        // Dropped at the end of the list (or in an empty column)
+        const lastTask = tasksInNewColumn[tasksInNewColumn.length - 1];
+        newOrder = (lastTask?.order ?? -1) + 1;
       }
 
-      // Update the moved task
-      movedTask.order = newOrder;
-      
-      // Insert the task at the correct position in finalTasks
-      const finalTasksWithoutMoved = finalTasks.filter(t => t.id !== movedTask.id);
-      finalTasksWithoutMoved.push(movedTask);
-
-      // Build the final task state with proper sequential ordering
-      const finalTaskState = [...finalTasksWithoutMoved];
-      
-      // Reorder all tasks in affected columns to have sequential orders
-      const affectedColumns = [newColumnId];
-      if (draggedTask.columnId !== newColumnId) {
-        affectedColumns.push(draggedTask.columnId);
+      // Only proceed if the position has actually changed
+      if (newColumnId === draggedTask.columnId && newOrder === draggedTask.order) {
+        return;
       }
 
-      affectedColumns.forEach(columnId => {
-        const columnTasks = finalTaskState
-          .filter(t => t.columnId === columnId)
-          .sort((a, b) => a.order - b.order);
+      // Create the optimistic state for the UI
+      const movedTask = { ...draggedTask, columnId: newColumnId, order: newOrder };
+      const finalTaskState = initialTasks.map(t => t.id === movedTask.id ? movedTask : t);
 
-        columnTasks.forEach((task, index) => {
-          task.order = index;
-        });
+      // Optimistically update the UI
+      tasksStore.set(finalTaskState);
+
+      // Persist the single change to the backend
+      const updates = [{
+        taskId: movedTask.id,
+        changes: { order: newOrder, columnId: newColumnId },
+      }];
+
+      onUpdateTasks(updates).catch(error => {
+        console.error("Failed to save D&D changes, rolling back.", error);
+        // On failure, roll back to the original state
+        tasksStore.set(initialTasks);
       });
-
-      // Build updates for persistence - only send the moved task's new position
-      const updates: { taskId: string; changes: Partial<Task> }[] = [];
-
-      // Find the final order of the moved task after reordering
-      const finalMovedTaskOrder = finalTaskState
-        .filter(t => t.columnId === newColumnId)
-        .sort((a, b) => a.order - b.order)
-        .findIndex(t => t.id === movedTask.id);
-
-      // Only update if the position actually changed
-      if (newColumnId !== draggedTask.columnId || finalMovedTaskOrder !== draggedTask.order) {
-        updates.push({
-          taskId: movedTask.id,
-          changes: { order: finalMovedTaskOrder, columnId: newColumnId },
-        });
-      }
-
-      if (updates.length > 0) {
-        // Optimistically update the UI
-        tasksStore.set(finalTaskState);
-        // Persist changes to the backend
-        onUpdateTasks(updates).catch(error => {
-          console.error("Failed to save D&D changes, rolling back.", error);
-          // On failure, roll back to the original state
-          tasksStore.set(initialTasks);
-        });
-      }
+      // --- End of Corrected Logic ---
     },
   });
 
