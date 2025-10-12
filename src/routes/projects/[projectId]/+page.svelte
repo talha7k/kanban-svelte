@@ -8,7 +8,7 @@
 	import { getProjectRelevantUsers, getUserProfile } from '$lib/api/firebaseUser';
 	import { updateProjectDetails, deleteProject } from '$lib/api/firebaseProject';
 	import { addTaskToProject } from '$lib/api/firebaseTask';
-	import { Loader2, Settings, Sparkles, ArrowLeft, Edit2 } from '@lucide/svelte';
+	import { Loader2, Settings, Sparkles, ArrowLeft, Edit2, FileText, Columns } from '@lucide/svelte';
 	import KanbanBoard from '$lib/components/kanban/KanbanBoard.svelte';
 	import EditProjectDialog from '$lib/components/project/EditProjectDialog.svelte';
 	import DeleteProjectAlertDialog from '$lib/components/dashboard/DeleteProjectAlertDialog.svelte';
@@ -343,7 +343,23 @@
 								Project
 							</Button>
 						{/if}
-						{#if canManageTasks}
+						{#if canManageTasks && project}
+							<Button
+								variant="outline"
+								onclick={() => goto(`/projects/${project!.id}/card-types`)}
+								class="mb-2 sm:mb-0 mr-2"
+								disabled={isSubmittingProjectEdit}
+							>
+								<FileText class="h-5 w-5" /> Card Types
+							</Button>
+							<Button
+								variant="outline"
+								onclick={() => goto(`/projects/${project!.id}/columns`)}
+								class="mb-2 sm:mb-0 mr-2"
+								disabled={isSubmittingProjectEdit}
+							>
+								<Columns class="h-5 w-5" /> Manage Columns
+							</Button>
 							<Button
 								variant="default"
 								onclick={() => (isGenerateTasksDialogOpen = true)}

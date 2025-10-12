@@ -1,6 +1,6 @@
  
 <script lang="ts">
-	import type { Task, UserProfile, AIPrioritySuggestion } from '$lib/types/types';
+	import type { Task, UserProfile, AIPrioritySuggestion, CardType } from '$lib/types/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -17,14 +17,15 @@
 	import UserSelectionCombobox from '../dashboard/UserSelectionCombobox.svelte';
 
 	export let assignableUsers: UserProfile[];
-	
+	export let selectedCardType: CardType | null = null;
+
 	export const isEditing: boolean = false;
 	export let formErrors: Record<string, string> = {};
 	export let updateFormData: (field: keyof TaskFormData, value: any) => void;
 	export let formData: TaskFormData;
 
 	$: selectedAssignees = formData.assigneeUids || [];
-	
+
 	let aiBrief = '';
 	let isAiDialogOpen = false;
 
@@ -127,6 +128,87 @@
 			<p class="text-xs text-destructive">{formErrors.assigneeUids}</p>
 		{/if}
 	</div>
+
+	<!-- Dynamic Card Type Fields -->
+	{#if selectedCardType && selectedCardType.fields.length > 0}
+		<div class="space-y-4">
+			<div class="border-t pt-4">
+				<h3 class="text-sm font-medium text-muted-foreground mb-3">Additional Fields</h3>
+				<div class="space-y-3">
+					{#each selectedCardType.fields as field (field.id)}
+						<div class="space-y-1">
+							<Label for="field-{field.id}">{field.name}{field.config.required ? ' *' : ''}</Label>
+
+							{#if field.type === 'fixed'}
+								<div class="px-3 py-2 bg-muted rounded-md text-sm">
+									{field.config.value || 'N/A'}
+								</div>
+							{:else if field.type === 'dropdown'}
+								<select
+									id="field-{field.id}"
+									bind:value={formData.fieldValues[field.id]}
+									class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+									required={field.config.required}
+								>
+									<option value="">Select {field.name.toLowerCase()}</option>
+									{#each field.config.options || [] as option}
+										<option value={option}>{option}</option>
+									{/each}
+								</select>
+							{:else if field.type === 'text_input'}
+								<Input
+									id="field-{field.id}"
+									bind:value={formData.fieldValues[field.id]}
+									placeholder={field.config.placeholder || ''}
+									required={field.config.required}
+								/>
+							{:else if field.type === 'number_input'}
+								<Input
+									id="field-{field.id}"
+									type="number"
+									bind:value={formData.fieldValues[field.id]}
+									placeholder={field.config.placeholder || ''}
+									min={field.config.min}
+									max={field.config.max}
+									required={field.config.required}
+								/>
+							{:else if field.type === 'date_input'}
+								<Input
+									id="field-{field.id}"
+									type="date"
+									bind:value={formData.fieldValues[field.id]}
+									required={field.config.required}
+								/>
+							{:else if field.type === 'textarea'}
+								<Textarea
+									id="field-{field.id}"
+									bind:value={formData.fieldValues[field.id]}
+									placeholder={field.config.placeholder || ''}
+									required={field.config.required}
+								/>
+							{:else if field.type === 'checkbox'}
+								<div class="flex items-center space-x-2">
+									<input
+										id="field-{field.id}"
+										type="checkbox"
+										bind:checked={formData.fieldValues[field.id]}
+										class="h-4 w-4 rounded border border-input"
+									/>
+									<label for="field-{field.id}" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+										{field.name}
+									</label>
+								</div>
+							{/if}
+
+							{#if formErrors[`field-${field.id}`]}
+								<p class="text-xs text-destructive">{formErrors[`field-${field.id}`]}</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+	{/if}
 
 </div>
 

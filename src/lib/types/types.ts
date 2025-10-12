@@ -3,9 +3,54 @@ export type ProjectId = string;
 export type TaskId = string;
 export type ColumnId = string;
 export type TeamId = string;
+export type CardTypeId = string;
 
 export type UserProjectRole = "manager" | "member";
 export type UserTeamRole = "owner" | "manager" | "member";
+
+// Card Type Field Types
+export type FieldType = "fixed" | "dropdown" | "text_input" | "number_input" | "date_input" | "textarea" | "checkbox";
+
+export interface FieldConfig {
+  // Common config
+  required?: boolean;
+  placeholder?: string;
+
+  // Fixed field config
+  value?: any;
+
+  // Dropdown config
+  options?: string[];
+  multiple?: boolean;
+
+  // Number config
+  min?: number;
+  max?: number;
+
+  // Text/Date validation
+  pattern?: string;
+  minLength?: number;
+  maxLength?: number;
+}
+
+export interface CardTypeField {
+  id: string;
+  name: string;
+  type: FieldType;
+  config: FieldConfig;
+  order: number;
+}
+
+export interface CardType {
+  id: CardTypeId;
+  name: string;
+  description?: string;
+  color?: string; // Hex color for visual identification
+  fields: CardTypeField[];
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Permission levels for different operations
 export type PermissionLevel = "owner" | "manager" | "member";
@@ -42,12 +87,13 @@ export interface AuthorizationContext {
 }
 
 export interface TaskFormData {
-  title: string;
-  description?: string;
-  priority: Task["priority"];
-  assigneeUids?: string[];
-  dueDate?: string; // YYYY-MM-DD string
-  tags?: string[];
+   title: string;
+   description?: string;
+   priority: Task["priority"];
+   assigneeUids?: string[];
+   dueDate?: string; // YYYY-MM-DD string
+   tags?: string[];
+   fieldValues: Record<string, any>; // Dynamic field values for card types
 }
 
 export interface UserProfile {
@@ -70,6 +116,7 @@ export interface Project {
   teamId: TeamId | null; // The team this project belongs to
   columns: Column[]; // Stored with the project
   tasks: Task[]; // Stored with the project
+  cardTypes?: CardType[]; // Card type definitions for this project
   memberIds?: UserId[]; // Users who are members of this project
   memberRoles?: { [key: UserId]: UserProjectRole }; // Project-specific roles for members
   createdAt: string; // ISO
@@ -101,6 +148,8 @@ export interface Task {
   projectId: ProjectId; // Ensures task is tied to a project context
   columnId: ColumnId;
   order: number; // Order within the column
+  cardTypeId?: CardTypeId; // Reference to the card type this task belongs to
+  fieldValues?: Record<string, any>; // Dynamic field values based on card type
   assigneeUids?: UserId[];
   reporterId?: UserId | null; // Allow null for Firestore
   dueDate?: string | null; // YYYY-MM-DD, allow null for Firestore
@@ -141,9 +190,10 @@ export interface AIPrioritySuggestion {
 
 // Firestore specific types
 export interface ProjectDocument
-  extends Omit<Project, "id" | "tasks" | "columns"> {
+  extends Omit<Project, "id" | "tasks" | "columns" | "cardTypes"> {
   tasks: Task[];
   columns: Column[];
+  cardTypes?: CardType[];
 }
 
 export interface UserDocument {

@@ -49,7 +49,9 @@ export const addTaskToProject = async (projectId: string, taskData: NewTaskData,
       reporterId: taskData.reporterId === undefined ? null : taskData.reporterId,
       dueDate: taskData.dueDate === undefined  || taskData.dueDate === '' ? null : taskData.dueDate,
       tags: taskData.tags === undefined ? [] : taskData.tags,
-      
+      cardTypeId: taskData.cardTypeId || undefined,
+      fieldValues: taskData.fieldValues || {},
+
       id: newTaskId,
       projectId,
       columnId,

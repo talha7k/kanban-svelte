@@ -48,6 +48,7 @@
 		assigneeUids: [],
 		tags: [],
 		dueDate: undefined,
+		fieldValues: {},
 	};
 
 	let currentTaskDataForAI: Partial<TaskFormData> = {};
@@ -71,6 +72,7 @@
 				assigneeUids: taskToEdit.assigneeUids || [],
 				dueDate: taskToEdit.dueDate || undefined,
 				tags: taskToEdit.tags || [],
+				fieldValues: taskToEdit.fieldValues || {},
 			};
 		currentTaskDataForAI = formData;
 		isFormInitialized = true;
@@ -125,6 +127,7 @@
 			assigneeUids: [],
 			tags: [],
 			dueDate: undefined,
+			fieldValues: {},
 		};
 		currentTaskDataForAI = {};
 		formErrors = {};

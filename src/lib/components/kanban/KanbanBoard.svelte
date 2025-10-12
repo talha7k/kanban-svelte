@@ -152,7 +152,7 @@ let isSubmittingTaskAdd = $state(false);
 	isAddDialogOpen = true;
 }
 
-async function handleAddTaskSubmit(taskData: any, columnId: string) {
+	async function handleAddTaskSubmit(taskData: any, columnId: string, cardTypeId?: string) {
 	const user = get(currentUser);
 	if (!user) {
 		toast.error('You must be logged in to add tasks');
@@ -174,7 +174,8 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 				projectId: project.id,
 				taskData: {
 					...taskData,
-					reporterId: user.uid
+					reporterId: user.uid,
+					...(cardTypeId && { cardTypeId })
 				},
 				columnId
 			})
@@ -621,6 +622,7 @@ async function handleAddTaskSubmit(taskData: any, columnId: string) {
 		columnId={selectedColumnId}
 		assignableUsers={users}
 		isSubmitting={isSubmittingTaskAdd}
+		cardTypes={project.cardTypes || []}
 	/>
 
 </div>

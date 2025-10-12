@@ -7,8 +7,6 @@
 	import type { UserProfile, Team, TeamId, Project } from '$lib/types/types';
 
 	export let selectedTeamId: TeamId | null;
-	export let selectedProject: Project | null;
-	export let onClearSelectedProject: () => void;
 	export let onUsersLoaded: ((users: UserProfile[]) => void) | undefined = undefined;
 
 	let allUsers: UserProfile[] = [];
@@ -58,6 +56,4 @@ async function fetchTeamData() {
 	{isLoadingUsers}
 	{allUsers}
 	{selectedTeam}
-	{selectedProject}
-	{onClearSelectedProject}
 />
