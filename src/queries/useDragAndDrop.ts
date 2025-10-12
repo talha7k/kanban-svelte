@@ -262,17 +262,20 @@ export function setupKanbanMonitor(
 
       // Build updates for persistence - only send the moved task's new position
       const updates: { taskId: string; changes: Partial<Task> }[] = [];
-      
+
       // Find the final order of the moved task after reordering
       const finalMovedTaskOrder = finalTaskState
         .filter(t => t.columnId === newColumnId)
         .sort((a, b) => a.order - b.order)
         .findIndex(t => t.id === movedTask.id);
-      
-      updates.push({
-        taskId: movedTask.id,
-        changes: { order: finalMovedTaskOrder, columnId: newColumnId },
-      });
+
+      // Only update if the position actually changed
+      if (newColumnId !== draggedTask.columnId || finalMovedTaskOrder !== draggedTask.order) {
+        updates.push({
+          taskId: movedTask.id,
+          changes: { order: finalMovedTaskOrder, columnId: newColumnId },
+        });
+      }
 
       if (updates.length > 0) {
         // Optimistically update the UI

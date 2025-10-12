@@ -645,6 +645,7 @@
                     e.stopPropagation();
                     onViewDetails(task);
                 }}
+                onmousedown={(e) => e.stopPropagation()}
                 aria-label="View task details"
                 title="View task details"
                 disabled={isSubmitting}
@@ -664,6 +665,7 @@
                         e.stopPropagation();
                         onEdit(task);
                     }}
+                    onmousedown={(e) => e.stopPropagation()}
                     aria-label="Edit task"
                     title="Edit task"
                     disabled={isSubmitting}
@@ -682,6 +684,7 @@
                         e.stopPropagation();
                         onDelete(task.id);
                     }}
+                    onmousedown={(e) => e.stopPropagation()}
                     aria-label="Delete task"
                     title="Delete task"
                     disabled={isSubmitting}
