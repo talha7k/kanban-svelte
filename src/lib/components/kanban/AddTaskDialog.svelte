@@ -12,6 +12,7 @@
 	} from '$lib/components/ui/dialog';
 	import type { Task, UserProfile, AIPrioritySuggestion, CardType, CardTypeId } from '$lib/types/types';
 	import TaskFormFields from './TaskFormFields.svelte';
+	import CardTypeFieldsPreview from './CardTypeFieldsPreview.svelte';
 	import type { TaskFormData } from '$lib/types/types';
 	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
 	import { Loader2, ChevronRight } from '@lucide/svelte';
@@ -214,22 +215,16 @@
 													class="w-4 h-4 rounded-full border-2 border-white shadow-sm"
 													style="background-color: {cardType.color || '#3b82f6'}"
 												></div>
-												<div>
-													<h3 class="font-medium">{cardType.name}</h3>
-													{#if cardType.description}
-														<p class="text-sm text-muted-foreground">{cardType.description}</p>
-													{/if}
-												</div>
+												<h3 class="font-medium">{cardType.name}</h3>
 											</div>
-											<div class="flex items-center gap-2">
-												{#if cardType.fields.length > 0}
-													<Badge variant="secondary" class="text-xs">
-														{cardType.fields.length} field{cardType.fields.length !== 1 ? 's' : ''}
-													</Badge>
-												{/if}
-												<ChevronRight class="h-4 w-4 text-muted-foreground" />
-											</div>
+											<ChevronRight class="h-4 w-4 text-muted-foreground" />
 										</div>
+										{#if cardType.description}
+											<p class="text-sm text-muted-foreground mt-1">{cardType.description}</p>
+										{/if}
+										{#if cardType.fields.length > 0}
+											<CardTypeFieldsPreview {cardType} />
+										{/if}
 									</CardContent>
 								</Card>
 							{/each}

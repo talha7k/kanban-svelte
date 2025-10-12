@@ -260,30 +260,30 @@
 						</div>
 					{/if}
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+					<div class="flex flex-wrap gap-2">
 						{#if task.dueDate && isValid(parseISO(task.dueDate))}
-							<div class="flex items-center">
-								<CalendarDays class="h-4 w-4 mr-2 text-muted-foreground" />
-								<strong>Due Date:</strong>&nbsp; <span class="text-foreground">{format(parseISO(task.dueDate), 'MMM d, yyyy')}</span>
-							</div>
+							<Badge variant="secondary" class="flex items-center gap-1">
+								<CalendarDays class="h-4 w-4" />
+								Due Date: {format(parseISO(task.dueDate), 'MMM d, yyyy')}
+							</Badge>
 						{/if}
 						{#if reporter}
-							<div class="flex items-center">
-								<User class="h-4 w-4 mr-2 text-muted-foreground" />
-								<strong>Reporter:</strong>&nbsp; <span class="text-foreground">{reporter.name}</span>
-							</div>
+							<Badge variant="secondary" class="flex items-center gap-1">
+								<User class="h-4 w-4" />
+								Reporter: {reporter.name}
+							</Badge>
 						{/if}
 						{#if task.createdAt && isValid(parseISO(task.createdAt))}
-							<div class="flex items-center">
-								<CalendarDays class="h-4 w-4 mr-2 text-muted-foreground" />
-								<strong>Created:</strong>&nbsp; <span class="text-foreground">{format(parseISO(task.createdAt), 'MMM d, yyyy HH:mm')}</span>
-							</div>
+							<Badge variant="secondary" class="flex items-center gap-1">
+								<CalendarDays class="h-4 w-4" />
+								Created: {format(parseISO(task.createdAt), 'MMM d, yyyy HH:mm')}
+							</Badge>
 						{/if}
 						{#if task.updatedAt && isValid(parseISO(task.updatedAt))}
-							<div class="flex items-center">
-								<CalendarDays class="h-4 w-4 mr-2 text-muted-foreground" />
-								<strong>Updated:</strong>&nbsp; <span class="text-foreground">{format(parseISO(task.updatedAt), 'MMM d, yyyy HH:mm')}</span>
-							</div>
+							<Badge variant="secondary" class="flex items-center gap-1">
+								<CalendarDays class="h-4 w-4" />
+								Updated: {format(parseISO(task.updatedAt), 'MMM d, yyyy HH:mm')}
+							</Badge>
 						{/if}
 					</div>
 
