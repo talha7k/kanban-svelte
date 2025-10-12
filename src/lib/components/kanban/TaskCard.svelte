@@ -196,10 +196,7 @@
 
     let dueDateField = $derived(() => {
         if (!selectedCardType?.fields) return null;
-        return selectedCardType.fields.find((field: any) => {
-            const fieldName = field.name.toLowerCase();
-            return fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
-        }) || null;
+        return selectedCardType.fields.find((field: any) => field.config?.isDueDate) || null;
     });
 
     let customPriorityValue = $derived(() => {
@@ -320,7 +317,6 @@
         const value = task.fieldValues?.[field.id];
         const fieldName = field.name.toLowerCase();
         const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
-        const isDueDateField = fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
 
         if (field.type === "fixed") {
             return field.config?.value || "N/A";
@@ -336,12 +332,6 @@
                 case "HIGH": return "High";
                 case "NONE": return "None";
                 default: return value || "Not set";
-            }
-        } else if (isDueDateField) {
-            if (value) {
-                return format(parseISO(value), "MMM d, yyyy");
-            } else {
-                return "Not set";
             }
         } else {
             return value || "Not set";

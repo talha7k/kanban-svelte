@@ -54,10 +54,7 @@
           })
         : null;
     $: dueDateField = selectedCardType
-        ? selectedCardType.fields.find((f) => {
-              const fieldName = f.name.toLowerCase();
-              return fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
-          })
+        ? selectedCardType.fields.find((f) => f.config?.isDueDate)
         : null;
 
     let aiBrief = "";

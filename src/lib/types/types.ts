@@ -31,6 +31,9 @@ export interface FieldConfig {
   pattern?: string;
   minLength?: number;
   maxLength?: number;
+
+  // Date input config
+  isDueDate?: boolean;
 }
 
 export interface CardTypeField {

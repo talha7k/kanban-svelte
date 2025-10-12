@@ -31,11 +31,15 @@
   let newFieldName = $state('');
   let newFieldType: FieldType = $state('text_input');
   let newFieldOptions = $state('');
+  let newFieldIsDueDate = $state(false);
 
   // AI generation dialog states
   let isAIGenerateDialogOpen = $state(false);
   let aiBrief = $state('');
   let isGenerating = $state(false);
+
+  // Check if due date field already exists
+  let hasDueDateField = $derived(fields.some(f => f.config?.isDueDate));
 
   $effect(() => {
     if (open) {
@@ -85,6 +89,15 @@
     const fieldName = newFieldName.trim().toLowerCase();
     const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
 
+    // Check if trying to add another due date field
+    if (newFieldType === 'date_input' && newFieldIsDueDate) {
+      const existingDueDateField = fields.find(f => f.config?.isDueDate);
+      if (existingDueDateField) {
+        alert('Only one due date field is allowed per card type.');
+        return;
+      }
+    }
+
     const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) :
                      isPriorityField ? ['LOW', 'MEDIUM', 'HIGH', 'NONE'] : [];
 
@@ -99,6 +112,7 @@
         ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
         ...((newFieldType === 'dropdown' || isPriorityField) && { options }),
         ...(newFieldType === 'textarea' && { placeholder: '' }),
+        ...(newFieldType === 'date_input' && newFieldIsDueDate && { isDueDate: true }),
       }
     };
 
@@ -106,6 +120,7 @@
     newFieldName = '';
     newFieldType = 'text_input';
     newFieldOptions = '';
+    newFieldIsDueDate = false;
     isAddFieldDialogOpen = false;
   }
 
@@ -369,20 +384,37 @@
            <option value="dropdown">Dropdown</option>
          </select>
       </div>
-      {#if newFieldType === 'dropdown'}
-        <div>
-          <Label for="field-options">Options (one per line)</Label>
-          <Textarea
-            id="field-options"
-            bind:value={newFieldOptions}
-            placeholder="Option 1\nOption 2\nOption 3"
-            rows={3}
-          />
-        </div>
-      {/if}
+       {#if newFieldType === 'dropdown'}
+         <div>
+           <Label for="field-options">Options (one per line)</Label>
+           <Textarea
+             id="field-options"
+             bind:value={newFieldOptions}
+             placeholder="Option 1\nOption 2\nOption 3"
+             rows={3}
+           />
+         </div>
+       {/if}
+        {#if newFieldType === 'date_input'}
+          <div class="flex items-center space-x-2">
+            <input
+              id="field-is-due-date"
+              type="checkbox"
+              bind:checked={newFieldIsDueDate}
+              disabled={hasDueDateField && !newFieldIsDueDate}
+              class="h-4 w-4 rounded border border-input disabled:opacity-50"
+            />
+            <Label for="field-is-due-date" class="text-sm font-medium">
+              Use as Due Date field
+              {#if hasDueDateField}
+                <span class="text-muted-foreground">(Already have one)</span>
+              {/if}
+            </Label>
+          </div>
+        {/if}
     </div>
     <DialogFooter>
-      <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldOptions = ''; }}>
+      <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldOptions = ''; newFieldIsDueDate = false; }}>
         Cancel
       </Button>
        <Button onclick={handleAddField} disabled={!newFieldName.trim()}>

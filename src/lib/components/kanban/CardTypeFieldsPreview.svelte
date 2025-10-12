@@ -58,9 +58,12 @@
                 </Badge>
             {:else}
                 {@const Icon = getFieldTypeIcon(field.type)}
-                <Badge variant="secondary" class="{getFieldTypeColor(field.type)} text-xs flex items-center gap-1">
+                <Badge variant="secondary" class="{field.config?.isDueDate ? 'bg-red-100 text-red-800 border-red-200' : getFieldTypeColor(field.type)} text-xs flex items-center gap-1">
                     <Icon class="h-3 w-3" />
                     {field.name}
+                    {#if field.config?.isDueDate}
+                        <span class="ml-1 text-xs font-bold">(Due Date)</span>
+                    {/if}
 
                 </Badge>
             {/if}
