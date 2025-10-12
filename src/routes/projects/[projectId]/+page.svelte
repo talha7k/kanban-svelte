@@ -34,8 +34,8 @@
 	// Use TanStack Query for project data
 	const projectQuery = useProject($page.params.projectId);
 	
-	// Use server data initially, then switch to query data after hydration
-	let project: Project | null = $derived(data.project || $projectQuery.data || null);
+	// Use query data for project
+	let project: Project | null = $derived($projectQuery.data || null);
 
   // Permission checks
   const permissions = $derived(project ? createProjectPermissions(project, data.team) : null);

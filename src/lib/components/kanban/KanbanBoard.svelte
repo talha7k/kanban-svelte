@@ -251,18 +251,8 @@
                     throw new Error("Failed to add task");
                 }
 
-                const result = await response.json();
-                const newTask = result.task;
-
-                // Update local tasks store immediately for better UX
-                tasksStore.update((tasks) =>
-                    [...tasks, newTask].filter(
-                        (task) => task && typeof task === "object" && task.id,
-                    ),
-                );
-
-                // Invalidate project query to ensure server consistency
-                queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+                // Invalidate project query to refresh tasks
+                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 toast.success("Task added successfully");
             });

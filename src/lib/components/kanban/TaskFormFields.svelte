@@ -47,6 +47,18 @@
               (f) => f.name === "description" && f.type === "fixed",
           )
         : null;
+    $: priorityField = selectedCardType
+        ? selectedCardType.fields.find((f) => {
+              const fieldName = f.name.toLowerCase();
+              return fieldName.includes('priority') || fieldName.includes('severity');
+          })
+        : null;
+    $: dueDateField = selectedCardType
+        ? selectedCardType.fields.find((f) => {
+              const fieldName = f.name.toLowerCase();
+              return fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
+          })
+        : null;
 
     let aiBrief = "";
     let isAiDialogOpen = false;
@@ -201,12 +213,88 @@
         </div>
     {/if}
 
+    <!-- Priority Field -->
+    {#if selectedCardType && priorityField}
+        <div class="space-y-1">
+            <Label for="priority">Priority</Label>
+            {#if readonly}
+                <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                    {formData.priority || "Not set"}
+                </div>
+            {:else}
+                <select
+                    id="priority"
+                    bind:value={formData.priority}
+                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <option value="NONE">None</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                </select>
+            {/if}
+        </div>
+    {:else if !selectedCardType}
+        <div class="space-y-1">
+            <Label for="priority">Priority</Label>
+            {#if readonly}
+                <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                    {formData.priority || "Not set"}
+                </div>
+            {:else}
+                <select
+                    id="priority"
+                    bind:value={formData.priority}
+                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <option value="NONE">None</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                </select>
+            {/if}
+        </div>
+    {/if}
+
+    <!-- Due Date Field -->
+    {#if selectedCardType && dueDateField}
+        <div class="space-y-1">
+            <Label for="dueDate">Due Date</Label>
+            {#if readonly}
+                <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                    {formData.dueDate || "Not set"}
+                </div>
+            {:else}
+                <Input
+                    id="dueDate"
+                    type="date"
+                    bind:value={formData.dueDate}
+                />
+            {/if}
+        </div>
+    {:else if !selectedCardType}
+        <div class="space-y-1">
+            <Label for="dueDate">Due Date</Label>
+            {#if readonly}
+                <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                    {formData.dueDate || "Not set"}
+                </div>
+            {:else}
+                <Input
+                    id="dueDate"
+                    type="date"
+                    bind:value={formData.dueDate}
+                />
+            {/if}
+        </div>
+    {/if}
+
     {#if selectedCardType && selectedCardType.fields.length > 0}
         <div class="col-span-2">
             <Label class="text-base font-medium mb-3 block">Custom Fields</Label>
             <div class="flex flex-wrap gap-2">
                 {#each selectedCardType.fields as field (field.id)}
-                    {#if field.name !== "title" && field.name !== "description"}
+                    {#if field.name !== "title" && field.name !== "description" && field.id !== priorityField?.id && field.id !== dueDateField?.id}
                         {#if field.type === "fixed"}
                             <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200">
                                 {field.name}: {field.config.value || "N/A"}

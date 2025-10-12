@@ -120,9 +120,10 @@
         text: string;
         colorClass: string;
     } | null {
-        if (!task.dueDate) return null;
+        const currentDueDate = effectiveDueDate();
+        if (!currentDueDate) return null;
 
-        const dueDate = parseISO(task.dueDate);
+        const dueDate = parseISO(currentDueDate);
         if (!isValid(dueDate)) return null;
 
         const now = new Date();
@@ -193,8 +194,22 @@
         }) || null;
     });
 
+    let dueDateField = $derived(() => {
+        if (!selectedCardType?.fields) return null;
+        return selectedCardType.fields.find((field: any) => {
+            const fieldName = field.name.toLowerCase();
+            return fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
+        }) || null;
+    });
+
     let customPriorityValue = $derived(() => {
         const field = priorityField();
+        if (!field) return null;
+        return task.fieldValues?.[field.id] || null;
+    });
+
+    let customDueDateValue = $derived(() => {
+        const field = dueDateField();
         if (!field) return null;
         return task.fieldValues?.[field.id] || null;
     });
@@ -210,10 +225,23 @@
         return task.priority;
     });
 
+    let effectiveDueDate = $derived(() => {
+        const field = dueDateField();
+        if (field) {
+            return customDueDateValue() || null;
+        }
+        return task.dueDate || null;
+    });
+
     // Update field values when task changes
     $effect(() => {
         if (task) {
             fieldValues = { ...(task.fieldValues || {}) };
+            // Initialize due date field value if it exists
+            const dueDateFld = dueDateField();
+            if (dueDateFld && !(dueDateFld.id in fieldValues)) {
+                fieldValues[dueDateFld.id] = task.dueDate || null;
+            }
             // Initialize popover states
             if (selectedCardType && selectedCardType.fields) {
                 for (const field of selectedCardType.fields) {
@@ -292,6 +320,7 @@
         const value = task.fieldValues?.[field.id];
         const fieldName = field.name.toLowerCase();
         const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
+        const isDueDateField = fieldName.includes('due date') || fieldName.includes('due_date') || fieldName.includes('deadline');
 
         if (field.type === "fixed") {
             return field.config?.value || "N/A";
@@ -308,6 +337,12 @@
                 case "NONE": return "None";
                 default: return value || "Not set";
             }
+        } else if (isDueDateField) {
+            if (value) {
+                return format(parseISO(value), "MMM d, yyyy");
+            } else {
+                return "Not set";
+            }
         } else {
             return value || "Not set";
         }
@@ -318,20 +353,29 @@
 
         isSubmittingFieldUpdate = true;
         try {
-            // Send all field values, using null for unset fields
-            const fullFieldValues: Record<string, any> = {};
-            if (selectedCardType && selectedCardType.fields) {
-                for (const field of selectedCardType.fields) {
-                    if (
-                        field.name !== "title" &&
-                        field.name !== "description"
-                    ) {
-                        fullFieldValues[field.id] =
-                            fieldValues[field.id] ?? null;
+            const field = selectedCardType?.fields.find((f: any) => f.id === fieldId);
+            const isDueDateField = field && dueDateField() && field.id === dueDateField()!.id;
+
+            if (isDueDateField) {
+                // For due date fields, update the dueDate directly
+                await onUpdateTask(task.id, { dueDate: fieldValues[fieldId] || null });
+            } else {
+                // Send all field values, using null for unset fields
+                const fullFieldValues: Record<string, any> = {};
+                if (selectedCardType && selectedCardType.fields) {
+                    for (const field of selectedCardType.fields) {
+                        if (
+                            field.name !== "title" &&
+                            field.name !== "description" &&
+                            field.id !== dueDateField()?.id  // Exclude due date field from fieldValues
+                        ) {
+                            fullFieldValues[field.id] =
+                                fieldValues[field.id] ?? null;
+                        }
                     }
                 }
+                await onUpdateTask(task.id, { fieldValues: fullFieldValues });
             }
-            await onUpdateTask(task.id, { fieldValues: fullFieldValues });
             openPopovers.set(fieldId, false);
         } catch (error) {
             console.error("Failed to update custom fields:", error);
@@ -422,7 +466,7 @@
         <CardContent class="px-4 py-1">
             <div class="flex flex-wrap gap-1">
                  {#each selectedCardType.fields as field (field.id)}
-                     {#if field.name !== "title" && field.name !== "description" && field.id !== priorityField()?.id}
+                      {#if field.name !== "title" && field.name !== "description" && field.id !== priorityField()?.id && field.id !== dueDateField()?.id}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge
@@ -570,20 +614,24 @@
                                         <div
                                             class="flex justify-end space-x-2 pt-2"
                                         >
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onclick={() => {
-                                                    fieldValues = {
-                                                        ...(task.fieldValues ||
-                                                            {}),
-                                                    };
-                                                    openPopovers.set(
-                                                        field.id,
-                                                        false,
-                                                    );
-                                                }}
-                                            >
+                                             <Button
+                                                 variant="outline"
+                                                 size="sm"
+                                                 onclick={() => {
+                                                     if (field.id === dueDateField()?.id) {
+                                                         fieldValues[field.id] = task.dueDate || null;
+                                                     } else {
+                                                         fieldValues = {
+                                                             ...(task.fieldValues ||
+                                                                 {}),
+                                                         };
+                                                     }
+                                                     openPopovers.set(
+                                                         field.id,
+                                                         false,
+                                                     );
+                                                 }}
+                                             >
                                                 Reset
                                             </Button>
                                             <PopoverClose>
@@ -621,8 +669,8 @@
                 {#if dueDateStatus}
                     <span
                         class="flex text-xs font-semibold items-center {dueDateStatus.colorClass}"
-                        title="Due: {task.dueDate
-                            ? format(parseISO(task.dueDate), 'MMM d, yyyy')
+                        title="Due: {effectiveDueDate()
+                            ? format(parseISO(effectiveDueDate()!), 'MMM d, yyyy')
                             : 'N/A'}"
                     >
                         <Clock2Icon class="h-4 w-4 mr-1" />
