@@ -83,7 +83,31 @@
     }
   });
 
+  function getFieldTypeLabel(type: FieldType): string {
+    switch (type) {
+      case 'fixed': return 'Fixed Value';
+      case 'dropdown': return 'Dropdown';
+      case 'text_input': return 'Text Input';
+      case 'number_input': return 'Number Input';
+      case 'date_input': return 'Date Input';
+      case 'textarea': return 'Textarea';
+      case 'checkbox': return 'Checkbox';
+      default: return 'Unknown';
+    }
+  }
 
+  function getFieldTypeColor(type: FieldType): string {
+    switch (type) {
+      case 'fixed': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'dropdown': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'text_input': return 'bg-green-100 text-green-800 border-green-200';
+      case 'number_input': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'date_input': return 'bg-red-100 text-red-800 border-red-200';
+      case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  }
 
   function handleAddCardType() {
     isAddDialogOpen = true;
@@ -449,7 +473,7 @@
             {/if}
           </div>
         {:else}
-          <div class="grid gap-4">
+          <div class="grid gap-4 grid-cols-1 md:grid-cols-2">
             {#each cardTypes as cardType, index (cardType.id)}
               <Card
                 class="transition-all duration-200 {dragOverIndex === index ? 'ring-2 ring-primary' : ''}"

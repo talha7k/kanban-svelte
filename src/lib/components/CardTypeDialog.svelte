@@ -5,6 +5,7 @@
   import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
+  import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
   import { Loader2, Trash2 } from '@lucide/svelte';
   import type { CardType, CardTypeField, FieldType } from '$lib/types/types';
 
@@ -134,7 +135,7 @@
           id="description"
           bind:value={description}
           placeholder="Optional description"
-          rows="3"
+          rows={3}
         />
       </div>
       <div class="col-span-2">
@@ -152,7 +153,25 @@
               <div class="flex items-center justify-between p-2 border rounded">
                 <div>
                   <span class="font-medium">{field.name}</span>
-                  <Badge variant="secondary" class="ml-2">{getFieldTypeLabel(field.type)}</Badge>
+                  {#if field.type === 'dropdown'}
+                    <Popover>
+                      <PopoverTrigger>
+                        <Badge variant="secondary" class="ml-2 cursor-pointer hover:opacity-80">{getFieldTypeLabel(field.type)}</Badge>
+                      </PopoverTrigger>
+                      <PopoverContent class="w-80">
+                        <div class="space-y-2">
+                          <Label>Options</Label>
+                          <div class="flex flex-wrap gap-1">
+                            {#each field.config?.options || [] as option}
+                              <Badge variant="outline">{option}</Badge>
+                            {/each}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  {:else}
+                    <Badge variant="secondary" class="ml-2">{getFieldTypeLabel(field.type)}</Badge>
+                  {/if}
                   {#if field.config.required}
                     <span class="text-red-500 ml-1">*</span>
                   {/if}

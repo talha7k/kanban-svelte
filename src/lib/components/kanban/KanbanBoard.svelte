@@ -613,6 +613,10 @@ let isSubmittingTaskAdd = $state(false);
 		onEditComment={handleEditComment}
 		onDeleteComment={handleDeleteComment}
 		currentUserId={$currentUser?.uid}
+		cardTypes={project.cardTypes || []}
+		onUpdateTask={handleUpdateTask}
+		assignableUsers={users}
+		canManageTask={canManageTasks}
 		onOpenChange={(open) => {
 			isViewDialogOpen = open;
 			if (!open) taskToView = null;

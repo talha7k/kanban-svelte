@@ -1,6 +1,6 @@
 
 <script lang="ts">
-	import type { Task, UserProfile, Comment as CommentType } from '$lib/types/types';
+	import type { Task, UserProfile, Comment as CommentType, CardType } from '$lib/types/types';
 	import {
 		Dialog,
 		DialogContent,
@@ -13,6 +13,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Label } from '$lib/components/ui/label';
 	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock } from '@lucide/svelte';
 	import { format, parseISO, isValid, differenceInDays, isToday, isPast } from 'date-fns';
 	import CommentItem from './CommentItem.svelte';
@@ -23,45 +24,59 @@
 	import { toast } from 'svelte-sonner';
 	import { Input } from '$lib/components/ui/input';
 
-	export let isOpen: boolean;
-	export let onOpenChange: (isOpen: boolean) => void;
-	export let task: Task | null;
-	export let users: UserProfile[];
-	export let onAddComment: (taskId: string, commentText: string) => Promise<void> | void;
-	export let onEditComment: ((taskId: string, commentId: string, newContent: string) => Promise<void>) | undefined = undefined;
-	export let onDeleteComment: ((taskId: string, commentId: string) => Promise<void>) | undefined = undefined;
-	export let currentUserId: string | undefined = undefined;
+	let {
+		isOpen,
+		onOpenChange,
+		task,
+		users,
+		onAddComment,
+		onEditComment = undefined,
+		onDeleteComment = undefined,
+		currentUserId = undefined,
+		cardTypes = [],
+		onUpdateTask = undefined,
+		assignableUsers = [],
+		canManageTask = false
+	} = $props();
 
-	let newComment = '';
-	let comments: CommentType[] = [];
-	let isSubmittingLocalComment = false;
-	let lastTaskId: string | null = null;
+	let newComment = $state('');
+	let comments = $state<CommentType[]>([]);
+	let isSubmittingLocalComment = $state(false);
+	let lastTaskId: string | null = $state(null);
+	let isEditingFields = $state(false);
+	let fieldValues: Record<string, any> = $state({});
+	let isSubmittingFieldUpdate = $state(false);
 
 	// Update comments when task changes or when task.comments changes
-	$: if (task) {
-		// If this is a different task, reset comments
-		if (lastTaskId !== task.id) {
-			lastTaskId = task.id;
-			comments = task.comments ? [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : [];
-		} else if (task.comments) {
-			// Same task, update comments if they exist
-			comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+	$effect(() => {
+		if (task) {
+			// If this is a different task, reset comments
+			if (lastTaskId !== task.id) {
+				lastTaskId = task.id;
+				comments = task.comments ? [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : [];
+			} else if (task.comments) {
+				// Same task, update comments if they exist
+				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			}
+		} else {
+			comments = [];
+			lastTaskId = null;
 		}
-	} else {
-		comments = [];
-		lastTaskId = null;
-	}
+	});
 
-	$: if (isOpen && task) {
-		newComment = '';
-		// Ensure comments are loaded when dialog opens
-		if (task.comments) {
-			comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+	$effect(() => {
+		if (isOpen && task) {
+			newComment = '';
+			// Ensure comments are loaded when dialog opens
+			if (task.comments) {
+				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			}
 		}
-	}
+	});
 
-	$: assignees = task?.assigneeUids?.map(uid => users.find(u => u.id === uid)).filter(Boolean) as UserProfile[] || [];
-	$: reporter = users.find(u => u.id === task?.reporterId);
+	const assignees = $derived(task?.assigneeUids?.map((uid: string) => users.find((u: UserProfile) => u.id === uid)).filter(Boolean) as UserProfile[] || []);
+	const reporter = $derived(users.find((u: UserProfile) => u.id === task?.reporterId));
+	const selectedCardType = $derived(cardTypes.find((ct: CardType) => ct.id === task?.cardTypeId) || null);
 
 	async function handleAddCommentSubmit() {
 		if (newComment.trim() === '') {
@@ -111,7 +126,7 @@
 		return `${daysDiff + 1} day${daysDiff + 1 > 1 ? 's' : ''} left`;
 	}
 
-	$: dueDateStatusText = getDueDateStatusText();
+	const dueDateStatusText = $derived(getDueDateStatusText());
 
 	async function handleEditComment(commentId: string, newContent: string) {
 		if (!onEditComment || !task) return;
@@ -136,6 +151,22 @@
 			}
 		} catch (error) {
 			throw error;
+		}
+	}
+
+	async function handleSaveFieldValues() {
+		if (!onUpdateTask || !task) return;
+
+		isSubmittingFieldUpdate = true;
+		try {
+			await onUpdateTask(task.id, { fieldValues });
+			isEditingFields = false;
+			fieldValues = {};
+			toast.success('Custom fields updated successfully.');
+		} catch (error) {
+			toast.error('Failed to update custom fields. Please try again.');
+		} finally {
+			isSubmittingFieldUpdate = false;
 		}
 	}
 </script>
@@ -228,7 +259,137 @@
 						</div>
 					{/if}
 
-
+					{#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
+						<div>
+							<div class="flex justify-between items-center mb-1">
+								<h3 class="font-semibold text-sm text-muted-foreground flex items-center"><Info class="h-4 w-4 mr-2" />Custom Fields</h3>
+								{#if canManageTask}
+									<Button
+										variant="ghost"
+										size="sm"
+										class="h-6 px-2 text-xs"
+										onclick={() => {
+											isEditingFields = !isEditingFields;
+											if (isEditingFields) {
+												fieldValues = { ...(task.fieldValues || {}) };
+											}
+										}}
+									>
+										{isEditingFields ? 'Cancel' : 'Edit'}
+									</Button>
+								{/if}
+							</div>
+							<div class="space-y-3">
+								{#each selectedCardType.fields as field (field.id)}
+									<div class="flex flex-col space-y-1">
+										<Label class="text-xs font-medium text-muted-foreground">
+											{field.name}
+											{#if field.config.required}
+												<span class="text-red-500 ml-1">*</span>
+											{/if}
+										</Label>
+										{#if isEditingFields}
+											{#if field.type === 'text_input'}
+												<Input
+													bind:value={fieldValues[field.id]}
+													placeholder="Enter text..."
+													class="text-sm"
+												/>
+											{:else if field.type === 'number_input'}
+												<Input
+													type="number"
+													bind:value={fieldValues[field.id]}
+													placeholder="Enter number..."
+													class="text-sm"
+												/>
+											{:else if field.type === 'textarea'}
+												<Textarea
+													bind:value={fieldValues[field.id]}
+													placeholder="Enter description..."
+													class="text-sm"
+													rows={3}
+												/>
+											{:else if field.type === 'date_input'}
+												<Input
+													type="date"
+													bind:value={fieldValues[field.id]}
+													class="text-sm"
+												/>
+											{:else if field.type === 'checkbox'}
+												<div class="flex items-center space-x-2">
+													<input
+														type="checkbox"
+														bind:checked={fieldValues[field.id]}
+														class="rounded"
+													/>
+													<span class="text-sm">{fieldValues[field.id] ? 'Yes' : 'No'}</span>
+												</div>
+											{:else if field.type === 'dropdown'}
+												<select
+													bind:value={fieldValues[field.id]}
+													class="w-full p-2 text-sm border rounded-md bg-background"
+												>
+													<option value="">Select an option...</option>
+													{#each field.config?.options || [] as option}
+														<option value={option}>{option}</option>
+													{/each}
+												</select>
+											{:else}
+												<div class="text-sm text-muted-foreground bg-muted/30 p-2 rounded-md">
+													{field.type} field (not editable in view)
+												</div>
+											{/if}
+										{:else}
+											<div class="text-sm text-foreground bg-muted/30 p-2 rounded-md">
+												{#if field.type === 'fixed'}
+													{task.fieldValues?.[field.id] || 'Not set'}
+												{:else if field.type === 'dropdown'}
+													{task.fieldValues?.[field.id] || 'Not selected'}
+												{:else if field.type === 'text_input'}
+													{task.fieldValues?.[field.id] || 'Not filled'}
+												{:else if field.type === 'number_input'}
+													{task.fieldValues?.[field.id] || 'Not set'}
+												{:else if field.type === 'date_input'}
+													{task.fieldValues?.[field.id] ? format(parseISO(task.fieldValues[field.id]), 'MMM d, yyyy') : 'Not set'}
+												{:else if field.type === 'textarea'}
+													<div class="whitespace-pre-wrap">{task.fieldValues?.[field.id] || 'Not filled'}</div>
+												{:else if field.type === 'checkbox'}
+													{task.fieldValues?.[field.id] ? 'Yes' : 'No'}
+												{:else}
+													{task.fieldValues?.[field.id] || 'Not set'}
+												{/if}
+											</div>
+										{/if}
+									</div>
+								{/each}
+								{#if isEditingFields}
+									<div class="flex justify-end space-x-2 pt-2">
+										<Button
+											variant="outline"
+											size="sm"
+											onclick={() => {
+												isEditingFields = false;
+												fieldValues = {};
+											}}
+											disabled={isSubmittingFieldUpdate}
+										>
+											Cancel
+										</Button>
+										<Button
+											size="sm"
+											onclick={handleSaveFieldValues}
+											disabled={isSubmittingFieldUpdate}
+										>
+											{#if isSubmittingFieldUpdate}
+												<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+											{/if}
+											Save Changes
+										</Button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/if}
 
 					<Separator class="my-4" />
 

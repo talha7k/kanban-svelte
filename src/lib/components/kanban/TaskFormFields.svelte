@@ -68,6 +68,32 @@
             : [...currentSelection, userId];
         updateFormData("assigneeUids", newSelection);
     }
+
+    function getFieldTypeLabel(type: string): string {
+        switch (type) {
+            case 'fixed': return 'Fixed Value';
+            case 'dropdown': return 'Dropdown';
+            case 'text_input': return 'Text Input';
+            case 'number_input': return 'Number Input';
+            case 'date_input': return 'Date Input';
+            case 'textarea': return 'Textarea';
+            case 'checkbox': return 'Checkbox';
+            default: return 'Unknown';
+        }
+    }
+
+    function getFieldTypeColor(type: string): string {
+        switch (type) {
+            case 'fixed': return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'dropdown': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'text_input': return 'bg-green-100 text-green-800 border-green-200';
+            case 'number_input': return 'bg-orange-100 text-orange-800 border-orange-200';
+            case 'date_input': return 'bg-red-100 text-red-800 border-red-200';
+            case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    }
 </script>
 
 <div class="grid grid-cols-2 gap-4 py-4">
@@ -83,15 +109,15 @@
         <div class="space-y-1 col-span-2">
             <div class="flex justify-between items-center">
                 <Label for="title">Title *</Label>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="ml-2"
-                    on:click={() => (isAiDialogOpen = true)}
-                >
-                    Generate with AI
-                </Button>
+                 <Button
+                     type="button"
+                     variant="outline"
+                     size="sm"
+                     class="ml-2"
+                     onclick={() => (isAiDialogOpen = true)}
+                 >
+                     Generate with AI
+                 </Button>
             </div>
             <Input
                 id="title"
@@ -143,96 +169,104 @@
     {/if}
 
     {#if selectedCardType && selectedCardType.fields.length > 0}
-        {#each selectedCardType.fields as field (field.id)}
-            {#if field.name !== "title" && field.name !== "description"}
-                <div class="space-y-1 col-span-2">
-                    <Label for="field-{field.id}"
-                        >{field.name}{field.config.required && hasAssignees
-                            ? " *"
-                            : ""}</Label
-                    >
-
-                    {#if field.type === "fixed"}
-                        <div class="px-3 py-2 bg-muted rounded-md text-sm">
-                            {field.config.value || "N/A"}
-                        </div>
-                    {:else if field.type === "dropdown"}
-                        <select
-                            id="field-{field.id}"
-                            bind:value={formData.fieldValues[field.id]}
-                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled
-                            required={field.config.required && hasAssignees}
-                        >
-                            <option value=""
-                                >Select {field.name.toLowerCase()}</option
-                            >
-                            {#each field.config.options || [] as option}
-                                <option value={option}>{option}</option>
-                            {/each}
-                        </select>
-                    {:else if field.type === "text_input"}
-                        <Input
-                            id="field-{field.id}"
-                            bind:value={formData.fieldValues[field.id]}
-                            placeholder={field.config.placeholder || ""}
-                            disabled
-                            required={field.config.required && hasAssignees}
-                        />
-                    {:else if field.type === "number_input"}
-                        <Input
-                            id="field-{field.id}"
-                            type="number"
-                            bind:value={formData.fieldValues[field.id]}
-                            placeholder={field.config.placeholder || ""}
-                            min={field.config.min}
-                            max={field.config.max}
-                            disabled
-                            required={field.config.required && hasAssignees}
-                        />
-                    {:else if field.type === "date_input"}
-                        <Input
-                            id="field-{field.id}"
-                            type="date"
-                            bind:value={formData.fieldValues[field.id]}
-                            disabled
-                            required={field.config.required && hasAssignees}
-                        />
-                    {:else if field.type === "textarea"}
-                        <Textarea
-                            id="field-{field.id}"
-                            bind:value={formData.fieldValues[field.id]}
-                            placeholder={field.config.placeholder || ""}
-                            disabled
-                            required={field.config.required && hasAssignees}
-                        />
-                    {:else if field.type === "checkbox"}
-                        <div class="flex items-center space-x-2 pt-2">
-                            <input
-                                id="field-{field.id}"
-                                type="checkbox"
-                                bind:checked={formData.fieldValues[field.id]}
-                                class="h-4 w-4 rounded border border-input"
-                                disabled
-                                required={field.config.required && hasAssignees}
-                            />
-                            <label
-                                for="field-{field.id}"
-                                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                                Required
-                            </label>
-                        </div>
+        <div class="col-span-2">
+            <Label class="text-base font-medium mb-3 block">Custom Fields</Label>
+            <div class="flex flex-wrap gap-2">
+                {#each selectedCardType.fields as field (field.id)}
+                    {#if field.name !== "title" && field.name !== "description"}
+                        {#if field.type === "fixed"}
+                            <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200">
+                                {field.name}: {field.config.value || "N/A"}
+                                {#if field.config.required && hasAssignees}
+                                    <span class="ml-1 text-red-500">*</span>
+                                {/if}
+                            </Badge>
+                        {:else}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80">
+                                        {field.name}: {getFieldTypeLabel(field.type)}
+                                        {#if field.config.required && hasAssignees}
+                                            <span class="ml-1 text-red-500">*</span>
+                                        {/if}
+                                    </Badge>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-80">
+                                    <div class="space-y-2">
+                                        <Label for="field-{field.id}">{field.name}</Label>
+                                        {#if field.type === "dropdown"}
+                                            <select
+                                                id="field-{field.id}"
+                                                bind:value={formData.fieldValues[field.id]}
+                                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                required={field.config.required && hasAssignees}
+                                            >
+                                                <option value="">Select {field.name.toLowerCase()}</option>
+                                                {#each field.config.options || [] as option}
+                                                    <option value={option}>{option}</option>
+                                                {/each}
+                                            </select>
+                                        {:else if field.type === "text_input"}
+                                            <Input
+                                                id="field-{field.id}"
+                                                bind:value={formData.fieldValues[field.id]}
+                                                placeholder={field.config.placeholder || ""}
+                                                required={field.config.required && hasAssignees}
+                                            />
+                                        {:else if field.type === "number_input"}
+                                            <Input
+                                                id="field-{field.id}"
+                                                type="number"
+                                                bind:value={formData.fieldValues[field.id]}
+                                                placeholder={field.config.placeholder || ""}
+                                                min={field.config.min}
+                                                max={field.config.max}
+                                                required={field.config.required && hasAssignees}
+                                            />
+                                        {:else if field.type === "date_input"}
+                                            <Input
+                                                id="field-{field.id}"
+                                                type="date"
+                                                bind:value={formData.fieldValues[field.id]}
+                                                required={field.config.required && hasAssignees}
+                                            />
+                                        {:else if field.type === "textarea"}
+                                            <Textarea
+                                                id="field-{field.id}"
+                                                bind:value={formData.fieldValues[field.id]}
+                                                placeholder={field.config.placeholder || ""}
+                                                required={field.config.required && hasAssignees}
+                                            />
+                                        {:else if field.type === "checkbox"}
+                                            <div class="flex items-center space-x-2">
+                                                <input
+                                                    id="field-{field.id}"
+                                                    type="checkbox"
+                                                    bind:checked={formData.fieldValues[field.id]}
+                                                    class="h-4 w-4 rounded border border-input"
+                                                    required={field.config.required && hasAssignees}
+                                                />
+                                                <label
+                                                    for="field-{field.id}"
+                                                    class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                >
+                                                    {field.config.label || "Required"}
+                                                </label>
+                                            </div>
+                                        {/if}
+                                        {#if formErrors[`field-${field.id}`]}
+                                            <p class="text-xs text-destructive">
+                                                {formErrors[`field-${field.id}`]}
+                                            </p>
+                                        {/if}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        {/if}
                     {/if}
-
-                    {#if formErrors[`field-${field.id}`]}
-                        <p class="text-xs text-destructive">
-                            {formErrors[`field-${field.id}`]}
-                        </p>
-                    {/if}
-                </div>
-            {/if}
-        {/each}
+                {/each}
+            </div>
+        </div>
     {/if}
 
     <div class="col-span-2 space-y-1">
