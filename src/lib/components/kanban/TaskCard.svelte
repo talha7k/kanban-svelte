@@ -84,7 +84,7 @@
             case "MEDIUM":
                 return "secondary";
             case "LOW":
-                return "outline";
+                return "secondary";
             default:
                 return "default";
         }
@@ -435,6 +435,8 @@
                     <Badge
                         variant={getPriorityBadgeVariant(effectivePriority())}
                         class={effectivePriority() === "MEDIUM"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : effectivePriority() === "LOW"
                             ? "bg-accent text-accent-foreground"
                             : ""}
                         title={getPriorityTooltip(effectivePriority())}
@@ -455,8 +457,8 @@
     {#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
         <CardContent class="px-4 py-1">
             <div class="flex flex-wrap gap-1">
-                 {#each selectedCardType.fields as field (field.id)}
-                      {#if field.name !== "title" && field.name !== "description" && field.id !== priorityField()?.id && field.id !== dueDateField()?.id}
+                  {#each selectedCardType.fields as field (field.id)}
+                       {#if field.name !== "title" && field.name !== "description"}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge

@@ -32,7 +32,7 @@
 	const queryClient = useQueryClient();
 
 	// Use TanStack Query for project data
-	const projectQuery = useProject($page.params.projectId);
+	const projectQuery = useProject($page.params.projectId, data.project);
 	
 	// Use query data for project
 	let project: Project | null = $derived($projectQuery.data || null);
