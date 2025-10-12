@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { CardType } from "$lib/types/types";
     import { Badge } from "$lib/components/ui/badge";
+    import { Check, ChevronsUpDown, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock } from "@lucide/svelte";
 
     export let cardType: CardType;
     export let hasAssignees: boolean = false;
@@ -30,21 +31,36 @@
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     }
+
+    function getFieldTypeIcon(type: string) {
+        switch (type) {
+            case 'fixed': return Lock;
+            case 'dropdown': return ChevronsUpDown;
+            case 'text_input': return Type;
+            case 'number_input': return Hash;
+            case 'date_input': return Calendar;
+            case 'textarea': return AlignLeft;
+            case 'checkbox': return CheckSquare;
+            default: return Type;
+        }
+    }
 </script>
 
 <div class="flex flex-wrap gap-1 mt-2">
     {#each cardType.fields as field (field.id)}
         {#if field.name !== "title" && field.name !== "description"}
             {#if field.type === "fixed"}
-                <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                <Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 text-xs flex items-center gap-1">
+                    <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
                     {field.name}: {field.config?.value || "N/A"}
                     {#if field.config?.required && hasAssignees}
                         <span class="ml-1 text-red-500">*</span>
                     {/if}
                 </Badge>
             {:else}
-                <Badge variant="secondary" class="{getFieldTypeColor(field.type)} text-xs">
-                    {field.name}: {getFieldTypeLabel(field.type)}
+                <Badge variant="secondary" class="{getFieldTypeColor(field.type)} text-xs flex items-center gap-1">
+                    <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                    {field.name}
                     {#if field.config?.required && hasAssignees}
                         <span class="ml-1 text-red-500">*</span>
                     {/if}

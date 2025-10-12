@@ -6,7 +6,7 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
-  import { Loader2, Trash2 } from '@lucide/svelte';
+  import { Loader2, Trash2, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown } from '@lucide/svelte';
   import type { CardType, CardTypeField, FieldType } from '$lib/types/types';
 
   interface Props {
@@ -58,6 +58,19 @@
       case 'textarea': return 'Textarea';
       case 'checkbox': return 'Checkbox';
       default: return 'Unknown';
+    }
+  }
+
+  function getFieldTypeIcon(type: FieldType) {
+    switch (type) {
+      case 'fixed': return Lock;
+      case 'dropdown': return ChevronsUpDown;
+      case 'text_input': return Type;
+      case 'number_input': return Hash;
+      case 'date_input': return Calendar;
+      case 'textarea': return AlignLeft;
+      case 'checkbox': return CheckSquare;
+      default: return Type;
     }
   }
 
@@ -150,32 +163,38 @@
         {:else}
           <div class="space-y-2">
             {#each fields as field (field.id)}
-              <div class="flex items-center justify-between p-2 border rounded">
-                <div>
-                  <span class="font-medium">{field.name}</span>
-                  {#if field.type === 'dropdown'}
-                    <Popover>
-                      <PopoverTrigger>
-                        <Badge variant="secondary" class="ml-2 cursor-pointer hover:opacity-80">{getFieldTypeLabel(field.type)}</Badge>
-                      </PopoverTrigger>
-                      <PopoverContent class="w-80">
-                        <div class="space-y-2">
-                          <Label>Options</Label>
-                          <div class="flex flex-wrap gap-1">
-                            {#each field.config?.options || [] as option}
-                              <Badge variant="outline">{option}</Badge>
-                            {/each}
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  {:else}
-                    <Badge variant="secondary" class="ml-2">{getFieldTypeLabel(field.type)}</Badge>
-                  {/if}
-                  {#if field.config.required}
-                    <span class="text-red-500 ml-1">*</span>
-                  {/if}
-                </div>
+               <div class="flex items-center justify-between p-2 border rounded">
+                 <div class="flex items-center gap-2">
+                   <span class="font-medium">{field.name}</span>
+                   {#if field.type === 'dropdown'}
+                     <Popover>
+                       <PopoverTrigger>
+                         <Badge variant="secondary" class="cursor-pointer hover:opacity-80 flex items-center gap-1">
+                           <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                           {getFieldTypeLabel(field.type)}
+                         </Badge>
+                       </PopoverTrigger>
+                       <PopoverContent class="w-80">
+                         <div class="space-y-2">
+                           <Label>Options</Label>
+                           <div class="flex flex-wrap gap-1">
+                             {#each field.config?.options || [] as option}
+                               <Badge variant="outline">{option}</Badge>
+                             {/each}
+                           </div>
+                         </div>
+                       </PopoverContent>
+                     </Popover>
+                   {:else}
+                     <Badge variant="secondary" class="flex items-center gap-1">
+                       <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                       {getFieldTypeLabel(field.type)}
+                     </Badge>
+                   {/if}
+                   {#if field.config.required}
+                     <span class="text-red-500">*</span>
+                   {/if}
+                 </div>
                 <Button type="button" variant="ghost" size="sm" onclick={() => handleRemoveField(field.id)}>
                   <Trash2 class="h-4 w-4" />
                 </Button>
@@ -240,7 +259,7 @@
             id="field-options"
             bind:value={newFieldOptions}
             placeholder="Option 1\nOption 2\nOption 3"
-            rows="3"
+            rows={3}
           />
         </div>
       {/if}

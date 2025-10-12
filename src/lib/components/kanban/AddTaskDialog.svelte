@@ -246,6 +246,7 @@
 						{formErrors}
 						{updateFormData}
 						{selectedCardType}
+						readonly={true}
 					/>
 
 					<DialogFooter class="mt-4">

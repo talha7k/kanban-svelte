@@ -15,7 +15,7 @@
         PopoverContent,
         PopoverTrigger,
     } from "$lib/components/ui/popover";
-    import { Check, ChevronsUpDown, X } from "@lucide/svelte";
+    import { Check, ChevronsUpDown, X, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock } from "@lucide/svelte";
     import { cn } from "$lib/utils";
     import { Command } from "bits-ui";
     import { Badge } from "$lib/components/ui/badge";
@@ -36,6 +36,7 @@
     export let selectedCardType: CardType | null = null;
 
     export let isEditing = false;
+    export let readonly = false;
     export let formErrors: Record<string, string> = {};
     export let updateFormData: (field: keyof TaskFormData, value: any) => void;
     export let formData: TaskFormData;
@@ -94,6 +95,19 @@
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     }
+
+    function getFieldTypeIcon(type: string) {
+        switch (type) {
+            case 'fixed': return Lock;
+            case 'dropdown': return ChevronsUpDown;
+            case 'text_input': return Type;
+            case 'number_input': return Hash;
+            case 'date_input': return Calendar;
+            case 'textarea': return AlignLeft;
+            case 'checkbox': return CheckSquare;
+            default: return Type;
+        }
+    }
 </script>
 
 <div class="grid grid-cols-2 gap-4 py-4">
@@ -105,19 +119,26 @@
                     ?.value || "N/A"}
             </div>
         </div>
+    {:else if readonly}
+        <div class="space-y-1 col-span-2">
+            <Label for="title">Title *</Label>
+            <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                {formData.title || "Not set"}
+            </div>
+        </div>
     {:else}
         <div class="space-y-1 col-span-2">
             <div class="flex justify-between items-center">
                 <Label for="title">Title *</Label>
-                 <Button
-                     type="button"
-                     variant="outline"
-                     size="sm"
-                     class="ml-2"
-                     onclick={() => (isAiDialogOpen = true)}
-                 >
-                     Generate with AI
-                 </Button>
+                  <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      class="ml-2"
+                      onclick={() => (isAiDialogOpen = true)}
+                  >
+                      Generate with AI
+                  </Button>
             </div>
             <Input
                 id="title"
@@ -139,6 +160,13 @@
                     {descField.config?.value || "N/A"}
                 </div>
             </div>
+        {:else if readonly}
+            <div class="space-y-1 col-span-2">
+                <Label for="description">Description</Label>
+                <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                    {formData.description || "Not set"}
+                </div>
+            </div>
         {:else}
             <div class="space-y-1 col-span-2">
                 <Label for="description">Description</Label>
@@ -154,6 +182,13 @@
                 {/if}
             </div>
         {/if}
+    {:else if readonly}
+        <div class="space-y-1 col-span-2">
+            <Label for="description">Description</Label>
+            <div class="px-3 py-2 bg-muted rounded-md text-sm">
+                {formData.description || "Not set"}
+            </div>
+        </div>
     {:else}
         <div class="space-y-1 col-span-2">
             <Label for="description">Description</Label>
@@ -181,11 +216,44 @@
                                     <span class="ml-1 text-red-500">*</span>
                                 {/if}
                             </Badge>
+                        {:else if readonly}
+                            {#if field.type === "dropdown"}
+                                <Popover>
+                                    <PopoverTrigger>
+                                        <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                            <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                            {field.name}: {formData.fieldValues[field.id] || "Not set"}
+                                            {#if field.config.required && hasAssignees}
+                                                <span class="ml-1 text-red-500">*</span>
+                                            {/if}
+                                        </Badge>
+                                    </PopoverTrigger>
+                                    <PopoverContent class="w-80">
+                                        <div class="space-y-2">
+                                            <Label>Options</Label>
+                                            <div class="flex flex-wrap gap-1">
+                                                {#each field.config?.options || [] as option}
+                                                    <Badge variant="outline">{option}</Badge>
+                                                {/each}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            {:else}
+                                <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
+                                    <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                    {field.name}: {formData.fieldValues[field.id] || "Not set"}
+                                    {#if field.config.required && hasAssignees}
+                                        <span class="ml-1 text-red-500">*</span>
+                                    {/if}
+                                </Badge>
+                            {/if}
                         {:else}
                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80">
-                                        {field.name}: {getFieldTypeLabel(field.type)}
+                                <PopoverTrigger>
+                                    <Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                        <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                                        {field.name}
                                         {#if field.config.required && hasAssignees}
                                             <span class="ml-1 text-red-500">*</span>
                                         {/if}
@@ -250,7 +318,7 @@
                                                     for="field-{field.id}"
                                                     class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                 >
-                                                    {field.config.label || "Required"}
+                                                    {field.name}
                                                 </label>
                                             </div>
                                         {/if}
@@ -314,7 +382,7 @@
             <Button
                 type="button"
                 variant="outline"
-                on:click={() => (isAiDialogOpen = false)}>Cancel</Button
+                onclick={() => (isAiDialogOpen = false)}>Cancel</Button
             >
         </DialogFooter>
     </DialogContent>

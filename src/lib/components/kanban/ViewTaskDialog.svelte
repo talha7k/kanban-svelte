@@ -21,7 +21,7 @@
 		PopoverClose,
 	} from '$lib/components/ui/popover';
 
-	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock } from '@lucide/svelte';
+	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown } from '@lucide/svelte';
 	import { format, parseISO, isValid, differenceInDays, isToday, isPast } from 'date-fns';
 	import CommentItem from './CommentItem.svelte';
 	import { onMount } from 'svelte';
@@ -161,6 +161,19 @@
 			case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 			case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
 			default: return 'bg-gray-100 text-gray-800 border-gray-200';
+		}
+	}
+
+	function getFieldTypeIcon(type: string) {
+		switch (type) {
+			case 'fixed': return Lock;
+			case 'dropdown': return ChevronsUpDown;
+			case 'text_input': return Type;
+			case 'number_input': return Hash;
+			case 'date_input': return Calendar;
+			case 'textarea': return AlignLeft;
+			case 'checkbox': return CheckSquare;
+			default: return Type;
 		}
 	}
 
@@ -332,7 +345,8 @@
 								{#each selectedCardType.fields as field (field.id)}
 									{#if field.name !== "title" && field.name !== "description"}
 										{#if field.type === "fixed"}
-											<Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200">
+											<Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1">
+												<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
 												{field.name}: {field.config?.value || "N/A"}
 												{#if field.config?.required && task?.assigneeUids?.length}
 													<span class="ml-1 text-red-500">*</span>
@@ -341,7 +355,8 @@
 										{:else}
 											<Popover>
 												<PopoverTrigger>
-													<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80">
+													<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 flex items-center gap-1">
+														<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
 														{field.name}: {getFieldDisplayValue(field, task)}
 														{#if field.config?.required && task?.assigneeUids?.length}
 															<span class="ml-1 text-red-500">*</span>

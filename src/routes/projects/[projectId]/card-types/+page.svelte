@@ -10,7 +10,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
-  import { Loader2, ArrowLeft, Plus, Edit2, Trash2, GripVertical, Settings } from '@lucide/svelte';
+  import { Loader2, ArrowLeft, Plus, Edit2, Trash2, GripVertical, Settings, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown } from '@lucide/svelte';
   import type { Project, CardType, CardTypeField, FieldType } from '$lib/types/types';
   import { addCardTypeToProject, updateCardTypeInProject, deleteCardTypeFromProject, reorderCardTypesInProject } from '$lib/api/firebaseCardType';
   import CardTypeDialog from '$lib/components/CardTypeDialog.svelte';
@@ -106,6 +106,19 @@
       case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  }
+
+  function getFieldTypeIcon(type: FieldType) {
+    switch (type) {
+      case 'fixed': return Lock;
+      case 'dropdown': return ChevronsUpDown;
+      case 'text_input': return Type;
+      case 'number_input': return Hash;
+      case 'date_input': return Calendar;
+      case 'textarea': return AlignLeft;
+      case 'checkbox': return CheckSquare;
+      default: return Type;
     }
   }
 
@@ -536,14 +549,15 @@
                     <div class="space-y-2">
                       <h4 class="text-sm font-medium text-muted-foreground">Fields:</h4>
                       <div class="flex flex-wrap gap-2">
-                        {#each cardType.fields as field (field.id)}
-                          <Badge variant="secondary" class={getFieldTypeColor(field.type)}>
-                            {field.name}: {getFieldTypeLabel(field.type)}
-                            {#if field.config.required}
-                              <span class="ml-1 text-red-500">*</span>
-                            {/if}
-                          </Badge>
-                        {/each}
+                         {#each cardType.fields as field (field.id)}
+                           <Badge variant="secondary" class="{getFieldTypeColor(field.type)} flex items-center gap-1">
+                             <svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+                             {field.name}
+                             {#if field.config.required}
+                               <span class="ml-1 text-red-500">*</span>
+                             {/if}
+                           </Badge>
+                         {/each}
                       </div>
                     </div>
                   {/if}
