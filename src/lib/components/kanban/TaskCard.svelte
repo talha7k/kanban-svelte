@@ -186,17 +186,29 @@
         cardTypes.find((ct) => ct.id === task.cardTypeId) || null,
     );
 
+    // Key to track task changes without depending on object reference
+    let taskKey = $derived(task ? `${task.id}-${task.updatedAt}` : null);
+
     let priorityField = $derived(() => {
         if (!selectedCardType?.fields) return null;
-        return selectedCardType.fields.find((field: any) => {
-            const fieldName = field.name.toLowerCase();
-            return fieldName.includes('priority') || fieldName.includes('severity');
-        }) || null;
+        return (
+            selectedCardType.fields.find((field: any) => {
+                const fieldName = field.name.toLowerCase();
+                return (
+                    fieldName.includes("priority") ||
+                    fieldName.includes("severity")
+                );
+            }) || null
+        );
     });
 
     let dueDateField = $derived(() => {
         if (!selectedCardType?.fields) return null;
-        return selectedCardType.fields.find((field: any) => field.config?.isDueDate) || null;
+        return (
+            selectedCardType.fields.find(
+                (field: any) => field.config?.isDueDate,
+            ) || null
+        );
     });
 
     let customPriorityValue = $derived(() => {
@@ -230,23 +242,26 @@
         return task.dueDate || null;
     });
 
-    // Update field values when task changes
+    // ✅ FIX: This effect now only depends on `task` and `selectedCardType`.
+    // It creates NEW state from scratch instead of reading the state it's about to write.
     $effect(() => {
         if (task) {
-            fieldValues = { ...(task.fieldValues || {}) };
-            // Initialize due date field value if it exists
+            // Initialize fieldValues based on the current task prop
+            const newFieldValues = { ...(task.fieldValues || {}) };
             const dueDateFld = dueDateField();
-            if (dueDateFld && !(dueDateFld.id in fieldValues)) {
-                fieldValues[dueDateFld.id] = task.dueDate || null;
+            if (dueDateFld && !(dueDateFld.id in newFieldValues)) {
+                newFieldValues[dueDateFld.id] = task.dueDate || null;
             }
-            // Initialize popover states
+            fieldValues = newFieldValues;
+
+            // Initialize popover states from scratch, breaking the read/write cycle
+            const newOpenPopovers = new Map<string, boolean>();
             if (selectedCardType && selectedCardType.fields) {
                 for (const field of selectedCardType.fields) {
-                    if (!openPopovers.has(field.id)) {
-                        openPopovers.set(field.id, false);
-                    }
+                    newOpenPopovers.set(field.id, false);
                 }
             }
+            openPopovers = newOpenPopovers;
         }
     });
 
@@ -316,7 +331,8 @@
     function getFieldDisplayValue(field: any, task: Task): string {
         const value = task.fieldValues?.[field.id];
         const fieldName = field.name.toLowerCase();
-        const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
+        const isPriorityField =
+            fieldName.includes("priority") || fieldName.includes("severity");
 
         if (field.type === "fixed") {
             return field.config?.value || "N/A";
@@ -327,11 +343,16 @@
         } else if (isPriorityField) {
             // Map priority enum values to display names
             switch (value) {
-                case "LOW": return "Low";
-                case "MEDIUM": return "Medium";
-                case "HIGH": return "High";
-                case "NONE": return "None";
-                default: return value || "Not set";
+                case "LOW":
+                    return "Low";
+                case "MEDIUM":
+                    return "Medium";
+                case "HIGH":
+                    return "High";
+                case "NONE":
+                    return "None";
+                default:
+                    return value || "Not set";
             }
         } else {
             return value || "Not set";
@@ -343,12 +364,17 @@
 
         isSubmittingFieldUpdate = true;
         try {
-            const field = selectedCardType?.fields.find((f: any) => f.id === fieldId);
-            const isDueDateField = field && dueDateField() && field.id === dueDateField()!.id;
+            const field = selectedCardType?.fields.find(
+                (f: any) => f.id === fieldId,
+            );
+            const isDueDateField =
+                field && dueDateField() && field.id === dueDateField()!.id;
 
             if (isDueDateField) {
                 // For due date fields, update the dueDate directly
-                await onUpdateTask(task.id, { dueDate: fieldValues[fieldId] || null });
+                await onUpdateTask(task.id, {
+                    dueDate: fieldValues[fieldId] || null,
+                });
             } else {
                 // Send all field values, using null for unset fields
                 const fullFieldValues: Record<string, any> = {};
@@ -357,7 +383,7 @@
                         if (
                             field.name !== "title" &&
                             field.name !== "description" &&
-                            field.id !== dueDateField()?.id  // Exclude due date field from fieldValues
+                            field.id !== dueDateField()?.id // Exclude due date field from fieldValues
                         ) {
                             fullFieldValues[field.id] =
                                 fieldValues[field.id] ?? null;
@@ -393,7 +419,12 @@
                             {(() => {
                                 const parts = assignee.name.trim().split(/\s+/);
                                 if (parts.length === 1) return parts[0];
-                                return parts[0] + ' ' + parts[parts.length - 1][0] + '.';
+                                return (
+                                    parts[0] +
+                                    " " +
+                                    parts[parts.length - 1][0] +
+                                    "."
+                                );
                             })()}
                         </Badge>
                     {/each}
@@ -437,8 +468,8 @@
                         class={effectivePriority() === "MEDIUM"
                             ? "bg-yellow-100 text-yellow-800"
                             : effectivePriority() === "LOW"
-                            ? "bg-accent text-accent-foreground"
-                            : ""}
+                              ? "bg-accent text-accent-foreground"
+                              : ""}
                         title={getPriorityTooltip(effectivePriority())}
                     >
                         <Icon class="h-3 w-3" />
@@ -457,8 +488,8 @@
     {#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
         <CardContent class="px-4 py-1">
             <div class="flex flex-wrap gap-1">
-                  {#each selectedCardType.fields as field (field.id)}
-                       {#if field.name !== "title" && field.name !== "description"}
+                {#each selectedCardType.fields as field (field.id)}
+                    {#if field.name !== "title" && field.name !== "description"}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge
@@ -507,26 +538,26 @@
                                         <Label for="field-{field.id}"
                                             >{field.name}</Label
                                         >
-                                         {#if field.type === "dropdown" || field.type === "priority"}
-                                             <select
-                                                 id="field-{field.id}"
-                                                 bind:value={
-                                                     fieldValues[field.id]
-                                                 }
-                                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                 required={field.config
-                                                     ?.required &&
-                                                     task?.assigneeUids?.length}
-                                             >
-                                                 <option value=""
-                                                     >Select {field.name.toLowerCase()}</option
-                                                 >
-                                                 {#each field.config?.options || [] as option}
-                                                     <option value={option}
-                                                         >{option}</option
-                                                     >
-                                                 {/each}
-                                             </select>
+                                        {#if field.type === "dropdown" || field.type === "priority"}
+                                            <select
+                                                id="field-{field.id}"
+                                                bind:value={
+                                                    fieldValues[field.id]
+                                                }
+                                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                required={field.config
+                                                    ?.required &&
+                                                    task?.assigneeUids?.length}
+                                            >
+                                                <option value=""
+                                                    >Select {field.name.toLowerCase()}</option
+                                                >
+                                                {#each field.config?.options || [] as option}
+                                                    <option value={option}
+                                                        >{option}</option
+                                                    >
+                                                {/each}
+                                            </select>
                                         {:else if field.type === "text_input"}
                                             <Input
                                                 id="field-{field.id}"
@@ -606,24 +637,29 @@
                                         <div
                                             class="flex justify-end space-x-2 pt-2"
                                         >
-                                             <Button
-                                                 variant="outline"
-                                                 size="sm"
-                                                 onclick={() => {
-                                                     if (field.id === dueDateField()?.id) {
-                                                         fieldValues[field.id] = task.dueDate || null;
-                                                     } else {
-                                                         fieldValues = {
-                                                             ...(task.fieldValues ||
-                                                                 {}),
-                                                         };
-                                                     }
-                                                     openPopovers.set(
-                                                         field.id,
-                                                         false,
-                                                     );
-                                                 }}
-                                             >
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onclick={() => {
+                                                    if (
+                                                        field.id ===
+                                                        dueDateField()?.id
+                                                    ) {
+                                                        fieldValues[field.id] =
+                                                            task.dueDate ||
+                                                            null;
+                                                    } else {
+                                                        fieldValues = {
+                                                            ...(task.fieldValues ||
+                                                                {}),
+                                                        };
+                                                    }
+                                                    openPopovers.set(
+                                                        field.id,
+                                                        false,
+                                                    );
+                                                }}
+                                            >
                                                 Reset
                                             </Button>
                                             <PopoverClose>
@@ -662,7 +698,10 @@
                     <span
                         class="flex text-xs font-semibold items-center {dueDateStatus.colorClass}"
                         title="Due: {effectiveDueDate()
-                            ? format(parseISO(effectiveDueDate()!), 'MMM d, yyyy')
+                            ? format(
+                                  parseISO(effectiveDueDate()!),
+                                  'MMM d, yyyy',
+                              )
                             : 'N/A'}"
                     >
                         <Clock2Icon class="h-4 w-4 mr-1" />
