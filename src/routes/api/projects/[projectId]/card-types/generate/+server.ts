@@ -24,16 +24,17 @@ export const POST: RequestHandler = async ({ request, params }) => {
     }
     const existingCardTypes = project.cardTypes || [];
 
-    // Generate card type using AI
-    console.log('Generating card type with brief:', brief.trim());
-    console.log('Existing card types count:', existingCardTypes.length);
+    // Summarize existing card types for the AI
+    const existingCardTypesSummary = existingCardTypes.map(ct => {
+      return `Card Type: ${ct.name}
+Description: ${ct.description || 'No description'}
+Fields: ${ct.fields.map(f => `${f.name} (${f.type})`).join(', ')}`;
+    }).join('\n\n');
 
     const generatedCardType = await generateCardType({
       brief: brief.trim(),
-      existingCardTypes: JSON.stringify(existingCardTypes),
+      existingCardTypes: existingCardTypesSummary,
     });
-
-    console.log('Generated card type:', generatedCardType);
 
     return json({ success: true, cardType: generatedCardType });
   } catch (err) {

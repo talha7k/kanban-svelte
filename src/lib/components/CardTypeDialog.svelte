@@ -121,12 +121,29 @@
     onCancel();
   }
 
+  function getDefaultDropdownOptions(fieldName: string): string[] {
+    const name = fieldName.toLowerCase();
+    if (name.includes('priority') || name.includes('severity')) {
+      return ['Low', 'Medium', 'High', 'Critical'];
+    }
+    if (name.includes('status')) {
+      return ['Open', 'In Progress', 'Closed'];
+    }
+    if (name.includes('type') || name.includes('category')) {
+      return ['Type 1', 'Type 2', 'Type 3'];
+    }
+    // Default options
+    return ['Option 1', 'Option 2', 'Option 3'];
+  }
+
   async function handleAIGenerate() {
     if (!aiBrief.trim() || !onAIGenerate) return;
 
     isGenerating = true;
     try {
       const generatedData = await onAIGenerate(aiBrief.trim());
+
+
 
       // Populate the form with generated data
       name = generatedData.name;
@@ -136,6 +153,24 @@
         ...field,
         id: crypto.randomUUID(),
         order: fields.length + generatedData.fields.indexOf(field),
+        config: {
+          ...field.config,
+          // Ensure dropdown fields have options array
+          ...(field.type === 'dropdown' && {
+            options: field.config?.options || getDefaultDropdownOptions(field.name)
+          }),
+          // Ensure other field types have proper defaults
+          ...(field.type === 'text_input' && {
+            placeholder: field.config?.placeholder || ''
+          }),
+          ...(field.type === 'number_input' && {
+            min: field.config?.min,
+            max: field.config?.max
+          }),
+          ...(field.type === 'textarea' && {
+            placeholder: field.config?.placeholder || ''
+          }),
+        }
       }));
 
       isAIGenerateDialogOpen = false;

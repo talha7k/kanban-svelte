@@ -3,7 +3,7 @@ import { ai } from '$lib/server/ai/genkit';
 
 const GenerateCardTypeInputSchema = z.object({
   brief: z.string().describe('A brief description of what the card type should represent.'),
-  existingCardTypes: z.string().describe('A JSON string of existing card types in the project to analyze for patterns.'),
+  existingCardTypes: z.string().describe('A summary of existing card types in the project to analyze for patterns.'),
 });
 
 export type GenerateCardTypeInput = z.infer<typeof GenerateCardTypeInputSchema>;
@@ -18,7 +18,7 @@ const GenerateCardTypeOutputSchema = z.object({
     config: z.object({
       required: z.boolean().optional().describe('Whether this field is required.'),
       placeholder: z.string().optional().describe('Placeholder text for input fields.'),
-      options: z.array(z.string()).optional().describe('Options for dropdown fields.'),
+      options: z.array(z.string()).optional().describe('Options for dropdown fields (required when type is dropdown).'),
       min: z.number().optional().describe('Minimum value for number inputs.'),
       max: z.number().optional().describe('Maximum value for number inputs.'),
     }).optional(),
@@ -49,7 +49,19 @@ Consider these field types:
 - textarea: For longer text content
 - date_input: For dates
 - checkbox: For boolean values
-- dropdown: For selecting from predefined options
+- dropdown: For selecting from predefined options (when using dropdown, always provide relevant options in the config.options array)
+
+IMPORTANT: For dropdown fields, you MUST include a config object with an options array containing 3-5 relevant options for that field type.
+
+Example of a dropdown field:
+{
+  "name": "Priority",
+  "type": "dropdown",
+  "config": {
+    "required": true,
+    "options": ["Low", "Medium", "High", "Critical"]
+  }
+}
 
 Make sure fields are practical and commonly needed for the described card type.`,
 });
