@@ -55,63 +55,110 @@
 </script>
 
 <div class="grid gap-4 py-4">
-	<div class="space-y-1">
-		<div class="flex justify-between items-center">
-			<Label for="title">Title</Label>
-			<Button type="button" variant="outline" size="sm" class="ml-2" onclick={() => isAiDialogOpen = true}>
-				Generate with AI
-			</Button>
-		</div>
-		<Input 
-			id="title" 
-			bind:value={formData.title} 
-			placeholder="e.g., Implement feature X" 
-		/>
-		{#if formErrors.title}
-			<p class="text-xs text-destructive">{formErrors.title}</p>
-		{/if}
-	</div>
-	<div class="space-y-1">
-		<Label for="description">Description</Label>
-		<Textarea 
-			id="description" 
-			bind:value={formData.description} 
-			placeholder="Provide a detailed description of the task..." 
-		/>
-		{#if formErrors.description}
-			<p class="text-xs text-destructive">{formErrors.description}</p>
-		{/if}
-	</div>
-	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-		<div class="space-y-1">
-			<Label for="priority">Priority</Label>
-			<select 
-				id="priority" 
-				bind:value={formData.priority}
-				class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				<option value="NONE">None</option>
-				<option value="LOW">Low</option>
-				<option value="MEDIUM">Medium</option>
-				<option value="HIGH">High</option>
-			</select>
-			{#if formErrors.priority}
-				<p class="text-xs text-destructive">{formErrors.priority}</p>
-			{/if}
-		</div>
-		<div class="space-y-1">
-			<Label for="dueDate">Due Date</Label>
-			<Input
-				id="dueDate"
-				type="date"
-				bind:value={formData.dueDate}
-				class="w-full [&::-webkit-calendar-picker-indicator]:ml-auto"
-			/>
-			{#if formErrors.dueDate}
-				<p class="text-xs text-destructive">{formErrors.dueDate}</p>
-			{/if}
-		</div>
-	</div>
+	<!-- Render custom fields, treating Title and Description specially -->
+	{#if selectedCardType && selectedCardType.fields.length > 0}
+		{#each selectedCardType.fields as field (field.id)}
+			<div class="space-y-1">
+				{#if field.name === 'Title'}
+					<div class="flex justify-between items-center">
+						<Label for="field-{field.id}">{field.name}{field.config.required ? ' *' : ''}</Label>
+						<Button type="button" variant="outline" size="sm" class="ml-2" onclick={() => isAiDialogOpen = true}>
+							Generate with AI
+						</Button>
+					</div>
+					<Input
+						id="field-{field.id}"
+						bind:value={formData.title}
+						placeholder={field.config.placeholder || 'e.g., Implement feature X'}
+						required={field.config.required}
+					/>
+					{#if formErrors.title}
+						<p class="text-xs text-destructive">{formErrors.title}</p>
+					{/if}
+				{:else if field.name === 'Description'}
+					<Label for="field-{field.id}">{field.name}{field.config.required ? ' *' : ''}</Label>
+					<Textarea
+						id="field-{field.id}"
+						bind:value={formData.description}
+						placeholder={field.config.placeholder || 'Provide a detailed description of the task...'}
+						required={field.config.required}
+					/>
+					{#if formErrors.description}
+						<p class="text-xs text-destructive">{formErrors.description}</p>
+					{/if}
+				{:else}
+					<!-- Render other custom fields -->
+					<Label for="field-{field.id}">{field.name}{field.config.required ? ' *' : ''}</Label>
+
+					{#if field.type === 'fixed'}
+						<div class="px-3 py-2 bg-muted rounded-md text-sm">
+							{field.config.value || 'N/A'}
+						</div>
+					{:else if field.type === 'dropdown'}
+						<select
+							id="field-{field.id}"
+							bind:value={formData.fieldValues[field.id]}
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							required={field.config.required}
+						>
+							<option value="">Select {field.name.toLowerCase()}</option>
+							{#each field.config.options || [] as option}
+								<option value={option}>{option}</option>
+							{/each}
+						</select>
+					{:else if field.type === 'text_input'}
+						<Input
+							id="field-{field.id}"
+							bind:value={formData.fieldValues[field.id]}
+							placeholder={field.config.placeholder || ''}
+							required={field.config.required}
+						/>
+					{:else if field.type === 'number_input'}
+						<Input
+							id="field-{field.id}"
+							type="number"
+							bind:value={formData.fieldValues[field.id]}
+							placeholder={field.config.placeholder || ''}
+							min={field.config.min}
+							max={field.config.max}
+							required={field.config.required}
+						/>
+					{:else if field.type === 'date_input'}
+						<Input
+							id="field-{field.id}"
+							type="date"
+							bind:value={formData.fieldValues[field.id]}
+							required={field.config.required}
+						/>
+					{:else if field.type === 'textarea'}
+						<Textarea
+							id="field-{field.id}"
+							bind:value={formData.fieldValues[field.id]}
+							placeholder={field.config.placeholder || ''}
+							required={field.config.required}
+						/>
+					{:else if field.type === 'checkbox'}
+						<div class="flex items-center space-x-2">
+							<input
+								id="field-{field.id}"
+								type="checkbox"
+								bind:checked={formData.fieldValues[field.id]}
+								class="h-4 w-4 rounded border border-input"
+							/>
+							<label for="field-{field.id}" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+								{field.name}
+							</label>
+						</div>
+					{/if}
+
+					{#if formErrors[`field-${field.id}`]}
+						<p class="text-xs text-destructive">{formErrors[`field-${field.id}`]}</p>
+					{/if}
+				{/if}
+			</div>
+		{/each}
+	{/if}
+
 	<div class="space-y-1">
 		<Label>Assignees</Label>
 		<UserSelectionCombobox
@@ -129,86 +176,7 @@
 		{/if}
 	</div>
 
-	<!-- Dynamic Card Type Fields -->
-	{#if selectedCardType && selectedCardType.fields.length > 0}
-		<div class="space-y-4">
-			<div class="border-t pt-4">
-				<h3 class="text-sm font-medium text-muted-foreground mb-3">Additional Fields</h3>
-				<div class="space-y-3">
-					{#each selectedCardType.fields as field (field.id)}
-						<div class="space-y-1">
-							<Label for="field-{field.id}">{field.name}{field.config.required ? ' *' : ''}</Label>
 
-							{#if field.type === 'fixed'}
-								<div class="px-3 py-2 bg-muted rounded-md text-sm">
-									{field.config.value || 'N/A'}
-								</div>
-							{:else if field.type === 'dropdown'}
-								<select
-									id="field-{field.id}"
-									bind:value={formData.fieldValues[field.id]}
-									class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-									required={field.config.required}
-								>
-									<option value="">Select {field.name.toLowerCase()}</option>
-									{#each field.config.options || [] as option}
-										<option value={option}>{option}</option>
-									{/each}
-								</select>
-							{:else if field.type === 'text_input'}
-								<Input
-									id="field-{field.id}"
-									bind:value={formData.fieldValues[field.id]}
-									placeholder={field.config.placeholder || ''}
-									required={field.config.required}
-								/>
-							{:else if field.type === 'number_input'}
-								<Input
-									id="field-{field.id}"
-									type="number"
-									bind:value={formData.fieldValues[field.id]}
-									placeholder={field.config.placeholder || ''}
-									min={field.config.min}
-									max={field.config.max}
-									required={field.config.required}
-								/>
-							{:else if field.type === 'date_input'}
-								<Input
-									id="field-{field.id}"
-									type="date"
-									bind:value={formData.fieldValues[field.id]}
-									required={field.config.required}
-								/>
-							{:else if field.type === 'textarea'}
-								<Textarea
-									id="field-{field.id}"
-									bind:value={formData.fieldValues[field.id]}
-									placeholder={field.config.placeholder || ''}
-									required={field.config.required}
-								/>
-							{:else if field.type === 'checkbox'}
-								<div class="flex items-center space-x-2">
-									<input
-										id="field-{field.id}"
-										type="checkbox"
-										bind:checked={formData.fieldValues[field.id]}
-										class="h-4 w-4 rounded border border-input"
-									/>
-									<label for="field-{field.id}" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-										{field.name}
-									</label>
-								</div>
-							{/if}
-
-							{#if formErrors[`field-${field.id}`]}
-								<p class="text-xs text-destructive">{formErrors[`field-${field.id}`]}</p>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			</div>
-		</div>
-	{/if}
 
 </div>
 
