@@ -10,10 +10,11 @@
   import type { Project, Column } from '$lib/types/types';
   import { addColumnToProject, updateColumnInProject, deleteColumnFromProject, reorderColumnsInProject } from '$lib/api/firebaseColumn';
   import { createProjectPermissions } from '$lib/client/permissions';
-	import { useProject } from '$queries/useProjectManagement';
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import { withLoading } from '$lib/utils/loading';
-	import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+ 	import { useProject } from '$queries/useProjectManagement';
+ 	import { useQueryClient } from '@tanstack/svelte-query';
+ 	import { withLoading } from '$lib/utils/loading';
+ 	import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+ 	import { pageHeader } from '$lib/stores/pageHeader';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
@@ -76,6 +77,32 @@
   $effect(() => {
     if (project && !$authLoading && $currentUser) {
       isLoading = false;
+    }
+  });
+
+  // Set page header data
+  $effect(() => {
+    if (project && !$authLoading && $currentUser && hasAccess) {
+      const actions = [];
+
+      if (canManageTasks) {
+        actions.push({
+          label: 'Add Column',
+          icon: Plus,
+          variant: 'default' as const,
+          onClick: () => isAddDialogOpen = true,
+          disabled: isSubmitting
+        });
+      }
+
+      pageHeader.set({
+        title: 'Manage Columns',
+        description: `Customize the columns for ${project.name}`,
+        backUrl: `/projects/${project.id}`,
+        actions
+      });
+    } else {
+      pageHeader.set(null);
     }
   });
 
@@ -332,69 +359,6 @@
   </div>
 {:else}
   <div class="h-full flex flex-col">
-    <!-- Header -->
-    <div class="p-4 border-b bg-card">
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between w-full">
-          <div class="flex items-center gap-4">
-            <Button onclick={() => goto(`/projects/${project.id}`)} variant="outline" size="icon">
-              <ArrowLeft class="h-4 w-4" />
-            </Button>
-            <div class="flex flex-col">
-              <h1 class="text-2xl font-bold text-card-foreground">
-                Manage Columns
-              </h1>
-              <p class="text-sm text-muted-foreground mt-1">
-                Customize the columns for {project.name}
-              </p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            {#if canManageTasks}
-              <Dialog bind:open={isAddDialogOpen}>
-                <DialogTrigger>
-                  <Button disabled={isSubmitting}>
-                    <Plus class="h-5 w-5" />
-                    Add Column
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Column</DialogTitle>
-                    <DialogDescription>
-                      Create a new column for your kanban board.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div class="space-y-4">
-                    <div>
-                      <Label for="column-title">Column Title</Label>
-                      <Input
-                        id="column-title"
-                        bind:value={newColumnTitle}
-                        placeholder="e.g., In Review, Testing, Done"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onclick={() => { isAddDialogOpen = false; newColumnTitle = ''; }}>
-                      Cancel
-                    </Button>
-                    <Button onclick={handleAddColumn} disabled={isSubmitting || !newColumnTitle.trim()}>
-                      {#if isSubmitting}
-                        <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                      {/if}
-                      Add Column
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4">
       <div class="container mx-auto max-w-4xl">
@@ -478,6 +442,40 @@
         {/if}
       </div>
     </div>
+
+    <!-- Add Column Dialog -->
+    <Dialog bind:open={isAddDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New Column</DialogTitle>
+          <DialogDescription>
+            Create a new column for your kanban board.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div>
+            <Label for="column-title">Column Title</Label>
+            <Input
+              id="column-title"
+              bind:value={newColumnTitle}
+              placeholder="e.g., In Review, Testing, Done"
+              required
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onclick={() => { isAddDialogOpen = false; newColumnTitle = ''; }}>
+            Cancel
+          </Button>
+          <Button onclick={handleAddColumn} disabled={isSubmitting || !newColumnTitle.trim()}>
+            {#if isSubmitting}
+              <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+            {/if}
+            Add Column
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- Edit Column Dialog -->
     <Dialog bind:open={isEditDialogOpen}>

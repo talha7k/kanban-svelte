@@ -14,10 +14,11 @@
   import type { Project, CardType, CardTypeField, FieldType } from '$lib/types/types';
   import { addCardTypeToProject, updateCardTypeInProject, deleteCardTypeFromProject, reorderCardTypesInProject } from '$lib/api/firebaseCardType';
   import CardTypeDialog from '$lib/components/CardTypeDialog.svelte';
-	import { createProjectPermissions } from '$lib/client/permissions';
-	import { useProject } from '$queries/useProjectManagement';
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import { withLoading } from '$lib/utils/loading';
+  import { createProjectPermissions } from '$lib/client/permissions';
+ 	import { useProject } from '$queries/useProjectManagement';
+ 	import { useQueryClient } from '@tanstack/svelte-query';
+ 	import { withLoading } from '$lib/utils/loading';
+ 	import { pageHeader } from '$lib/stores/pageHeader';
 
   // Server-loaded data
   interface PageData {
@@ -80,6 +81,32 @@
   $effect(() => {
     if (project && !$authLoading && $currentUser) {
       isLoading = false;
+    }
+  });
+
+  // Set page header data
+  $effect(() => {
+    if (project && !$authLoading && $currentUser && hasAccess) {
+      const actions = [];
+
+      if (canManageTasks) {
+        actions.push({
+          label: 'Add Card Type',
+          icon: Plus,
+          variant: 'default' as const,
+          onClick: handleAddCardType,
+          disabled: isSubmitting
+        });
+      }
+
+      pageHeader.set({
+        title: 'Card Types',
+        description: `Manage card types and their fields for ${project.name}`,
+        backUrl: `/projects/${project.id}`,
+        actions
+      });
+    } else {
+      pageHeader.set(null);
     }
   });
 
@@ -430,42 +457,6 @@
   </div>
 {:else}
   <div class="h-full flex flex-col">
-    <!-- Header -->
-    <div class="p-4 border-b bg-card">
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between w-full">
-          <div class="flex items-center gap-4">
-            <Button onclick={() => goto(`/projects/${project.id}`)} variant="outline" size="icon">
-              <ArrowLeft class="h-4 w-4" />
-            </Button>
-            <div class="flex flex-col">
-              <h1 class="text-2xl font-bold text-card-foreground">
-                Card Types
-              </h1>
-              <p class="text-sm text-muted-foreground mt-1">
-                Manage card types and their fields for {project.name}
-              </p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            {#if canManageTasks}
-              <Button
-                onclick={handleAddCardType}
-                disabled={isSubmitting}
-                class="md:mr-2"
-              >
-                {#if isSubmitting}
-                  <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                {/if}
-                <Plus class="h-5 w-5" />
-                Add Card Type
-              </Button>
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4">
       <div class="container mx-auto max-w-6xl">

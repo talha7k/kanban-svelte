@@ -8,15 +8,17 @@
 	import { getProjectRelevantUsers, getUserProfile } from '$lib/api/firebaseUser';
 	import { updateProjectDetails, deleteProject } from '$lib/api/firebaseProject';
 	import { addTaskToProject } from '$lib/api/firebaseTask';
-	import { Loader2, Settings, Sparkles, ArrowLeft, Edit2, FileText, Columns } from '@lucide/svelte';
+	import { Loader2, Sparkles, Edit, FileText, Columns, Plus } from '@lucide/svelte';
 	import KanbanBoard from '$lib/components/kanban/KanbanBoard.svelte';
 	import EditProjectDialog from '$lib/components/project/EditProjectDialog.svelte';
 	import DeleteProjectAlertDialog from '$lib/components/dashboard/DeleteProjectAlertDialog.svelte';
 	import GenerateTasksDialog from '$lib/components/project/GenerateTasksDialog.svelte';
+	import AddTaskDialog from '$lib/components/kanban/AddTaskDialog.svelte';
 	import { useProject } from '$queries/useProjectManagement';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { createProjectPermissions } from '$lib/client/permissions';
 	import { withLoading } from '$lib/utils/loading';
+	import { pageHeader } from '$lib/stores/pageHeader';
 
 	// Server-loaded data
 	interface PageData {
@@ -46,6 +48,9 @@
 	let isEditProjectDialogOpen = $state(false);
 	let isSubmittingProjectEdit = $state(false);
 	let isGenerateTasksDialogOpen = $state(false);
+	let isAddTaskDialogOpen = $state(false);
+	let selectedColumnId: string | null = $state(null);
+	let isAddingTask = $state(false);
 	let projectToDelete: Project | null = $state(null);
 	let isDeletingProject = $state(false);
 	let isGeneratingTasks = $state(false);
@@ -256,30 +261,149 @@
 		}
 	});
 
-	// Refresh function to reload project data
-	async function handleRefresh() {
-		try {
-			await queryClient.invalidateQueries({ queryKey: ['project', project?.id] });
-			toast.success('Project refreshed successfully');
-		} catch (error) {
-			console.error('Error refreshing project:', error);
-			toast.error('Failed to refresh project');
-		}
-	}
+ 	// Refresh function to reload project data
+ 	async function handleRefresh() {
+ 		try {
+ 			await queryClient.invalidateQueries({ queryKey: ['project', project?.id] });
+ 			toast.success('Project refreshed successfully');
+ 		} catch (error) {
+ 			console.error('Error refreshing project:', error);
+ 			toast.error('Failed to refresh project');
+ 		}
+ 	}
 
-	// Access control check - only check access after auth is loaded
-	let hasAccess = $derived(
-		!$authLoading && project && $currentUser && (
-			project.memberIds?.includes($currentUser.uid) ||
-			project.ownerId === $currentUser.uid
-		)
-	);
+ 	// Handle add task
+ 	function handleAddTask() {
+ 		selectedColumnId = project?.columns[0]?.id || null;
+ 		isAddTaskDialogOpen = true;
+ 	}
 
-	let isLoading = $derived(false); // No additional loading states - everything loads in background
-	let error = $derived(
-		(!data.project && $projectQuery.error?.message) ||
-			(!$authLoading && !hasAccess && project ? 'You do not have access to this project.' : null)
-	);
+ 	// Handle add task submit
+ 	async function handleAddTaskSubmit(taskData: any, columnId: string, cardTypeId?: string) {
+ 		if (!project || $authLoading || !$currentUser) return;
+ 		isAddingTask = true;
+ 		try {
+ 			await withLoading(async () => {
+ 				// Get Firebase ID token for authentication
+ 				const idToken = await $currentUser.getIdToken();
+
+ 				const response = await fetch('/api/add-task', {
+ 					method: 'POST',
+ 					headers: {
+ 						'Content-Type': 'application/json',
+ 						'Authorization': `Bearer ${idToken}`
+ 					},
+ 					body: JSON.stringify({
+ 						projectId: project!.id,
+ 						taskData: {
+ 							...taskData,
+ 							reporterId: $currentUser.uid,
+ 							...(cardTypeId && { cardTypeId })
+ 						},
+ 						columnId
+ 					})
+ 				});
+
+ 				if (!response.ok) {
+ 					throw new Error('Failed to add task');
+ 				}
+
+ 				const result = await response.json();
+ 				const newTask = result.task;
+
+ 				// Invalidate the project query to refresh the KanbanBoard
+ 				if (project) {
+ 					await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+ 				}
+
+ 				toast.success('Task added successfully');
+ 				isAddTaskDialogOpen = false;
+ 			});
+ 		} catch (error) {
+ 			console.error('Error adding task:', error);
+ 			toast.error('Failed to add task');
+ 			throw error;
+ 		} finally {
+ 			isAddingTask = false;
+ 		}
+ 	}
+
+  // Access control check - only check access after auth is loaded
+  let hasAccess = $derived(
+    !$authLoading && project && $currentUser && (
+      project.memberIds?.includes($currentUser.uid) ||
+      project.ownerId === $currentUser.uid
+    )
+  );
+
+  let isLoading = $derived(false); // No additional loading states - everything loads in background
+  let error = $derived(
+    (!data.project && $projectQuery.error?.message) ||
+      (!$authLoading && !hasAccess && project ? 'You do not have access to this project.' : null)
+  );
+
+  // Set page header data
+  $effect(() => {
+    if (project && !$authLoading && $currentUser && hasAccess) {
+      const actions = [];
+
+      if (canEditProject) {
+        actions.push({
+          label: 'Edit Project',
+          icon: Edit,
+          variant: 'secondary' as const,
+          onClick: () => isEditProjectDialogOpen = true,
+          disabled: isSubmittingProjectEdit
+        });
+      }
+
+      if (canViewProject) {
+        actions.push({
+          label: 'Card Types',
+          icon: FileText,
+          variant: 'outline' as const,
+          onClick: () => goto(`/projects/${project!.id}/card-types`),
+          disabled: isSubmittingProjectEdit
+        });
+
+        actions.push({
+          label: 'Manage Columns',
+          icon: Columns,
+          variant: 'outline' as const,
+          onClick: () => goto(`/projects/${project!.id}/columns`),
+          disabled: isSubmittingProjectEdit
+        });
+      }
+
+      if (canManageTasks) {
+        actions.push({
+          label: 'Add Task',
+          icon: Plus,
+          variant: 'default' as const,
+          onClick: handleAddTask,
+          disabled: false
+        });
+
+        actions.push({
+          label: 'AI Tasks',
+          icon: Sparkles,
+          variant: 'outline' as const,
+          onClick: () => isGenerateTasksDialogOpen = true,
+          disabled: isSubmittingProjectEdit
+        });
+      }
+
+      pageHeader.set({
+        title: project.name,
+        description: project.description,
+        creator: projectCreator,
+        backUrl: `/teams/${project.teamId}`,
+        actions
+      });
+    } else {
+      pageHeader.set(null);
+    }
+  });
 </script>
 
 <!-- Authentication and loading guard -->
@@ -307,78 +431,11 @@
 		</Button>
 	</div>
 {:else}
-	<div class="h-full flex flex-col">
-		<div class="p-4 border-b bg-card">
-			<div class="container mx-auto">
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-4">
-						<Button onclick={() => goto('/teams/' + project?.teamId)} variant="outline" size="icon">
-							<ArrowLeft class="h-4 w-4" />
-						</Button>
-						<div class="flex flex-col">
-							<h1 class="text-2xl font-bold text-card-foreground">
-								{project.name}
-							</h1>
-							{#if project.description}
-								<p class="text-sm text-muted-foreground mt-1">
-									{project.description}
-								</p>
-							{/if}
-							{#if projectCreator}
-								<p class="text-sm text-muted-foreground mt-1">
-									Created by: {projectCreator.name}
-								</p>
-							{/if}
-						</div>
-					</div>
-					<div class="flex flex-col sm:flex-row gap-2">
-						{#if canEditProject}
-							<Button
-								variant="secondary"
-								onclick={() => (isEditProjectDialogOpen = true)}
-								class="md:mr-2 mb-2 sm:mb-0"
-								disabled={isSubmittingProjectEdit}
-							>
-								<Edit2 class="h-5 w-5" />
-								Project
-							</Button>
-						{/if}
-						{#if canViewProject && project}
-							<Button
-								variant="outline"
-								onclick={() => goto(`/projects/${project!.id}/card-types`)}
-								class="mb-2 sm:mb-0 mr-2"
-								disabled={isSubmittingProjectEdit}
-							>
-								<FileText class="h-5 w-5" /> Card Types
-							</Button>
-							<Button
-								variant="outline"
-								onclick={() => goto(`/projects/${project!.id}/columns`)}
-								class="mb-2 sm:mb-0 mr-2"
-								disabled={isSubmittingProjectEdit}
-							>
-								<Columns class="h-5 w-5" /> Manage Columns
-							</Button>
-						{/if}
-						{#if canManageTasks && project}
-							<Button
-								variant="default"
-								onclick={() => (isGenerateTasksDialogOpen = true)}
-								class="mb-2 sm:mb-0"
-								disabled={isSubmittingProjectEdit}
-							>
-								<Sparkles class="h-5 w-5" /> AI Tasks
-							</Button>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="flex-1 min-h-0">
-			<!-- Allows KanbanBoard to take remaining height -->
-			<KanbanBoard {project} {users} team={data.team} />
-		</div>
+ 	<div class="h-full flex flex-col">
+ 		<div class="flex-1 min-h-0">
+ 			<!-- Allows KanbanBoard to take remaining height -->
+ 			<KanbanBoard {project} {users} team={data.team} />
+ 		</div>
 		{#if canEditProject && project}
 			<EditProjectDialog
 				isOpen={isEditProjectDialogOpen}
@@ -407,6 +464,15 @@
 				onAddTasks={handleAddTasks}
 				isGenerating={isGeneratingTasks}
 				{isAddingTasks}
+			/>
+			<AddTaskDialog
+				isOpen={isAddTaskDialogOpen}
+				onOpenChange={(open) => isAddTaskDialogOpen = open}
+				onAddTask={handleAddTaskSubmit}
+				columnId={selectedColumnId}
+				assignableUsers={users}
+				isSubmitting={isAddingTask}
+				cardTypes={project.cardTypes || []}
 			/>
 		{/if}
 	</div>

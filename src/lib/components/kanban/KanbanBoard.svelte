@@ -19,11 +19,12 @@ import AddTaskDialog from './AddTaskDialog.svelte';
 	import { createProjectPermissions } from '$lib/client/permissions';
 	import { withLoading } from '$lib/utils/loading';
 
-	let { project, users = [], team, onProjectUpdate = () => Promise.resolve() }: {
+	let { project, users = [], team, onProjectUpdate = () => Promise.resolve(), onAddTask }: {
 		project: Project;
 		users?: UserProfile[];
 		team?: Team;
 		onProjectUpdate?: () => Promise<void>;
+		onAddTask?: () => void;
 	} = $props();
 
 	// Permission checks
@@ -549,26 +550,27 @@ let isSubmittingTaskAdd = $state(false);
 				</div>
 			{/if}
 			<div class="flex flex-col h-full">
-				<div class="flex items-center justify-between p-4 border-b">
-					<h2 class="text-xl font-semibold">{project.name}</h2>
-					<Button onclick={handleAddTask} class="flex items-center gap-2">
-						<Plus class="h-4 w-4" />
-						Add Task
-					</Button>
+			<div class="flex-1 p-4 h-full">
+				<!-- Fixed Header Row -->
+				<div class="flex gap-4 mb-4 sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b pb-2">
+					{#each project.columns as column (column.id)}
+						<div class="w-80 flex-shrink-0">
+							<h3 class="font-medium text-center bg-muted/50 rounded-lg px-4 py-2 shadow-sm">{column.title}</h3>
+						</div>
+					{/each}
 				</div>
-			
-			<div class="flex-1 p-4">
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+				<!-- Scrollable Content -->
+				<div class="flex gap-4 overflow-x-auto h-full pb-4 items-stretch">
 					{#each project.columns as column (column.id)}
 						<div
-							class="bg-muted/50 rounded-lg p-4 transition-all duration-200"
+							class="bg-muted/50 rounded-lg p-4 transition-all duration-200 flex-shrink-0 w-80 flex flex-col"
 							class:ring-2={$dragState.isOverColumnId === column.id}
 							class:ring-primary={$dragState.isOverColumnId === column.id}
 							class:ring-offset-2={$dragState.isOverColumnId === column.id}
 							use:droppableColumn={{ columnId: column.id }}
 						>
-							<h3 class="font-medium mb-4">{column.title}</h3>
-							<div class="space-y-2 min-h-[100px]">
+							<div class="space-y-2 flex-1">
 								{#each $tasksStore.filter(task => task.columnId === column.id).sort((a, b) => a.order - b.order) as task, index (task.id)}
 									<!-- Insertion preview indicator BEFORE the target task -->
 									{#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}

@@ -16,6 +16,8 @@
 		DropdownMenuTrigger,
 	} from '$lib/components/ui/dropdown-menu';
 	import { toast } from 'svelte-sonner';
+	import PageHeader from './PageHeader.svelte';
+	import { pageHeader as pageHeaderStore } from '$lib/stores/pageHeader';
 
 	async function handleLogout() {
 		try {
@@ -33,83 +35,89 @@
 	}
 </script>
 
-<header class="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-	<div class="flex h-14 items-center justify-between w-full">
-		<div class="flex items-center">
-			<a href="/" class="mr-6 flex items-center space-x-2">
-				<KanbanIcon className="h-6 w-6 text-primary" />
-				<span class="font-bold sm:inline-block">
-					DijiKanban
-				</span>
-			</a>
-			<nav class="flex items-center space-x-4">
+<div>
+	<header class="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+		<div class="flex h-14 items-center justify-between w-full">
+			<div class="flex items-center">
+				<a href="/" class="mr-6 flex items-center space-x-2">
+					<KanbanIcon className="h-6 w-6 text-primary" />
+					<span class="font-bold sm:inline-block">
+						DijiKanban
+					</span>
+				</a>
+				<nav class="flex items-center space-x-4">
+					{#if $currentUser}
+						<Button variant="ghost">
+							<a href="/teams" class="flex items-center">
+								<Users class="mr-2 h-4 w-4" />
+								Teams
+							</a>
+						</Button>
+					{/if}
+				</nav>
+			</div>
+
+			<div class="flex items-center space-x-4">
+				<Button variant="ghost" size="sm">
+					<a href="https://github.com/yourusername/kanban-app" target="_blank" rel="noopener noreferrer" class="flex items-center">
+						<Github class="h-4 w-4" />
+					</a>
+				</Button>
+
 				{#if $currentUser}
+					<DropdownMenu>
+						<DropdownMenuTrigger class="relative h-8 w-8 rounded-full">
+							<Avatar class="h-8 w-8">
+								<AvatarImage src={$userProfile?.avatarUrl || ''} alt={$userProfile?.name || 'User'} />
+								<AvatarFallback>
+									{$userProfile?.name?.charAt(0) || $currentUser.email?.charAt(0) || 'U'}
+								</AvatarFallback>
+							</Avatar>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent class="w-56" align="end">
+							<DropdownMenuLabel class="font-normal">
+								<div class="flex flex-col space-y-1">
+									<p class="text-sm font-medium leading-none">
+										{$userProfile?.name || 'User'}
+									</p>
+									<p class="text-xs leading-none text-muted-foreground">
+										{$currentUser.email}
+									</p>
+								</div>
+							</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem>
+								<a href="/profile" class="flex items-center w-full">
+									<UserCircle class="mr-2 h-4 w-4" />
+									<span>Profile</span>
+								</a>
+							</DropdownMenuItem>
+							<DropdownMenuItem>
+								<a href="/settings" class="flex items-center w-full">
+									<Settings class="mr-2 h-4 w-4" />
+									<span>Settings</span>
+								</a>
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onclick={handleLogout}>
+								<LogOut class="mr-2 h-4 w-4" />
+								<span>Log out</span>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				{:else}
 					<Button variant="ghost">
-						<a href="/teams" class="flex items-center">
-							<Users class="mr-2 h-4 w-4" />
-							Teams
+						<a href="/login" class="flex items-center">
+							<LogIn class="mr-2 h-4 w-4" />
+							Sign In
 						</a>
 					</Button>
 				{/if}
-			</nav>
+			</div>
 		</div>
+	</header>
 
-		<div class="flex items-center space-x-4">
-			<Button variant="ghost" size="sm">
-				<a href="https://github.com/yourusername/kanban-app" target="_blank" rel="noopener noreferrer" class="flex items-center">
-					<Github class="h-4 w-4" />
-				</a>
-			</Button>
-
-			{#if $currentUser}
-				<DropdownMenu>
-					<DropdownMenuTrigger class="relative h-8 w-8 rounded-full">
-						<Avatar class="h-8 w-8">
-							<AvatarImage src={$userProfile?.avatarUrl || ''} alt={$userProfile?.name || 'User'} />
-							<AvatarFallback>
-								{$userProfile?.name?.charAt(0) || $currentUser.email?.charAt(0) || 'U'}
-							</AvatarFallback>
-						</Avatar>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent class="w-56" align="end">
-						<DropdownMenuLabel class="font-normal">
-							<div class="flex flex-col space-y-1">
-								<p class="text-sm font-medium leading-none">
-									{$userProfile?.name || 'User'}
-								</p>
-								<p class="text-xs leading-none text-muted-foreground">
-									{$currentUser.email}
-								</p>
-							</div>
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem>
-							<a href="/profile" class="flex items-center w-full">
-								<UserCircle class="mr-2 h-4 w-4" />
-								<span>Profile</span>
-							</a>
-						</DropdownMenuItem>
-						<DropdownMenuItem>
-							<a href="/settings" class="flex items-center w-full">
-								<Settings class="mr-2 h-4 w-4" />
-								<span>Settings</span>
-							</a>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onclick={handleLogout}>
-							<LogOut class="mr-2 h-4 w-4" />
-							<span>Log out</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			{:else}
-				<Button variant="ghost">
-					<a href="/login" class="flex items-center">
-						<LogIn class="mr-2 h-4 w-4" />
-						Sign In
-					</a>
-				</Button>
-			{/if}
-		</div>
-	</div>
-</header>
+	{#if $pageHeaderStore}
+		<PageHeader {...$pageHeaderStore} />
+	{/if}
+</div>
