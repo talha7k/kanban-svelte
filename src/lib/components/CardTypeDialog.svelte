@@ -6,7 +6,7 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
-  import { Loader2, Trash2, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown } from '@lucide/svelte';
+  import { Loader2, Trash2, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown, Sparkles } from '@lucide/svelte';
   import type { CardType, CardTypeField, FieldType } from '$lib/types/types';
 
   interface Props {
@@ -16,9 +16,10 @@
     isSubmitting?: boolean;
     onSave: (data: { name: string; description: string; color: string; fields: CardTypeField[] }) => void;
     onCancel: () => void;
+    onAIGenerate?: (brief: string) => Promise<{ name: string; description: string; color: string; fields: CardTypeField[] }>;
   }
 
-  let { open, mode, cardType, isSubmitting = false, onSave, onCancel }: Props = $props();
+  let { open, mode, cardType, isSubmitting = false, onSave, onCancel, onAIGenerate }: Props = $props();
 
   let name = $state('');
   let description = $state('');
@@ -31,6 +32,11 @@
   let newFieldType: FieldType = $state('text_input');
   let newFieldRequired = $state(false);
   let newFieldOptions = $state('');
+
+  // AI generation dialog states
+  let isAIGenerateDialogOpen = $state(false);
+  let aiBrief = $state('');
+  let isGenerating = $state(false);
 
   $effect(() => {
     if (open) {
@@ -114,14 +120,56 @@
   function handleCancel() {
     onCancel();
   }
+
+  async function handleAIGenerate() {
+    if (!aiBrief.trim() || !onAIGenerate) return;
+
+    isGenerating = true;
+    try {
+      const generatedData = await onAIGenerate(aiBrief.trim());
+
+      // Populate the form with generated data
+      name = generatedData.name;
+      description = generatedData.description || '';
+      color = generatedData.color;
+      fields = generatedData.fields.map(field => ({
+        ...field,
+        id: crypto.randomUUID(),
+        order: fields.length + generatedData.fields.indexOf(field),
+      }));
+
+      isAIGenerateDialogOpen = false;
+      aiBrief = '';
+    } catch (error) {
+      console.error('Error generating card type with AI:', error);
+      // Error handling will be done by the parent component
+    } finally {
+      isGenerating = false;
+    }
+  }
 </script>
 
 <Dialog bind:open>
   <DialogContent class="max-h-[90vh] overflow-y-auto">
     <DialogHeader>
-      <DialogTitle>{mode === 'add' ? 'Add Card Type' : 'Edit Card Type'}</DialogTitle>
+      <DialogTitle class="flex items-center gap-2">
+        {mode === 'add' ? 'Add Card Type' : 'Edit Card Type'}
+        {#if mode === 'add'}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={() => isAIGenerateDialogOpen = true}
+            disabled={isSubmitting}
+            class="ml-auto"
+          >
+            <Sparkles class="h-4 w-4 mr-2" />
+            Generate with AI
+          </Button>
+        {/if}
+      </DialogTitle>
       <DialogDescription>
-        {mode === 'add' ? 'Create a new card type with custom fields.' : 'Update the card type properties.'}
+        {mode === 'add' ? 'Create a new card type with custom fields or generate one with AI.' : 'Update the card type properties.'}
       </DialogDescription>
     </DialogHeader>
     <div class="grid grid-cols-2 gap-4 py-4">
@@ -279,8 +327,46 @@
       <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldRequired = false; newFieldOptions = ''; }}>
         Cancel
       </Button>
-      <Button onclick={handleAddField} disabled={!newFieldName.trim()}>
-        Add Field
+       <Button onclick={handleAddField} disabled={!newFieldName.trim()}>
+         Add Field
+       </Button>
+     </DialogFooter>
+   </DialogContent>
+ </Dialog>
+
+<!-- AI Generate Dialog -->
+<Dialog bind:open={isAIGenerateDialogOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Generate Card Type with AI</DialogTitle>
+      <DialogDescription>
+        Describe what kind of card type you want to create. The AI will analyze your existing card types and generate appropriate fields.
+      </DialogDescription>
+    </DialogHeader>
+    <div class="space-y-4">
+      <div>
+        <Label for="ai-brief">Description</Label>
+        <Textarea
+          id="ai-brief"
+          bind:value={aiBrief}
+          placeholder="e.g., A card type for bug reports with fields for severity, priority, and steps to reproduce"
+          rows={4}
+          required
+        />
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onclick={() => { isAIGenerateDialogOpen = false; aiBrief = ''; }}>
+        Cancel
+      </Button>
+      <Button onclick={handleAIGenerate} disabled={isGenerating || !aiBrief.trim()}>
+        {#if isGenerating}
+          <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+          Generating...
+        {:else}
+          <Sparkles class="mr-2 h-4 w-4" />
+          Generate
+        {/if}
       </Button>
     </DialogFooter>
   </DialogContent>

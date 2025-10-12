@@ -426,6 +426,38 @@
       isSubmitting = false;
     }
   }
+
+  async function handleAIGenerate(brief: string): Promise<{ name: string; description: string; color: string; fields: CardTypeField[] }> {
+    if (!project || !$currentUser) {
+      throw new Error('Project or user not available');
+    }
+
+    try {
+      const idToken = await $currentUser.getIdToken();
+      const response = await fetch(`/api/projects/${project.id}/card-types/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ brief })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate card type');
+      }
+
+      const result = await response.json();
+      return result.cardType;
+    } catch (error) {
+      console.error('Error generating card type with AI:', error);
+      toast.error('Error generating card type', {
+        description: error instanceof Error ? error.message : 'Could not generate card type with AI.'
+      });
+      throw error;
+    }
+  }
 </script>
 
 <!-- Authentication and loading guard -->
@@ -572,6 +604,7 @@
       isSubmitting={isSubmitting}
       onSave={handleAddSubmit}
       onCancel={() => { isAddDialogOpen = false; }}
+      onAIGenerate={handleAIGenerate}
     />
 
     <CardTypeDialog

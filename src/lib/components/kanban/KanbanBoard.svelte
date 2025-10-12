@@ -676,6 +676,7 @@
                     class="flex gap-4 h-full pb-4 items-stretch"
                 >
                     {#each project.columns as column (column.id)}
+                        {@const hasTasks = $tasksStore.some(task => task.columnId === column.id)}
                         <div
                             class="bg-muted/50 rounded-lg p-4 transition-all duration-200 flex-shrink-0 w-80 flex flex-col"
                             class:ring-2={$dragState.isOverColumnId ===
@@ -684,7 +685,7 @@
                                 column.id}
                             class:ring-offset-2={$dragState.isOverColumnId ===
                                 column.id}
-                            use:droppableColumn={{ columnId: column.id }}
+                            use:droppableColumn={{ columnId: hasTasks ? '' : column.id }}
                         >
                              <div class="flex-1 pt-2">
                                 {#each $tasksStore
@@ -692,10 +693,7 @@
                                     .sort((a, b) => a.order - b.order) as task, index (task.id)}
                                     <!-- Insertion preview indicator BEFORE the target task -->
                                      {#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}
-                                         <div class="relative mb-2" use:droppableTask={{
-                                             taskId: task.id,
-                                             columnId: column.id,
-                                         }}>
+                                         <div class="relative mb-2 pointer-events-none">
                                              <div
                                                  class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"
                                              ></div>
@@ -706,10 +704,10 @@
                                                             t.id ===
                                                             $dragState.movingTaskId,
                                                     )}
-                                                {#if movingTask}
-                                                    <div
-                                                        class="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-[100] whitespace-nowrap -translate-y-full"
-                                                    >
+                                                 {#if movingTask}
+                                                     <div
+                                                         class="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-[100] whitespace-nowrap -translate-y-full pointer-events-none"
+                                                     >
                                                         Drop "{movingTask.title}"
                                                         here (position {index +
                                                             1})
@@ -736,17 +734,19 @@
                                                      ?.afterTaskId,
                                          )
                                          : -1}
+                                     {@const nextTask = columnTasks[index + 1]}
                                      <div
-                                         class="transition-all duration-200 mb-2"
+                                         class="transition-all duration-200 mb-2 relative"
                                          class:opacity-50={$dragState.isDragging &&
                                              $dragState.movingTaskId === task.id}
                                          class:transform={insertionIndex !== -1 && index >= insertionIndex}
                                          class:translate-y-4={insertionIndex !== -1 && index >= insertionIndex}
+                                         class:top-glow={$dragState.isDragging && $dragState.insertionPreview?.afterTaskId === task.id}
+                                         class:bottom-glow={$dragState.isDragging && (
+                                             (nextTask && $dragState.insertionPreview?.afterTaskId === nextTask.id) ||
+                                             (!nextTask && !$dragState.insertionPreview?.afterTaskId && $dragState.insertionPreview?.columnId === column.id)
+                                         )}
                                          use:draggableTask={{ task }}
-                                         use:droppableTask={{
-                                             taskId: task.id,
-                                             columnId: column.id,
-                                         }}
                                      >
                                         <TaskCard
                                             {task}
@@ -770,24 +770,51 @@
                                                 handleMoveToPreviousColumn(t)}
                                             isSubmitting={$dragState.movingTaskId ===
                                                 task.id}
-                                            onUpdateTask={(
-                                                taskId: string,
-                                                updatedFields: Partial<Task>,
-                                            ) =>
-                                                handleUpdateTask(
-                                                    taskId,
-                                                    updatedFields,
-                                                )}
-                                        />
-                                    </div>
+                                             onUpdateTask={(
+                                                 taskId: string,
+                                                 updatedFields: Partial<Task>,
+                                             ) =>
+                                                 handleUpdateTask(
+                                                     taskId,
+                                                     updatedFields,
+                                                 )}
+                                         />
+                                         <!-- Top half drop zone: insert before this task -->
+                                         {#if $dragState.movingTaskId !== task.id}
+                                             <div
+                                                 class="absolute top-0 left-0 w-full h-1/2"
+                                                 use:droppableTask={{
+                                                     taskId: task.id,
+                                                     columnId: column.id,
+                                                 }}
+                                             ></div>
+                                         {/if}
+                                         <!-- Bottom half drop zone: insert after this task -->
+                                         {#if $dragState.movingTaskId !== task.id}
+                                             {#if nextTask}
+                                                 <div
+                                                     class="absolute bottom-0 left-0 w-full h-1/2"
+                                                     use:droppableTask={{
+                                                         taskId: nextTask.id,
+                                                         columnId: column.id,
+                                                     }}
+                                                 ></div>
+                                             {:else}
+                                                 <div
+                                                     class="absolute bottom-0 left-0 w-full h-1/2"
+                                                     use:droppableColumn={{ columnId: column.id }}
+                                                 ></div>
+                                             {/if}
+                                         {/if}
+                                     </div>
                                 {/each}
 
                                 <!-- Insertion preview at end of column -->
-                                {#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && !$dragState.insertionPreview.afterTaskId}
-                                    <div class="relative">
-                                        <div
-                                            class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"
-                                        ></div>
+                                 {#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && !$dragState.insertionPreview.afterTaskId}
+                                     <div class="relative" use:droppableColumn={{ columnId: column.id }}>
+                                         <div
+                                             class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"
+                                         ></div>
                                         {#if $dragState.movingTaskId}
                                             {@const movingTask =
                                                 $tasksStore.find(
@@ -889,5 +916,49 @@
         height: 100%;
         display: flex;
         flex-direction: column;
+    }
+
+    .top-glow::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: 15%;
+        width: 70%;
+        height: 2px;
+        background: #ef4444;
+        box-shadow: 0 -2px 8px 0 #ef4444, 0 -1px 4px 0 #ef4444;
+        border-radius: 8px 8px 0 0;
+        animation: top-glow-pulse 1.5s ease-in-out infinite;
+    }
+
+    .bottom-glow::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 15%;
+        width: 70%;
+        height: 2px;
+        background: #ef4444;
+        box-shadow: 0 2px 8px 0 #ef4444, 0 1px 4px 0 #ef4444;
+        border-radius: 0 0 8px 8px;
+        animation: bottom-glow-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes top-glow-pulse {
+        0%, 100% {
+            box-shadow: 0 -2px 8px 0 #ef4444, 0 -1px 4px 0 #ef4444;
+        }
+        50% {
+            box-shadow: 0 -4px 12px 0 #ef4444, 0 -2px 6px 0 #ef4444;
+        }
+    }
+
+    @keyframes bottom-glow-pulse {
+        0%, 100% {
+            box-shadow: 0 2px 8px 0 #ef4444, 0 1px 4px 0 #ef4444;
+        }
+        50% {
+            box-shadow: 0 4px 12px 0 #ef4444, 0 2px 6px 0 #ef4444;
+        }
     }
 </style>
