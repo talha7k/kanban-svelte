@@ -570,11 +570,21 @@ let isSubmittingTaskAdd = $state(false);
 							class:ring-offset-2={$dragState.isOverColumnId === column.id}
 							use:droppableColumn={{ columnId: column.id }}
 						>
-							<div class="space-y-2 flex-1">
+							<div class="space-y-2 flex-1 pt-6">
 								{#each $tasksStore.filter(task => task.columnId === column.id).sort((a, b) => a.order - b.order) as task, index (task.id)}
 									<!-- Insertion preview indicator BEFORE the target task -->
 									{#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && $dragState.insertionPreview.afterTaskId === task.id}
-										<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200 mb-2"></div>
+										<div class="relative mb-2">
+											<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"></div>
+											{#if $dragState.movingTaskId}
+												{@const movingTask = $tasksStore.find(t => t.id === $dragState.movingTaskId)}
+												{#if movingTask}
+													<div class="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-10 whitespace-nowrap -translate-y-full">
+														Drop "{movingTask.title}" here (position {index + 1})
+													</div>
+												{/if}
+											{/if}
+										</div>
 									{/if}
 									
 									<div
@@ -604,7 +614,18 @@ let isSubmittingTaskAdd = $state(false);
 								
 								<!-- Insertion preview at end of column -->
 								{#if $dragState.insertionPreview && $dragState.insertionPreview.columnId === column.id && !$dragState.insertionPreview.afterTaskId}
-									<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"></div>
+									<div class="relative">
+										<div class="h-2 bg-primary/30 rounded-md border-2 border-dashed border-primary animate-pulse transition-all duration-200"></div>
+										{#if $dragState.movingTaskId}
+											{@const movingTask = $tasksStore.find(t => t.id === $dragState.movingTaskId)}
+											{@const columnTasks = $tasksStore.filter(t => t.columnId === column.id)}
+											{#if movingTask}
+												<div class="absolute -top-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-10 whitespace-nowrap -translate-y-full">
+													Drop "{movingTask.title}" here (position {columnTasks.length + 1})
+												</div>
+											{/if}
+										{/if}
+									</div>
 								{/if}
 							</div>
 						</div>

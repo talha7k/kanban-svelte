@@ -379,13 +379,18 @@
             {/if}
           </div>
         {:else}
-          <div class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             {#each columns as column, index (column.id)}
               <Card
-                class="transition-all duration-200 {dragOverIndex === index ? 'ring-2 ring-primary' : ''}"
+                class="transition-all duration-200 {dragOverIndex === index ? 'ring-2 ring-primary' : ''} relative"
                 ondragover={(e) => handleDragOver(e, index)}
                 ondrop={(e) => handleDrop(e, index)}
               >
+                {#if dragOverIndex === index && draggedColumn}
+                  <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-10 whitespace-nowrap">
+                    Drop "{draggedColumn.title}" here (position {index + 1})
+                  </div>
+                {/if}
                 <CardContent class="p-4">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
