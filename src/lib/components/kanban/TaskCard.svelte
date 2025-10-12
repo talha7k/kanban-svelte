@@ -1,9 +1,17 @@
 <script lang="ts">
-	import type { Task, UserProfile, Column } from '$lib/types/types';
+	import type { Task, UserProfile, Column, CardType } from '$lib/types/types';
 	import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import { Label } from '$lib/components/ui/label';
+	import {
+		Popover,
+		PopoverContent,
+		PopoverTrigger,
+	} from '$lib/components/ui/popover';
 	import {
 		Edit2,
 		Trash2,
@@ -17,6 +25,13 @@
 		AlertTriangle,
 		AlertCircle,
 		ArrowDown,
+		Type,
+		Hash,
+		Calendar,
+		AlignLeft,
+		CheckSquare,
+		Lock,
+		ChevronsUpDown,
 	} from '@lucide/svelte';
 	import {
 		format,
@@ -29,21 +44,24 @@
 	} from 'date-fns';
 	import { currentUser } from '$lib/stores/auth';
 
-	export let task: Task;
-	export let users: UserProfile[];
-	export let projectColumns: Column[];
-	export let canManageTask: boolean;
-	export let onEdit: (task: Task) => void;
-	export let onDelete: (taskId: string) => void;
-	export let onViewDetails: (task: Task) => void;
-	export let onMoveToNextColumn: (task: Task) => void;
-	export let onMoveToPreviousColumn: (task: Task) => void;
-	export let isSubmitting: boolean = false;
-	export const onUpdateTask: (taskId: string, updatedFields: Partial<Task>) => void = () => {};
+	let {
+		task,
+		users,
+		projectColumns,
+		canManageTask,
+		cardTypes = [],
+		onEdit,
+		onDelete,
+		onViewDetails,
+		onMoveToNextColumn,
+		onMoveToPreviousColumn,
+		isSubmitting = false,
+		onUpdateTask = () => {},
+	} = $props();
 
-	$: assignees = (task.assigneeUids
-		?.map((uid) => users.find((u) => u.id === uid))
-		.filter(Boolean) as UserProfile[]) || [];
+	let assignees = $derived((task.assigneeUids
+		?.map((uid: string) => users.find((u: UserProfile) => u.id === uid))
+		.filter(Boolean) as UserProfile[]) || []);
 
 	function getPriorityBadgeVariant(priority: Task['priority']) {
 		switch (priority) {
@@ -125,13 +143,100 @@
 		}
 	}
 
-	$: dueDateStatus = getDueDateStatus();
+	let dueDateStatus = $derived(getDueDateStatus());
 
-	$: sortedColumns = [...projectColumns].sort((a, b) => a.order - b.order);
-	$: currentColumnIndex = sortedColumns.findIndex((col) => col.id === task.columnId);
-	$: hasNextColumn = currentColumnIndex !== -1 && currentColumnIndex < sortedColumns.length - 1;
-	$: hasPreviousColumn = currentColumnIndex !== -1 && currentColumnIndex > 0;
-	$: canMoveTask = canManageTask || task.assigneeUids?.includes($currentUser?.uid || '');
+	let sortedColumns = $derived([...projectColumns].sort((a, b) => a.order - b.order));
+	let currentColumnIndex = $derived(sortedColumns.findIndex((col) => col.id === task.columnId));
+	let hasNextColumn = $derived(currentColumnIndex !== -1 && currentColumnIndex < sortedColumns.length - 1);
+	let hasPreviousColumn = $derived(currentColumnIndex !== -1 && currentColumnIndex > 0);
+	let canMoveTask = $derived(canManageTask || task.assigneeUids?.includes($currentUser?.uid || ''));
+
+	// Custom fields state
+	let fieldValues: Record<string, any> = $state({});
+	let isSubmittingFieldUpdate = $state(false);
+
+	let selectedCardType = $derived(cardTypes.find((ct) => ct.id === task.cardTypeId) || null);
+
+	// Update field values when task changes
+	$effect(() => {
+		if (task) {
+			fieldValues = { ...(task.fieldValues || {}) };
+		}
+	});
+
+	function getFieldTypeLabel(type: string): string {
+		switch (type) {
+			case 'fixed': return 'Fixed Value';
+			case 'dropdown': return 'Dropdown';
+			case 'text_input': return 'Text Input';
+			case 'number_input': return 'Number Input';
+			case 'date_input': return 'Date Input';
+			case 'textarea': return 'Textarea';
+			case 'checkbox': return 'Checkbox';
+			default: return 'Unknown';
+		}
+	}
+
+	function getFieldTypeColor(type: string): string {
+		switch (type) {
+			case 'fixed': return 'bg-purple-100 text-purple-800 border-purple-200';
+			case 'dropdown': return 'bg-blue-100 text-blue-800 border-blue-200';
+			case 'text_input': return 'bg-green-100 text-green-800 border-green-200';
+			case 'number_input': return 'bg-orange-100 text-orange-800 border-orange-200';
+			case 'date_input': return 'bg-red-100 text-red-800 border-red-200';
+			case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+			case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+			default: return 'bg-gray-100 text-gray-800 border-gray-200';
+		}
+	}
+
+	function getFieldTypeIcon(type: string) {
+		switch (type) {
+			case 'fixed': return Lock;
+			case 'dropdown': return ChevronsUpDown;
+			case 'text_input': return Type;
+			case 'number_input': return Hash;
+			case 'date_input': return Calendar;
+			case 'textarea': return AlignLeft;
+			case 'checkbox': return CheckSquare;
+			default: return Type;
+		}
+	}
+
+	function getFieldDisplayValue(field: any, task: Task): string {
+		const value = task.fieldValues?.[field.id];
+		if (field.type === 'fixed') {
+			return field.config?.value || 'N/A';
+		} else if (field.type === 'checkbox') {
+			return value ? 'Yes' : 'No';
+		} else if (field.type === 'date_input' && value) {
+			return format(parseISO(value), 'MMM d, yyyy');
+		} else {
+			return value || 'Not set';
+		}
+	}
+
+	async function handleSaveFieldValues(fieldId: string) {
+		if (!onUpdateTask) return;
+
+		isSubmittingFieldUpdate = true;
+		try {
+			// Send all field values, using null for unset fields
+			const fullFieldValues: Record<string, any> = {};
+			if (selectedCardType && selectedCardType.fields) {
+				for (const field of selectedCardType.fields) {
+					if (field.name !== "title" && field.name !== "description") {
+						fullFieldValues[field.id] = fieldValues[field.id] ?? null;
+					}
+				}
+			}
+			await onUpdateTask(task.id, { fieldValues: fullFieldValues });
+		} catch (error) {
+			console.error('Failed to update custom fields:', error);
+		} finally {
+			isSubmittingFieldUpdate = false;
+		}
+	}
 </script>
 
 <Card
@@ -163,6 +268,127 @@
 			<p class="text-xs text-muted-foreground line-clamp-3">
 				{task.description}
 			</p>
+		</CardContent>
+	{/if}
+	{#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
+		<CardContent class="px-4 py-2">
+			<div class="flex flex-wrap gap-1">
+				{#each selectedCardType.fields as field (field.id)}
+					{#if field.name !== "title" && field.name !== "description"}
+						{#if field.type === "fixed"}
+							<Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200 text-xs flex items-center gap-1">
+								<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+								{field.name}: {field.config?.value || "N/A"}
+								{#if field.config?.required && task?.assigneeUids?.length}
+									<span class="ml-1 text-red-500">*</span>
+								{/if}
+							</Badge>
+						{:else}
+							<Popover>
+								<PopoverTrigger>
+									<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 text-xs flex items-center gap-1">
+										<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
+										{field.name}: {getFieldDisplayValue(field, task)}
+										{#if field.config?.required && task?.assigneeUids?.length}
+											<span class="ml-1 text-red-500">*</span>
+										{/if}
+										{#if isSubmittingFieldUpdate}
+											<Loader2 class="ml-1 h-3 w-3 animate-spin" />
+										{/if}
+									</Badge>
+								</PopoverTrigger>
+								<PopoverContent class="w-80">
+									<div class="space-y-2">
+										<Label for="field-{field.id}">{field.name}</Label>
+										{#if field.type === "dropdown"}
+											<select
+												id="field-{field.id}"
+												bind:value={fieldValues[field.id]}
+												class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+												required={field.config?.required && task?.assigneeUids?.length}
+											>
+												<option value="">Select {field.name.toLowerCase()}</option>
+												{#each field.config?.options || [] as option}
+													<option value={option}>{option}</option>
+												{/each}
+											</select>
+										{:else if field.type === "text_input"}
+											<Input
+												id="field-{field.id}"
+												bind:value={fieldValues[field.id]}
+												placeholder={field.config?.placeholder || ""}
+												required={field.config?.required && task?.assigneeUids?.length}
+											/>
+										{:else if field.type === "number_input"}
+											<Input
+												id="field-{field.id}"
+												type="number"
+												bind:value={fieldValues[field.id]}
+												placeholder={field.config?.placeholder || ""}
+												min={field.config?.min}
+												max={field.config?.max}
+												required={field.config?.required && task?.assigneeUids?.length}
+											/>
+										{:else if field.type === "date_input"}
+											<Input
+												id="field-{field.id}"
+												type="date"
+												bind:value={fieldValues[field.id]}
+												required={field.config?.required && task?.assigneeUids?.length}
+											/>
+										{:else if field.type === "textarea"}
+											<Textarea
+												id="field-{field.id}"
+												bind:value={fieldValues[field.id]}
+												placeholder={field.config?.placeholder || ""}
+												required={field.config?.required && task?.assigneeUids?.length}
+												rows={3}
+											/>
+										{:else if field.type === "checkbox"}
+											<div class="flex items-center space-x-2">
+												<input
+													id="field-{field.id}"
+													type="checkbox"
+													bind:checked={fieldValues[field.id]}
+													class="h-4 w-4 rounded border border-input"
+													required={field.config?.required && task?.assigneeUids?.length}
+												/>
+												<label
+													for="field-{field.id}"
+													class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+												>
+													{field.config?.label || field.name}
+												</label>
+											</div>
+										{/if}
+										<div class="flex justify-end space-x-2 pt-2">
+											<Button
+												variant="outline"
+												size="sm"
+												onclick={() => {
+													fieldValues = { ...(task.fieldValues || {}) };
+												}}
+											>
+												Reset
+											</Button>
+											<Button
+												size="sm"
+												onclick={() => handleSaveFieldValues(field.id)}
+												disabled={isSubmittingFieldUpdate}
+											>
+												{#if isSubmittingFieldUpdate}
+													<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+												{/if}
+												Save
+											</Button>
+										</div>
+									</div>
+								</PopoverContent>
+							</Popover>
+						{/if}
+					{/if}
+				{/each}
+			</div>
 		</CardContent>
 	{/if}
 	<CardFooter class="flex flex-col items-start">

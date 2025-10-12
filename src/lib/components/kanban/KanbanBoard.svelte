@@ -571,13 +571,14 @@ let isSubmittingTaskAdd = $state(false);
 										{users}
 										projectColumns={project.columns}
 										canManageTask={canManageTasks || (task.assigneeUids?.includes($currentUser?.uid || '') ?? false)}
-										onEdit={(t) => handleEditTask(t)}
-										onDelete={(taskId) => handleDeleteTask(taskId)}
-										onViewDetails={(t) => handleViewTaskDetails(t)}
-										onMoveToNextColumn={(t) => handleMoveToNextColumn(t)}
-										onMoveToPreviousColumn={(t) => handleMoveToPreviousColumn(t)}
+										cardTypes={project.cardTypes || []}
+										onEdit={(t: Task) => handleEditTask(t)}
+										onDelete={(taskId: string) => handleDeleteTask(taskId)}
+										onViewDetails={(t: Task) => handleViewTaskDetails(t)}
+										onMoveToNextColumn={(t: Task) => handleMoveToNextColumn(t)}
+										onMoveToPreviousColumn={(t: Task) => handleMoveToPreviousColumn(t)}
 										isSubmitting={$dragState.movingTaskId === task.id}
-										onUpdateTask={(taskId, updatedFields) => handleUpdateTask(taskId, updatedFields)}
+										onUpdateTask={(taskId: string, updatedFields: Partial<Task>) => handleUpdateTask(taskId, updatedFields)}
 									/>
 									</div>
 								{/each}
