@@ -157,13 +157,13 @@ let isSubmittingTaskAdd = $state(false);
 }
 
 	async function handleAddTaskSubmit(taskData: any, columnId: string, cardTypeId?: string) {
-	const user = get(currentUser);
-	if (!user) {
-		toast.error('You must be logged in to add tasks');
-		return;
-	}
+		const user = get(currentUser);
+		if (!user) {
+			toast.error('You must be logged in to add tasks');
+			return;
+		}
 
-	isSubmittingTaskAdd = true;
+		isSubmittingTaskAdd = true;
 	try {
 		await withLoading(async () => {
 			// Get Firebase ID token for authentication

@@ -119,9 +119,8 @@
 			return;
 		}
 
-		console.log('Validation passed, calling onAddTask');
 		try {
-			await onAddTask(formData, columnId, selectedCardType.id);
+			await onAddTask(formData, columnId, selectedCardType?.id);
 			resetForm();
 			onOpenChange(false);
 		} catch (error) {

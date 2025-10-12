@@ -14,6 +14,12 @@
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
+	import {
+		Popover,
+		PopoverContent,
+		PopoverTrigger,
+	} from '$lib/components/ui/popover';
+
 	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock } from '@lucide/svelte';
 	import { format, parseISO, isValid, differenceInDays, isToday, isPast } from 'date-fns';
 	import CommentItem from './CommentItem.svelte';
@@ -43,7 +49,7 @@
 	let comments = $state<CommentType[]>([]);
 	let isSubmittingLocalComment = $state(false);
 	let lastTaskId: string | null = $state(null);
-	let isEditingFields = $state(false);
+	let isEditingFields = $state(canManageTask);
 	let fieldValues: Record<string, any> = $state({});
 	let isSubmittingFieldUpdate = $state(false);
 
@@ -67,10 +73,13 @@
 	$effect(() => {
 		if (isOpen && task) {
 			newComment = '';
+			fieldValues = { ...(task.fieldValues || {}) };
 			// Ensure comments are loaded when dialog opens
 			if (task.comments) {
 				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 			}
+
+
 		}
 	});
 
@@ -127,6 +136,45 @@
 	}
 
 	const dueDateStatusText = $derived(getDueDateStatusText());
+
+	function getFieldTypeLabel(type: string): string {
+		switch (type) {
+			case 'fixed': return 'Fixed Value';
+			case 'dropdown': return 'Dropdown';
+			case 'text_input': return 'Text Input';
+			case 'number_input': return 'Number Input';
+			case 'date_input': return 'Date Input';
+			case 'textarea': return 'Textarea';
+			case 'checkbox': return 'Checkbox';
+			default: return 'Unknown';
+		}
+	}
+
+	function getFieldTypeColor(type: string): string {
+		switch (type) {
+			case 'fixed': return 'bg-purple-100 text-purple-800 border-purple-200';
+			case 'dropdown': return 'bg-blue-100 text-blue-800 border-blue-200';
+			case 'text_input': return 'bg-green-100 text-green-800 border-green-200';
+			case 'number_input': return 'bg-orange-100 text-orange-800 border-orange-200';
+			case 'date_input': return 'bg-red-100 text-red-800 border-red-200';
+			case 'textarea': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+			case 'checkbox': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+			default: return 'bg-gray-100 text-gray-800 border-gray-200';
+		}
+	}
+
+	function getFieldDisplayValue(field: any, task: Task): string {
+		const value = task.fieldValues?.[field.id];
+		if (field.type === 'fixed') {
+			return field.config?.value || 'N/A';
+		} else if (field.type === 'checkbox') {
+			return value ? 'Yes' : 'No';
+		} else if (field.type === 'date_input' && value) {
+			return format(parseISO(value), 'MMM d, yyyy');
+		} else {
+			return value || 'Not set';
+		}
+	}
 
 	async function handleEditComment(commentId: string, newContent: string) {
 		if (!onEditComment || !task) return;
@@ -259,134 +307,129 @@
 						</div>
 					{/if}
 
-					{#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
-						<div>
-							<div class="flex justify-between items-center mb-1">
-								<h3 class="font-semibold text-sm text-muted-foreground flex items-center"><Info class="h-4 w-4 mr-2" />Custom Fields</h3>
-								{#if canManageTask}
-									<Button
-										variant="ghost"
-										size="sm"
-										class="h-6 px-2 text-xs"
-										onclick={() => {
-											isEditingFields = !isEditingFields;
-											if (isEditingFields) {
-												fieldValues = { ...(task.fieldValues || {}) };
-											}
-										}}
-									>
-										{isEditingFields ? 'Cancel' : 'Edit'}
-									</Button>
-								{/if}
+					{#if !task?.cardTypeId && cardTypes && cardTypes.length > 0}
+						<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+							<div class="flex items-center text-amber-800">
+								<Info class="h-4 w-4 mr-2" />
+								<span class="text-sm font-medium">No Card Type Assigned</span>
 							</div>
-							<div class="space-y-3">
+							<p class="text-xs text-amber-700 mt-1">
+								This task was created before card types were implemented. Custom fields are only available for tasks with assigned card types.
+							</p>
+						</div>
+					{:else if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
+						<div>
+							<h3 class="font-semibold text-sm mb-3 text-muted-foreground flex items-center"><Info class="h-4 w-4 mr-2" />Custom Fields</h3>
+							<div class="flex flex-wrap gap-2">
 								{#each selectedCardType.fields as field (field.id)}
-									<div class="flex flex-col space-y-1">
-										<Label class="text-xs font-medium text-muted-foreground">
-											{field.name}
-											{#if field.config.required}
-												<span class="text-red-500 ml-1">*</span>
-											{/if}
-										</Label>
-										{#if isEditingFields}
-											{#if field.type === 'text_input'}
-												<Input
-													bind:value={fieldValues[field.id]}
-													placeholder="Enter text..."
-													class="text-sm"
-												/>
-											{:else if field.type === 'number_input'}
-												<Input
-													type="number"
-													bind:value={fieldValues[field.id]}
-													placeholder="Enter number..."
-													class="text-sm"
-												/>
-											{:else if field.type === 'textarea'}
-												<Textarea
-													bind:value={fieldValues[field.id]}
-													placeholder="Enter description..."
-													class="text-sm"
-													rows={3}
-												/>
-											{:else if field.type === 'date_input'}
-												<Input
-													type="date"
-													bind:value={fieldValues[field.id]}
-													class="text-sm"
-												/>
-											{:else if field.type === 'checkbox'}
-												<div class="flex items-center space-x-2">
-													<input
-														type="checkbox"
-														bind:checked={fieldValues[field.id]}
-														class="rounded"
-													/>
-													<span class="text-sm">{fieldValues[field.id] ? 'Yes' : 'No'}</span>
-												</div>
-											{:else if field.type === 'dropdown'}
-												<select
-													bind:value={fieldValues[field.id]}
-													class="w-full p-2 text-sm border rounded-md bg-background"
-												>
-													<option value="">Select an option...</option>
-													{#each field.config?.options || [] as option}
-														<option value={option}>{option}</option>
-													{/each}
-												</select>
-											{:else}
-												<div class="text-sm text-muted-foreground bg-muted/30 p-2 rounded-md">
-													{field.type} field (not editable in view)
-												</div>
-											{/if}
-										{:else}
-											<div class="text-sm text-foreground bg-muted/30 p-2 rounded-md">
-												{#if field.type === 'fixed'}
-													{task.fieldValues?.[field.id] || 'Not set'}
-												{:else if field.type === 'dropdown'}
-													{task.fieldValues?.[field.id] || 'Not selected'}
-												{:else if field.type === 'text_input'}
-													{task.fieldValues?.[field.id] || 'Not filled'}
-												{:else if field.type === 'number_input'}
-													{task.fieldValues?.[field.id] || 'Not set'}
-												{:else if field.type === 'date_input'}
-													{task.fieldValues?.[field.id] ? format(parseISO(task.fieldValues[field.id]), 'MMM d, yyyy') : 'Not set'}
-												{:else if field.type === 'textarea'}
-													<div class="whitespace-pre-wrap">{task.fieldValues?.[field.id] || 'Not filled'}</div>
-												{:else if field.type === 'checkbox'}
-													{task.fieldValues?.[field.id] ? 'Yes' : 'No'}
-												{:else}
-													{task.fieldValues?.[field.id] || 'Not set'}
+									{#if field.name !== "title" && field.name !== "description"}
+										{#if field.type === "fixed"}
+											<Badge variant="secondary" class="bg-purple-100 text-purple-800 border-purple-200">
+												{field.name}: {field.config?.value || "N/A"}
+												{#if field.config?.required && task?.assigneeUids?.length}
+													<span class="ml-1 text-red-500">*</span>
 												{/if}
-											</div>
+											</Badge>
+										{:else}
+											<Popover>
+												<PopoverTrigger>
+													<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80">
+														{field.name}: {getFieldDisplayValue(field, task)}
+														{#if field.config?.required && task?.assigneeUids?.length}
+															<span class="ml-1 text-red-500">*</span>
+														{/if}
+													</Badge>
+												</PopoverTrigger>
+												<PopoverContent class="w-80">
+													<div class="space-y-2">
+														<Label for="field-{field.id}">{field.name}</Label>
+														{#if field.type === "dropdown"}
+															<select
+																id="field-{field.id}"
+																bind:value={fieldValues[field.id]}
+																class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+																required={field.config?.required && task?.assigneeUids?.length}
+															>
+																<option value="">Select {field.name.toLowerCase()}</option>
+																{#each field.config?.options || [] as option}
+																	<option value={option}>{option}</option>
+																{/each}
+															</select>
+														{:else if field.type === "text_input"}
+															<Input
+																id="field-{field.id}"
+																bind:value={fieldValues[field.id]}
+																placeholder={field.config?.placeholder || ""}
+																required={field.config?.required && task?.assigneeUids?.length}
+															/>
+														{:else if field.type === "number_input"}
+															<Input
+																id="field-{field.id}"
+																type="number"
+																bind:value={fieldValues[field.id]}
+																placeholder={field.config?.placeholder || ""}
+																min={field.config?.min}
+																max={field.config?.max}
+																required={field.config?.required && task?.assigneeUids?.length}
+															/>
+														{:else if field.type === "date_input"}
+															<Input
+																id="field-{field.id}"
+																type="date"
+																bind:value={fieldValues[field.id]}
+																required={field.config?.required && task?.assigneeUids?.length}
+															/>
+														{:else if field.type === "textarea"}
+															<Textarea
+																id="field-{field.id}"
+																bind:value={fieldValues[field.id]}
+																placeholder={field.config?.placeholder || ""}
+																required={field.config?.required && task?.assigneeUids?.length}
+															/>
+														{:else if field.type === "checkbox"}
+															<div class="flex items-center space-x-2">
+																<input
+																	id="field-{field.id}"
+																	type="checkbox"
+																	bind:checked={fieldValues[field.id]}
+																	class="h-4 w-4 rounded border border-input"
+																	required={field.config?.required && task?.assigneeUids?.length}
+																/>
+																<label
+																	for="field-{field.id}"
+																	class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+																>
+																	{field.config?.label || "Required"}
+																</label>
+															</div>
+														{/if}
+														<div class="flex justify-end space-x-2 pt-2">
+															<Button
+																variant="outline"
+																size="sm"
+																onclick={() => {
+																	fieldValues = { ...(task.fieldValues || {}) };
+																}}
+															>
+																Reset
+															</Button>
+															<Button
+																size="sm"
+																onclick={handleSaveFieldValues}
+																disabled={isSubmittingFieldUpdate}
+															>
+																{#if isSubmittingFieldUpdate}
+																	<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+																{/if}
+																Save
+															</Button>
+														</div>
+													</div>
+												</PopoverContent>
+											</Popover>
 										{/if}
-									</div>
+									{/if}
 								{/each}
-								{#if isEditingFields}
-									<div class="flex justify-end space-x-2 pt-2">
-										<Button
-											variant="outline"
-											size="sm"
-											onclick={() => {
-												isEditingFields = false;
-												fieldValues = {};
-											}}
-											disabled={isSubmittingFieldUpdate}
-										>
-											Cancel
-										</Button>
-										<Button
-											size="sm"
-											onclick={handleSaveFieldValues}
-											disabled={isSubmittingFieldUpdate}
-										>
-											{#if isSubmittingFieldUpdate}
-												<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-											{/if}
-											Save Changes
-										</Button>
-									</div>
-								{/if}
 							</div>
 						</div>
 					{/if}
