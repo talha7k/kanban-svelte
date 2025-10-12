@@ -329,10 +329,16 @@
     }
 
     function getFieldDisplayValue(field: any, task: Task): string {
-        const value = task.fieldValues?.[field.id];
+        let value = task.fieldValues?.[field.id];
         const fieldName = field.name.toLowerCase();
         const isPriorityField =
             fieldName.includes("priority") || fieldName.includes("severity");
+        const isDueDateField = dueDateField() && field.id === dueDateField()!.id;
+
+        // For due date fields, use the task's dueDate instead of fieldValues
+        if (isDueDateField) {
+            value = task.dueDate;
+        }
 
         if (field.type === "fixed") {
             return field.config?.value || "N/A";
