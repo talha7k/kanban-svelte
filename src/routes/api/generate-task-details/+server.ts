@@ -1,11 +1,15 @@
 import { generateTaskDetailsAction } from '$lib/server/actions/project';
 import { json } from '@sveltejs/kit';
+import { requireAuth } from '$lib/server/auth';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
+
     const input = await request.json();
-    
+
     // Validate input
     if (!input || typeof input !== 'object' || !input.briefInput) {
       return json(
@@ -15,7 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     const result = await generateTaskDetailsAction(input);
-    
+
     if (result.success) {
       return json(result, { status: 200 });
     } else {
@@ -24,9 +28,9 @@ export const POST: RequestHandler = async ({ request }) => {
   } catch (error) {
     console.error('Error in generate-task-details API:', error);
     return json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }
     );

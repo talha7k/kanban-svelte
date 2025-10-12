@@ -162,7 +162,7 @@ export interface Task {
 // Used for creating a task, some fields are auto-generated
 export type NewTaskData = Omit<
   Task,
-  "id" | "columnId" | "updatedAt" | "comments"
+  "id" | "columnId" | "updatedAt" | "comments" | "projectId" | "createdAt" | "order"
 >;
 
 export interface Column {
@@ -181,7 +181,7 @@ export interface Comment {
 }
 
 // Used for creating a comment
-export type NewCommentData = Omit<Comment, "id" | "createdAt">;
+export type NewCommentData = Omit<Comment, "id" | "createdAt" | "userId">;
 
 export interface AIPrioritySuggestion {
   suggestedPriority: "LOW" | "MEDIUM" | "HIGH";

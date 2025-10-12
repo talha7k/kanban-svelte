@@ -1,7 +1,8 @@
 "use server";
 
 import { generateProjectTasks } from '$lib/server/ai/flows/generate-project-tasks';
-import { addTaskToProject, getProjectById } from '$lib/server/api/firebaseProject';
+import { addTaskToProject } from '$lib/server/api/firebaseTask';
+import { getProjectById } from '$lib/server/api/firebaseProject';
 import type { NewTaskData, Task } from '$lib/types/types';
 import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDetailsOutput } from '$lib/server/ai/flows/generate-task-details';
 
@@ -50,14 +51,10 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
           title: taskData.title,
           description: taskData.description,
           priority: taskData.priority,
-          projectId: taskData.projectId,
           reporterId: taskData.reporterId,
-          createdAt: new Date().toISOString(),
-          order: project.tasks.length + addedTasksCount,
           assigneeUids: taskData.assigneeUids,
           dueDate: taskData.dueDate,
           tags: taskData.tags,
-          
         }, taskData.columnId || project.columns[0]?.id || 'todo', currentUserUid);
         addedTasksCount++;
       } catch (error) {

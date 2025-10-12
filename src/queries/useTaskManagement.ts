@@ -28,9 +28,6 @@ export function useTaskManagement(
       const newTaskPayload: NewTaskData = {
         ...variables.taskData,
         reporterId: currentUserId,
-        order: tasks.filter(task => task.columnId === variables.columnId).length,
-        projectId,
-        createdAt: new Date().toISOString(),
       };
       return addTaskToProject(projectId, newTaskPayload, variables.columnId);
     },

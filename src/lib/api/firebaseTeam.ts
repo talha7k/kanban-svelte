@@ -42,6 +42,28 @@ export async function getTeamsForUser(userId: UserId): Promise<Team[]> {
 
 
 
+export const getTeam = async (teamId: string): Promise<Team | null> => {
+  if (!db) return null;
+  try {
+    const teamRef = doc(db, `teams/${teamId}`);
+    const teamSnap = await getDoc(teamRef);
+
+    if (teamSnap.exists()) {
+      const teamData = { id: teamSnap.id, ...teamSnap.data() } as Team;
+      if (teamData.memberIds && teamData.memberIds.length > 0) {
+        const members = await getTeamMembers(teamId);
+        teamData.members = members;
+      }
+      return teamData;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting team:', error);
+    return null;
+  }
+};
+
 export const updateTeam = async (teamId: string, data: Partial<Team>) => {
   if (!db) {
     throw new Error("Firebase Firestore not initialized");

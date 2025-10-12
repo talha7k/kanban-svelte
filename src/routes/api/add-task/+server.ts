@@ -29,9 +29,6 @@ export const POST: RequestHandler = async ({ request }) => {
       tags: taskData.tags || [],
       cardTypeId: taskData.cardTypeId || undefined,
       fieldValues: taskData.fieldValues || {},
-      projectId,
-      createdAt: new Date().toISOString(),
-      order: 0 // Will be set properly by the addTaskToProject function
     };
 
     const newTask = await addTaskToProject(projectId, newTaskData, columnId, userId);
