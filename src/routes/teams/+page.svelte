@@ -12,7 +12,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Plus, Loader2 } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
-	import { debugClientAuth } from '$lib/debug-client-auth';
 
 	// Team management queries
 const {
@@ -85,12 +84,7 @@ let isCreatingTeam = $state(false);
 		<h1 class="text-3xl font-bold mb-2">Select a Team</h1>
 		<p class="text-muted-foreground">Choose a team to continue or create a new one</p>
 		
-		<!-- Debug Authentication Button -->
-		<div class="mt-4">
-			<Button variant="outline" size="sm" onclick={() => debugClientAuth()}>
-				Debug Auth State
-			</Button>
-		</div>
+
 	</div>
 
 	{#if $teamsData.isPending}
