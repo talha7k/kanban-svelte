@@ -17,7 +17,7 @@ if (serviceAccountKey1) {
     console.log('   Project ID from process.env:', serviceAccount.project_id);
     console.log('   Client email from process.env:', serviceAccount.client_email);
   } catch (e) {
-    console.log('   Error parsing from process.env:', e.message);
+    console.log('   Error parsing from process.env:', e instanceof Error ? e.message : String(e));
   }
 } else {
   console.log('   FIREBASE_SERVICE_ACCOUNT_KEY not found in process.env');
@@ -35,13 +35,13 @@ try {
       console.log('   Project ID from .env file:', serviceAccount.project_id);
       console.log('   Client email from .env file:', serviceAccount.client_email);
     } catch (e) {
-      console.log('   Error parsing from .env file:', e.message);
+      console.log('   Error parsing from .env file:', e instanceof Error ? e.message : String(e));
     }
   } else {
     console.log('   FIREBASE_SERVICE_ACCOUNT_KEY not found in .env file');
   }
 } catch (e) {
-  console.log('   Error reading .env file:', e.message);
+  console.log('   Error reading .env file:', e instanceof Error ? e.message : String(e));
 }
 
 // Test actual Firebase initialization
@@ -72,7 +72,7 @@ if (!admin.apps.length) {
     });
     
   } catch (e) {
-    console.log('   Firebase initialization error:', e.message);
+    console.log('   Firebase initialization error:', e instanceof Error ? e.message : String(e));
   }
 } else {
   console.log('   Firebase already initialized');

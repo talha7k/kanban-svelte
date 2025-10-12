@@ -28,6 +28,7 @@ export function useTaskManagement(
       const newTaskPayload: NewTaskData = {
         ...variables.taskData,
         reporterId: currentUserId,
+        order: 0, // Will be recalculated on server
       };
       return addTaskToProject(projectId, newTaskPayload, variables.columnId);
     },

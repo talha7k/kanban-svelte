@@ -45,6 +45,7 @@ try {
   
   // Check if the task exists in the project
   const tasks = project?.tasks || [];
+  // @ts-ignore
   const task = tasks.find(t => t.id === taskId);
   
   console.log('Task found:', !!task);

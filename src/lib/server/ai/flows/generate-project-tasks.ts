@@ -1,5 +1,3 @@
-'use server';
-
 import { z } from 'genkit';
 import { ai } from '$lib/server/ai/genkit';
 

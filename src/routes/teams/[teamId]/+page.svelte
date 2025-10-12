@@ -110,7 +110,7 @@
 	}
 
 	async function updateProject() {
-		if (!selectedProject || !newProjectName.trim()) return;
+		if (!newProjectName.trim()) return;
 
 		const updateData = {
 			name: newProjectName.trim(),
@@ -118,6 +118,7 @@
 		};
 
 		await withLoading(async () => {
+			if (!selectedProject) return;
 			await handleUpdateProject(selectedProject.id, updateData);
 		});
 
@@ -132,6 +133,7 @@
 		if (!selectedProject) return;
 
 		await withLoading(async () => {
+			if (!selectedProject) return;
 			await handleDeleteProject(selectedProject.id, selectedProject.teamId || $selectedTeamId || undefined);
 		});
 

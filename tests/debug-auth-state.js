@@ -15,7 +15,7 @@ if (!admin.apps.length) {
     });
     console.log('✓ Firebase Admin initialized successfully');
   } catch (e) {
-    console.log('✗ Firebase Admin initialization error:', e.message);
+    console.log('✗ Firebase Admin initialization error:', e instanceof Error ? e.message : String(e));
     process.exit(1);
   }
 }
@@ -38,7 +38,7 @@ try {
     console.log('');
   });
 } catch (error) {
-  console.log('   Error listing users:', error.message);
+  console.log('   Error listing users:', error instanceof Error ? error.message : String(error));
 }
 
 // Check user profiles in Firestore
@@ -56,7 +56,7 @@ try {
     console.log('');
   });
 } catch (error) {
-  console.log('   Error fetching user profiles:', error.message);
+  console.log('   Error fetching user profiles:', error instanceof Error ? error.message : String(error));
 }
 
 // Check existing projects and their owners
@@ -75,7 +75,7 @@ try {
     console.log('');
   });
 } catch (error) {
-  console.log('   Error fetching projects:', error.message);
+  console.log('   Error fetching projects:', error instanceof Error ? error.message : String(error));
 }
 
 console.log('=== Debug Complete ===');

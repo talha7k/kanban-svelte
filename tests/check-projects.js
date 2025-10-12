@@ -2,6 +2,7 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'fs';
 
 const envFile = readFileSync('.env', 'utf8');
+/** @type {Record<string, string>} */
 const envVars = {};
 envFile.split('\n').forEach(line => {
   const [key, ...value] = line.split('=');

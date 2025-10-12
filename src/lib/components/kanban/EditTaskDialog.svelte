@@ -169,7 +169,6 @@
 					{selectedCardType}
 					{formErrors}
 					{updateFormData}
-					isEditing={true}
 				/>
 				
 				<DialogFooter class="mt-4 flex justify-between">

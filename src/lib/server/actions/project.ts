@@ -1,5 +1,3 @@
-"use server";
-
 import { generateProjectTasks } from "$lib/server/ai/flows/generate-project-tasks";
 import { addTaskToProject } from "$lib/server/api/firebaseTask";
 import { getProjectById } from "$lib/server/api/firebaseProject";
@@ -136,7 +134,7 @@ export async function addApprovedTasksAction(
     // Fetch the updated project to reflect all changes.
     const updatedProject = await getProjectById(projectId);
 
-    return { success: true, addedTasksCount, updatedProject };
+    return { success: true, addedTasksCount, updatedProject: updatedProject || undefined };
   } catch (error) {
     console.error("Error in addApprovedTasksAction:", error);
     const message =

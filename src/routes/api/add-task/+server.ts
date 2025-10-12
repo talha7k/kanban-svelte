@@ -29,6 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
       tags: taskData.tags || [],
       cardTypeId: taskData.cardTypeId || undefined,
       fieldValues: taskData.fieldValues || {},
+      order: 0, // Will be recalculated on server
     };
 
     const newTask = await addTaskToProject(projectId, newTaskData, columnId, userId);
