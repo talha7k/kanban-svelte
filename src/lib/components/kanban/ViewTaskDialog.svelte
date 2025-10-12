@@ -18,6 +18,7 @@
 		Popover,
 		PopoverContent,
 		PopoverTrigger,
+		PopoverClose,
 	} from '$lib/components/ui/popover';
 
 	import { CalendarDays, User, Tag, Users, MessageSquare, Info, Loader2, Clock } from '@lucide/svelte';
@@ -207,9 +208,16 @@
 
 		isSubmittingFieldUpdate = true;
 		try {
-			await onUpdateTask(task.id, { fieldValues });
-			isEditingFields = false;
-			fieldValues = {};
+			// Send all field values, using null for unset fields
+			const fullFieldValues: Record<string, any> = {};
+			if (selectedCardType && selectedCardType.fields) {
+				for (const field of selectedCardType.fields) {
+					if (field.name !== "title" && field.name !== "description") {
+						fullFieldValues[field.id] = fieldValues[field.id] ?? null;
+					}
+				}
+			}
+			await onUpdateTask(task.id, { fieldValues: fullFieldValues });
 			toast.success('Custom fields updated successfully.');
 		} catch (error) {
 			toast.error('Failed to update custom fields. Please try again.');
@@ -338,6 +346,9 @@
 														{#if field.config?.required && task?.assigneeUids?.length}
 															<span class="ml-1 text-red-500">*</span>
 														{/if}
+														{#if isSubmittingFieldUpdate}
+															<Loader2 class="ml-2 h-3 w-3 animate-spin" />
+														{/if}
 													</Badge>
 												</PopoverTrigger>
 												<PopoverContent class="w-80">
@@ -413,16 +424,18 @@
 															>
 																Reset
 															</Button>
-															<Button
-																size="sm"
-																onclick={handleSaveFieldValues}
-																disabled={isSubmittingFieldUpdate}
-															>
-																{#if isSubmittingFieldUpdate}
-																	<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-																{/if}
-																Save
-															</Button>
+															<PopoverClose>
+																<Button
+																	size="sm"
+																	onclick={handleSaveFieldValues}
+																	disabled={isSubmittingFieldUpdate}
+																>
+																	{#if isSubmittingFieldUpdate}
+																		<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+																	{/if}
+																	Save
+																</Button>
+															</PopoverClose>
 														</div>
 													</div>
 												</PopoverContent>

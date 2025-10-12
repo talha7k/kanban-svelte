@@ -467,11 +467,21 @@ let isSubmittingTaskAdd = $state(false);
 		isSubmittingTaskEdit = true;
 		try {
 			// Optimistically update the UI first
+			let updatedTask: Task;
 			tasksStore.update(tasks =>
-				tasks.map(task =>
-					task.id === taskId ? { ...task, ...updatedFields } : task
-				)
+				tasks.map(task => {
+					if (task.id === taskId) {
+						updatedTask = { ...task, ...updatedFields };
+						return updatedTask;
+					}
+					return task;
+				})
 			);
+
+			// Update taskToView if it's the same task
+			if (taskToView?.id === taskId) {
+				taskToView = updatedTask!;
+			}
 
 			await withLoading(async () => {
 				// Get Firebase ID token for authentication
