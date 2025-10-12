@@ -149,7 +149,8 @@ export const getProjectById = async (
     const projectRef = db.collection("projects").doc(projectId);
     const projectSnap = await projectRef.get();
     if (projectSnap.exists) {
-      return { id: projectSnap.id, ...projectSnap.data() } as Project;
+      const data = projectSnap.data() as Omit<Project, 'id'>;
+      return { id: projectSnap.id, ...data, tasks: data.tasks?.filter(task => task && typeof task === 'object' && task.id) || [] } as Project;
     }
     return null;
   } catch (error) {

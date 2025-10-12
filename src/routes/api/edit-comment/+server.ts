@@ -17,9 +17,9 @@ export const PUT: RequestHandler = async ({ request }) => {
       );
     }
 
-    await updateCommentInTask(projectId, taskId, commentId, newContent, userId);
+    const updatedTask = await updateCommentInTask(projectId, taskId, commentId, newContent, userId);
 
-    return json({ success: true, message: 'Comment updated successfully' });
+    return json({ task: updatedTask });
   } catch (error) {
     console.error('Error in edit-comment API:', error);
     return json(

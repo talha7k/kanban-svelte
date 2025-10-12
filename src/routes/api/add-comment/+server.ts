@@ -30,9 +30,9 @@ export const POST: RequestHandler = async ({ request }) => {
       avatarUrl: userData?.avatarUrl,
     };
 
-    const newComment = await addCommentToTask(projectId, taskId, commentData, userId);
+    const updatedTask = await addCommentToTask(projectId, taskId, commentData, userId);
 
-    return json({ success: true, comment: newComment });
+    return json({ task: updatedTask });
   } catch (error) {
     console.error('Error adding comment:', error);
     return json(

@@ -17,9 +17,9 @@ export const DELETE: RequestHandler = async ({ request }) => {
       );
     }
 
-    await deleteCommentFromTask(projectId, taskId, commentId, userId);
+    const updatedTask = await deleteCommentFromTask(projectId, taskId, commentId, userId);
 
-    return json({ success: true, message: 'Comment deleted successfully' });
+    return json({ task: updatedTask });
   } catch (error) {
     console.error('Error in delete-comment API:', error);
     return json(

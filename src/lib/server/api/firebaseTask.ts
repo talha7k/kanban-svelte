@@ -260,7 +260,7 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
   }
 };
 
-export const addCommentToTask = async (projectId: string, taskId: TaskId, commentData: NewCommentData, currentUserUid: string): Promise<Comment> => {
+export const addCommentToTask = async (projectId: string, taskId: TaskId, commentData: NewCommentData, currentUserUid: string): Promise<Task> => {
   const firestore = db();
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
@@ -299,14 +299,14 @@ export const addCommentToTask = async (projectId: string, taskId: TaskId, commen
       tasks: updatedTasks,
       updatedAt: new Date().toISOString(),
     });
-    return newComment;
+    return updatedTasks[taskIndex];
   } catch (error) {
     console.error('Error adding comment to task:', error);
     throw error;
   }
 };
 
-export const updateCommentInTask = async (projectId: string, taskId: TaskId, commentId: string, newContent: string, currentUserUid: string): Promise<void> => {
+export const updateCommentInTask = async (projectId: string, taskId: TaskId, commentId: string, newContent: string, currentUserUid: string): Promise<Task> => {
   const firestore = db();
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
@@ -366,13 +366,14 @@ export const updateCommentInTask = async (projectId: string, taskId: TaskId, com
       tasks: updatedTasks,
       updatedAt: new Date().toISOString(),
     });
+    return updatedTasks[taskIndex];
   } catch (error) {
     console.error('Error updating comment in task:', error);
     throw error;
   }
 };
 
-export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, commentId: string, currentUserUid: string): Promise<void> => {
+export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, commentId: string, currentUserUid: string): Promise<Task> => {
   const firestore = db();
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
@@ -422,6 +423,7 @@ export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, c
       tasks: updatedTasks,
       updatedAt: new Date().toISOString(),
     });
+    return updatedTasks[taskIndex];
   } catch (error) {
     console.error('Error deleting comment from task:', error);
     throw error;

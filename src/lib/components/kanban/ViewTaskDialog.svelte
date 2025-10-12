@@ -205,13 +205,24 @@
 
 	async function handleDeleteComment(commentId: string) {
 		if (!onDeleteComment || !task) return;
+
+		// Confirm deletion
+		if (!confirm('Are you sure you want to delete this comment?')) return;
+
+		// Optimistically remove the comment
+		const commentToDelete = comments.find(c => c.id === commentId);
+		if (commentToDelete) {
+			comments = comments.filter(c => c.id !== commentId);
+		}
+
 		try {
 			await onDeleteComment(task.id, commentId);
-			// Force refresh comments after deleting
-			if (task.comments) {
-				comments = [...task.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-			}
+			// The prop update will also update comments via $effect
 		} catch (error) {
+			// Revert the optimistic update
+			if (commentToDelete) {
+				comments = [...comments, commentToDelete].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			}
 			throw error;
 		}
 	}

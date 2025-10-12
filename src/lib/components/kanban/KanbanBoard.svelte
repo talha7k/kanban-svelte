@@ -55,7 +55,7 @@ let isSubmittingTaskAdd = $state(false);
 	// Initialize tasks from project
 	$effect(() => {
 		if (project?.tasks) {
-			tasksStore.set(project.tasks);
+			tasksStore.set(project.tasks.filter(task => task && typeof task === 'object' && task.id));
 		}
 	});
 	
@@ -196,7 +196,7 @@ let isSubmittingTaskAdd = $state(false);
 			const newTask = result.task;
 
 			// Update the tasks store with the new task
-			tasksStore.update(tasks => [...tasks, newTask]);
+			tasksStore.update(tasks => [...tasks, newTask].filter(task => task && typeof task === 'object' && task.id));
 
 			toast.success('Task added successfully');
 		});
@@ -255,7 +255,7 @@ let isSubmittingTaskAdd = $state(false);
 				}
 
 				// Remove task from store
-				tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id));
+				tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id).filter(task => task && typeof task === 'object' && task.id));
 
 				// Close dialogs if the deleted task was being viewed
 				if (taskToView?.id === taskToDelete!.id) {
@@ -315,13 +315,18 @@ let isSubmittingTaskAdd = $state(false);
 					throw new Error('Failed to add comment');
 				}
 
-				// Update the task in the store with the new comment
 				const responseData = await response.json();
 				const updatedTask = responseData.task;
+
+				if (!updatedTask || !updatedTask.id) {
+					throw new Error('Invalid task data received from API');
+				}
+
+				// Update the task in the store with the new comment
 				tasksStore.update(tasks =>
 					tasks.map(task =>
 						task.id === taskId ? updatedTask : task
-					)
+					).filter(task => task && typeof task === 'object' && task.id)
 				);
 
 				// Update the taskToView if it's the same task
@@ -370,10 +375,15 @@ let isSubmittingTaskAdd = $state(false);
 				// Update the task in the store with the edited comment
 				const responseData = await response.json();
 				const updatedTask = responseData.task;
+
+				if (!updatedTask || !updatedTask.id) {
+					throw new Error('Invalid task data received from API');
+				}
+
 				tasksStore.update(tasks =>
 					tasks.map(task =>
 						task.id === taskId ? updatedTask : task
-					)
+					).filter(task => task && typeof task === 'object' && task.id)
 				);
 
 				// Update taskToView if it's the same task
@@ -423,10 +433,15 @@ let isSubmittingTaskAdd = $state(false);
 				// Update the task in the store with the comment removed
 				const responseData = await response.json();
 				const updatedTask = responseData.task;
+
+				if (!updatedTask || !updatedTask.id) {
+					throw new Error('Invalid task data received from API');
+				}
+
 				tasksStore.update(tasks =>
 					tasks.map(task =>
 						task.id === taskId ? updatedTask : task
-					)
+					).filter(task => task && typeof task === 'object' && task.id)
 				);
 
 				// Update taskToView if it's the same task
