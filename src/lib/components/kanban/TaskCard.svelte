@@ -186,6 +186,11 @@
         cardTypes.find((ct) => ct.id === task.cardTypeId) || null,
     );
 
+    let displayableFields = $derived(() => {
+        if (!selectedCardType?.fields) return [];
+        return selectedCardType.fields.filter(field => field.name !== "title" && field.name !== "description");
+    });
+
     // Key to track task changes without depending on object reference
     let taskKey = $derived(task ? `${task.id}-${task.updatedAt}` : null);
 
@@ -491,11 +496,11 @@
             </p>
         </CardContent>
     {/if}
-    {#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
+    {#if displayableFields().length > 0}
         <CardContent class="px-4 py-1">
-            <div class="flex flex-wrap gap-1">
-                {#each selectedCardType.fields as field (field.id)}
-                    {#if field.name !== "title" && field.name !== "description"}
+            {#if displayableFields().length <= 5}
+                <div class="flex flex-wrap gap-1">
+                    {#each displayableFields() as field (field.id)}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge
@@ -690,9 +695,18 @@
                                 </PopoverContent>
                             </Popover>
                         {/if}
-                    {/if}
-                {/each}
-            </div>
+                    {/each}
+                </div>
+            {:else}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onclick={() => onViewDetails(task)}
+                    class="text-xs"
+                >
+                    Edit Custom Fields ({displayableFields().length})
+                </Button>
+            {/if}
         </CardContent>
     {/if}
     <CardFooter class="py-1 px-4 flex flex-col items-start">
