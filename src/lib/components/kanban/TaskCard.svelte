@@ -311,6 +311,24 @@
     aria-label="Task: '{task.title}', Priority: '{task.priority}'"
 >
     <CardHeader class="py-2 px-4 mb-0 pb-0">
+        {#if assignees.length > 0}
+            <div class="flex flex-wrap gap-1 mb-2">
+                {#each assignees.slice(0, 3) as assignee (assignee.id)}
+                    <Badge variant="secondary" class="text-xs">
+                        {(() => {
+                            const parts = assignee.name.trim().split(/\s+/);
+                            if (parts.length === 1) return parts[0];
+                            return parts[0] + ' ' + parts[parts.length - 1][0] + '.';
+                        })()}
+                    </Badge>
+                {/each}
+                {#if assignees.length > 3}
+                    <Badge variant="secondary" class="text-xs">
+                        +{assignees.length - 3}
+                    </Badge>
+                {/if}
+            </div>
+        {/if}
         <div class="flex justify-between items-start">
             <CardTitle
                 class="text-base font-semibold leading-tight text-card-foreground"
@@ -319,12 +337,19 @@
             </CardTitle>
             <div class="flex items-center gap-1">
                 {#if task.comments && task.comments.length > 0}
-                    <span
-                        class="flex text-xs font-bold items-center text-blue-400"
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        class="h-6 px-2 text-blue-400 hover:text-blue-600 pointer-events-auto"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            onViewDetails(task);
+                        }}
+                        title="View task details"
                     >
-                        <MessageSquare class="h-4 w-4 mr-1" />
+                        <MessageSquare class="h-4 w-4 mr-0.5" />
                         {task.comments.length}
-                    </span>
+                    </Button>
                 {/if}
                 {#if task.priority !== "NONE"}
                     {@const Icon = getPriorityIcon(task.priority)}
@@ -544,25 +569,7 @@
         </CardContent>
     {/if}
     <CardFooter class="py-1 px-4 flex flex-col items-start">
-        <div class="flex justify-between w-full items-center">
-            <div class="flex -space-x-2 mt-1">
-                {#each assignees.slice(0, 3) as assignee (assignee.id)}
-                    <Avatar class="h-6 w-6 border-2 border-card">
-                        <AvatarImage
-                            src={assignee.avatarUrl}
-                            alt={assignee.name}
-                        />
-                        <AvatarFallback
-                            >{assignee.name.substring(0, 1)}</AvatarFallback
-                        >
-                    </Avatar>
-                {/each}
-                {#if assignees.length > 3}
-                    <Avatar class="h-6 w-6 border-2 border-card">
-                        <AvatarFallback>+{assignees.length - 3}</AvatarFallback>
-                    </Avatar>
-                {/if}
-            </div>
+        <div class="flex justify-end w-full items-center">
             <div
                 class="flex items-center space-x-2 text-xs gap-3 text-muted-foreground mt-1 mr-2"
             >
