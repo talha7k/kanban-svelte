@@ -16,6 +16,7 @@
 	import { useProject } from '$queries/useProjectManagement';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { createProjectPermissions } from '$lib/client/permissions';
+	import { withLoading } from '$lib/utils/loading';
 
 	// Server-loaded data
 	interface PageData {
@@ -145,30 +146,34 @@
 		}
 		isGeneratingTasks = true;
 		try {
-			// Get Firebase ID token for authentication
-			const idToken = await $currentUser.getIdToken();
-			
-			const response = await fetch('/api/generate-tasks', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					brief,
-					currentUserUid: $currentUser.uid,
-					taskCount
-				})
+			const tasks = await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await $currentUser.getIdToken();
+
+				const response = await fetch('/api/generate-tasks', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						brief,
+						currentUserUid: $currentUser.uid,
+						taskCount
+					})
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || 'Failed to generate tasks');
+				}
+
+				const data = await response.json();
+				return data.tasks;
 			});
-			
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Failed to generate tasks');
-			}
-			
-			const data = await response.json();
-			return data.tasks;
+
+			return tasks;
 		} catch (error) {
 			console.error('Error generating tasks:', error);
 			toast.error('Error Generating Tasks', {
@@ -187,51 +192,53 @@
 		if (!project || $authLoading || !$currentUser) return;
 		isAddingTasks = true;
 		try {
-			// Add projectId to each task
-			const tasksWithProjectId = tasks.map((task) => ({
-				...task,
-				projectId: project!.id
-			}));
-			
-			// Get Firebase ID token for authentication
-			const idToken = await $currentUser.getIdToken();
-			
-			const response = await fetch('/api/add-approved-tasks', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					tasks: tasksWithProjectId,
-					currentUserUid: $currentUser.uid
-				})
-			});
-			
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Failed to add tasks');
-			}
-			
-			const result = await response.json();
-			
-			if (result.success) {
-				if (result.updatedProject) {
-					project = result.updatedProject;
-				}
-				// Invalidate the project query to refresh the KanbanBoard
-				if (project) {
-					await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-				}
-				toast.success('Tasks Added', {
-					description: `Successfully added ${result.addedTasksCount} task${
-						result.addedTasksCount !== 1 ? 's' : ''
-					} to your project.`
+			await withLoading(async () => {
+				// Add projectId to each task
+				const tasksWithProjectId = tasks.map((task) => ({
+					...task,
+					projectId: project!.id
+				}));
+
+				// Get Firebase ID token for authentication
+				const idToken = await $currentUser.getIdToken();
+
+				const response = await fetch('/api/add-approved-tasks', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						tasks: tasksWithProjectId,
+						currentUserUid: $currentUser.uid
+					})
 				});
-			} else {
-				throw new Error(result.error);
-			}
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || 'Failed to add tasks');
+				}
+
+				const result = await response.json();
+
+				if (result.success) {
+					if (result.updatedProject) {
+						project = result.updatedProject;
+					}
+					// Invalidate the project query to refresh the KanbanBoard
+					if (project) {
+						await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+					}
+					toast.success('Tasks Added', {
+						description: `Successfully added ${result.addedTasksCount} task${
+							result.addedTasksCount !== 1 ? 's' : ''
+						} to your project.`
+					});
+				} else {
+					throw new Error(result.error);
+				}
+			});
 		} catch (error) {
 			console.error('Error adding tasks:', error);
 			toast.error('Error Adding Tasks', {

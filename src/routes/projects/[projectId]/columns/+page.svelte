@@ -10,9 +10,10 @@
   import type { Project, Column } from '$lib/types/types';
   import { addColumnToProject, updateColumnInProject, deleteColumnFromProject, reorderColumnsInProject } from '$lib/api/firebaseColumn';
   import { createProjectPermissions } from '$lib/client/permissions';
-  import { useProject } from '$queries/useProjectManagement';
-  import { useQueryClient } from '@tanstack/svelte-query';
-  import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+	import { useProject } from '$queries/useProjectManagement';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { withLoading } from '$lib/utils/loading';
+	import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
@@ -83,35 +84,37 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/columns`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          title: newColumnTitle.trim(),
-          order: columns.length,
-        })
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/columns`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            title: newColumnTitle.trim(),
+            order: columns.length,
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create column');
+        }
+
+        const result = await response.json();
+
+        // Update local state
+        columns = [...columns, result.column];
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Column created successfully');
+        newColumnTitle = '';
+        isAddDialogOpen = false;
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create column');
-      }
-
-      const result = await response.json();
-
-      // Update local state
-      columns = [...columns, result.column];
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Column created successfully');
-      newColumnTitle = '';
-      isAddDialogOpen = false;
     } catch (error) {
       console.error('Error creating column:', error);
       toast.error('Error creating column', {
@@ -127,35 +130,37 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/columns/${editingColumn.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          title: editColumnTitle.trim(),
-        })
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/columns/${editingColumn.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            title: editColumnTitle.trim(),
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update column');
+        }
+
+        const result = await response.json();
+
+        // Update local state
+        columns = columns.map(col => col.id === editingColumn!.id ? result.column : col);
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Column updated successfully');
+        editColumnTitle = '';
+        isEditDialogOpen = false;
+        editingColumn = null;
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update column');
-      }
-
-      const result = await response.json();
-
-      // Update local state
-      columns = columns.map(col => col.id === editingColumn!.id ? result.column : col);
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Column updated successfully');
-      editColumnTitle = '';
-      isEditDialogOpen = false;
-      editingColumn = null;
     } catch (error) {
       console.error('Error updating column:', error);
       toast.error('Error updating column', {
@@ -171,32 +176,34 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const url = targetColumnId
-        ? `/api/projects/${project.id}/columns/${deletingColumn.id}?targetColumnId=${targetColumnId}`
-        : `/api/projects/${project.id}/columns/${deletingColumn.id}`;
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const url = targetColumnId
+          ? `/api/projects/${project.id}/columns/${deletingColumn.id}?targetColumnId=${targetColumnId}`
+          : `/api/projects/${project.id}/columns/${deletingColumn.id}`;
 
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete column');
         }
+
+        // Update local state
+        columns = columns.filter(col => col.id !== deletingColumn!.id);
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Column deleted successfully');
+        isDeleteDialogOpen = false;
+        deletingColumn = null;
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete column');
-      }
-
-      // Update local state
-      columns = columns.filter(col => col.id !== deletingColumn!.id);
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Column deleted successfully');
-      isDeleteDialogOpen = false;
-      deletingColumn = null;
     } catch (error) {
       console.error('Error deleting column:', error);
       toast.error('Error deleting column', {
@@ -252,25 +259,27 @@
 
     // Send reorder request to server
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/columns/reorder`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          columnIds: reorderedColumns.map(col => col.id)
-        })
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/columns/reorder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            columnIds: reorderedColumns.map(col => col.id)
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to reorder columns');
+        }
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to reorder columns');
-      }
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 
     } catch (error) {
       console.error('Error reordering columns:', error);

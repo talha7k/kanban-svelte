@@ -10,6 +10,7 @@
 	import AppHeader from '$lib/components/layout/AppHeader.svelte';
 	import LandingPage from '$lib/components/landing/LandingPage.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import FullScreenLoader from '$lib/components/ui/FullScreenLoader.svelte';
 	import type { TeamId } from '$lib/types/types';
 	import { QueryClientProvider } from '@tanstack/svelte-query';
 	import { queryClient } from '$lib/queryClient';
@@ -79,6 +80,7 @@
 	<QueryClientProvider client={queryClient}>
 		<LandingPage />
 		<Toaster />
+		<FullScreenLoader />
 	</QueryClientProvider>
 {:else if isLoading}
 	<div class="min-h-screen flex flex-col items-center justify-center bg-background p-4">
@@ -94,7 +96,7 @@
 	<div class="min-h-screen flex items-center justify-center">
 		<p>Redirecting to login...</p>
 	</div>
-{:else if !shouldShowContent && $currentUser && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
+ {:else if !shouldShowContent && $currentUser && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
 	<!-- Team selection page should render here -->
 	<QueryClientProvider client={queryClient}>
 		<div class="min-h-screen flex flex-col bg-background">
@@ -103,9 +105,10 @@
 				{@render children()}
 			</main>
 			<Toaster />
+			<FullScreenLoader />
 		</div>
 	</QueryClientProvider>
-{:else if shouldShowContent}
+ {:else if shouldShowContent}
 	<QueryClientProvider client={queryClient}>
 		<div class="min-h-screen flex flex-col bg-background">
 			<AppHeader />
@@ -113,14 +116,16 @@
 				{@render children()}
 			</main>
 			<Toaster />
+			<FullScreenLoader />
 		</div>
 	</QueryClientProvider>
-{:else}
+ {:else}
 	<!-- Login/Signup pages and other unauthenticated pages -->
 	<QueryClientProvider client={queryClient}>
 		<div class="min-h-screen bg-background">
 			{@render children()}
 			<Toaster />
+			<FullScreenLoader />
 		</div>
 	</QueryClientProvider>
 {/if}

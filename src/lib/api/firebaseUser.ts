@@ -40,20 +40,28 @@ export const createUserProfileDocument = async (userAuth: FirebaseUser, addition
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  if (!userId || !db) return null;
-  
-  const userRef = doc(db, `users/${userId}`);
-  const snapshot = await getDoc(userRef);
-  if (snapshot.exists()) {
-    const data = snapshot.data() as UserDocument;
-    return {
-      id: snapshot.id,
-      ...data,
-      bio: data.bio || '',
-      title: data.title || '',
-    } as UserProfile;
+  if (!userId || typeof userId !== 'string' || userId.trim() === '' || !db) {
+    console.error('Invalid userId provided to getUserProfile:', userId);
+    return null;
   }
-  return null;
+
+  try {
+    const userRef = doc(db, `users/${userId.trim()}`);
+    const snapshot = await getDoc(userRef);
+    if (snapshot.exists()) {
+      const data = snapshot.data() as UserDocument;
+      return {
+        id: snapshot.id,
+        ...data,
+        bio: data.bio || '',
+        title: data.title || '',
+      } as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user profile for userId:', userId, error);
+    throw error; // Re-throw to let caller handle
+  }
 };
 
 export const getAllUserProfiles = async (): Promise<UserProfile[]> => {

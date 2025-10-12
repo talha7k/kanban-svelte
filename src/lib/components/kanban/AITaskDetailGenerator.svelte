@@ -5,12 +5,13 @@
 	import { Wand2 } from '@lucide/svelte';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import { toast } from 'svelte-sonner';
+	import { withLoading } from '$lib/utils/loading';
+	import { isLoading } from '$lib/stores/loading';
 
 	export let briefInput: string;
 	export let onDetailsGenerated: ((details: GenerateTaskDetailsOutput) => void) | undefined = undefined;
 	export let onCancel: (() => void) | undefined = undefined;
 
-	let isLoading = false;
 	let generatedDetails: GenerateTaskDetailsOutput | null = null;
 	let error: string | null = null;
 
@@ -18,52 +19,49 @@
 		// Reset previous results when generating new ones
 		generatedDetails = null;
 		error = null;
-		isLoading = true;
-		error = null;
-		generatedDetails = null;
 
 		const input: GenerateTaskDetailsInput = {
 			briefInput: briefInput,
 		};
 
 		try {
-			const response = await fetch('/api/generate-task-details', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(input)
+			await withLoading(async () => {
+				const response = await fetch('/api/generate-task-details', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(input)
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const result = await response.json();
+
+				if (result.success && result.details) {
+					generatedDetails = result.details;
+					toast.success(`AI Task Details Generated - Title: ${result.details.title}`);
+				} else if (result.error) {
+					throw new Error(result.error);
+				} else {
+					throw new Error("Unknown error during AI task details generation.");
+				}
 			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const result = await response.json();
-			
-			if (result.success && result.details) {
-				generatedDetails = result.details;
-				toast.success(`AI Task Details Generated - Title: ${result.details.title}`);
-			} else if (result.error) {
-				throw new Error(result.error);
-			} else {
-				throw new Error("Unknown error during AI task details generation.");
-			}
 		} catch (err) {
 			console.error("Error generating AI task details:", err);
 			error = err instanceof Error ? err.message : "An unknown error occurred.";
 			toast.error("AI Generation Failed - Could not generate task details at this time.");
-		} finally {
-			isLoading = false;
 		}
 	}
 </script>
 
 <div class="space-y-3 my-4">
 	{#if !generatedDetails}
-		<Button type="button" onclick={handleGenerateDetails} disabled={isLoading} variant="outline" size="sm">
+		<Button type="button" onclick={handleGenerateDetails} disabled={$isLoading} variant="outline" size="sm">
 			<Wand2 class="mr-2 h-4 w-4" />
-			{isLoading ? 'Generating Details...' : 'Generate Task Details with AI'}
+			{$isLoading ? 'Generating Details...' : 'Generate Task Details with AI'}
 		</Button>
 	{/if}
 
@@ -110,12 +108,12 @@
 					>
 						Cancel
 					</Button>
-					<Button 
+					<Button
 						type="button"
-						size="sm" 
+						size="sm"
 						variant="ghost"
 						onclick={handleGenerateDetails}
-						disabled={isLoading}
+						disabled={$isLoading}
 					>
 						Regenerate
 					</Button>

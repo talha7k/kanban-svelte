@@ -17,6 +17,7 @@ import AddTaskDialog from './AddTaskDialog.svelte';
 	import KanbanColumn from './KanbanColumn.svelte';
 	import DeleteTaskDialog from './DeleteTaskDialog.svelte';
 	import { createProjectPermissions } from '$lib/client/permissions';
+	import { withLoading } from '$lib/utils/loading';
 
 	let { project, users = [], team, onProjectUpdate = () => Promise.resolve() }: {
 		project: Project;
@@ -63,75 +64,78 @@ let isSubmittingTaskAdd = $state(false);
 	onMount(() => {
 		cleanupMonitor = setupKanbanMonitor(tasksStore, async (updates: Array<{taskId: string, changes: Partial<Task>}>) => {
 				let savingToastId: string | number | undefined;
-				
+
 				try {
 					// Show saving state and toast
 					dragState.update(state => ({ ...state, isSaving: true }));
 					savingToastId = toast.loading('Saving task position...');
-					
-					// Group updates by taskId to avoid duplicate calls
-					const uniqueUpdates = new Map<string, Partial<Task>>();
-					
-					for (const update of updates) {
-						const { taskId, changes } = update;
-						if (!uniqueUpdates.has(taskId)) {
-							uniqueUpdates.set(taskId, changes);
-						} else {
-							// Merge changes if there are multiple updates for the same task
-							const existing = uniqueUpdates.get(taskId)!;
-							uniqueUpdates.set(taskId, { ...existing, ...changes });
-						}
-					}
 
-					// Process each unique update - prioritize move operations
-					const movePromises: Promise<void>[] = [];
-					
-					for (const [taskId, changes] of uniqueUpdates.entries()) {
-						// Check if this is a move operation (columnId or order changed)
-						if (changes.columnId !== undefined || changes.order !== undefined) {
-							// Get the task from the store to determine the new column and order
-							const task = get(tasksStore).find(t => t.id === taskId);
-							if (task) {
-								const newColumnId = changes.columnId ?? task.columnId;
-								const newOrder = changes.order ?? task.order;
-								
-								// Use the server-side API for proper positioning
-									const userId = get(currentUser)?.uid;
-									if (!userId) {
-										throw new Error('User not authenticated');
-									}
-									
-									movePromises.push(
-										fetch('/api/move-task', {
-											method: 'POST',
-											headers: {
-												'Content-Type': 'application/json',
-											},
-											body: JSON.stringify({
-												projectId: project.id,
-												taskId,
-												newColumnId,
-												newOrder,
-												currentUserUid: userId
-											})
-										})
-										.then(response => {
-											if (!response.ok) {
-												throw new Error('Failed to move task');
-											}
-										})
-									);
+					await withLoading(async () => {
+						// Group updates by taskId to avoid duplicate calls
+						const uniqueUpdates = new Map<string, Partial<Task>>();
+
+						for (const update of updates) {
+							const { taskId, changes } = update;
+							if (!uniqueUpdates.has(taskId)) {
+								uniqueUpdates.set(taskId, changes);
+							} else {
+								// Merge changes if there are multiple updates for the same task
+								const existing = uniqueUpdates.get(taskId)!;
+								uniqueUpdates.set(taskId, { ...existing, ...changes });
 							}
 						}
-					}
 
-					// Wait for all move operations to complete
-												await Promise.all(movePromises);
-												toast.success('Task position saved successfully');
-												toast.dismiss(savingToastId);
-												dragState.update(state => ({ ...state, isSaving: false }));
+						// Process each unique update - prioritize move operations
+						const movePromises: Promise<void>[] = [];
 
-												// No need to invalidate queries - we already have optimistic updates
+						for (const [taskId, changes] of uniqueUpdates.entries()) {
+							// Check if this is a move operation (columnId or order changed)
+							if (changes.columnId !== undefined || changes.order !== undefined) {
+								// Get the task from the store to determine the new column and order
+								const task = get(tasksStore).find(t => t.id === taskId);
+								if (task) {
+									const newColumnId = changes.columnId ?? task.columnId;
+									const newOrder = changes.order ?? task.order;
+
+									// Use the server-side API for proper positioning
+										const userId = get(currentUser)?.uid;
+										if (!userId) {
+											throw new Error('User not authenticated');
+										}
+
+										movePromises.push(
+											fetch('/api/move-task', {
+												method: 'POST',
+												headers: {
+													'Content-Type': 'application/json',
+												},
+												body: JSON.stringify({
+													projectId: project.id,
+													taskId,
+													newColumnId,
+													newOrder,
+													currentUserUid: userId
+												})
+											})
+											.then(response => {
+												if (!response.ok) {
+													throw new Error('Failed to move task');
+												}
+											})
+										);
+								}
+							}
+						}
+
+						// Wait for all move operations to complete
+						await Promise.all(movePromises);
+					});
+
+					toast.success('Task position saved successfully');
+					toast.dismiss(savingToastId);
+					dragState.update(state => ({ ...state, isSaving: false }));
+
+					// No need to invalidate queries - we already have optimistic updates
 				} catch (error) {
 					console.error('Error updating tasks after drag and drop:', error);
 					toast.error('Failed to save task position');
@@ -161,37 +165,39 @@ let isSubmittingTaskAdd = $state(false);
 
 	isSubmittingTaskAdd = true;
 	try {
-		// Get Firebase ID token for authentication
-		const idToken = await user.getIdToken();
-		
-		const response = await fetch('/api/add-task', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${idToken}`
-			},
-			body: JSON.stringify({
-				projectId: project.id,
-				taskData: {
-					...taskData,
-					reporterId: user.uid,
-					...(cardTypeId && { cardTypeId })
+		await withLoading(async () => {
+			// Get Firebase ID token for authentication
+			const idToken = await user.getIdToken();
+
+			const response = await fetch('/api/add-task', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${idToken}`
 				},
-				columnId
-			})
+				body: JSON.stringify({
+					projectId: project.id,
+					taskData: {
+						...taskData,
+						reporterId: user.uid,
+						...(cardTypeId && { cardTypeId })
+					},
+					columnId
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to add task');
+			}
+
+			const result = await response.json();
+			const newTask = result.task;
+
+			// Update the tasks store with the new task
+			tasksStore.update(tasks => [...tasks, newTask]);
+
+			toast.success('Task added successfully');
 		});
-
-		if (!response.ok) {
-			throw new Error('Failed to add task');
-		}
-
-		const result = await response.json();
-		const newTask = result.task;
-
-		// Update the tasks store with the new task
-		tasksStore.update(tasks => [...tasks, newTask]);
-
-		toast.success('Task added successfully');
 	} catch (error) {
 		console.error('Error adding task:', error);
 		toast.error('Failed to add task');
@@ -225,38 +231,40 @@ let isSubmittingTaskAdd = $state(false);
 
 		isDeletingTask = true;
 		try {
-			// Get Firebase ID token for authentication
-			const idToken = await user.getIdToken();
-			
-			const response = await fetch('/api/delete-task', {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					taskId: taskToDelete.id,
-					currentUserUid: user.uid
-				})
+			await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await user.getIdToken();
+
+				const response = await fetch('/api/delete-task', {
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						taskId: taskToDelete.id,
+						currentUserUid: user.uid
+					})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to delete task');
+				}
+
+				// Remove task from store
+				tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id));
+
+				// Close dialogs if the deleted task was being viewed
+				if (taskToView?.id === taskToDelete.id) {
+					isViewDialogOpen = false;
+					taskToView = null;
+				}
+
+				toast.success('Task deleted successfully');
+				isDeleteDialogOpen = false;
+				taskToDelete = null;
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to delete task');
-			}
-
-			// Remove task from store
-			tasksStore.update(tasks => tasks.filter(t => t.id !== taskToDelete!.id));
-			
-			// Close dialogs if the deleted task was being viewed
-			if (taskToView?.id === taskToDelete.id) {
-				isViewDialogOpen = false;
-				taskToView = null;
-			}
-
-			toast.success('Task deleted successfully');
-			isDeleteDialogOpen = false;
-			taskToDelete = null;
 		} catch (error) {
 			console.error('Error deleting task:', error);
 			toast.error('Failed to delete task');
@@ -284,40 +292,41 @@ let isSubmittingTaskAdd = $state(false);
 
 		isSubmittingComment = true;
 		try {
-			// Get Firebase ID token for authentication
-			const idToken = await user.getIdToken();
-			
-			const response = await fetch('/api/add-comment', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					taskId,
-					commentText
-				})
+			await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await user.getIdToken();
+
+				const response = await fetch('/api/add-comment', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						taskId,
+						commentText
+					})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to add comment');
+				}
+
+				// Update the task in the store with the new comment
+				const responseData = await response.json();
+				const updatedTask = responseData.task;
+				tasksStore.update(tasks =>
+					tasks.map(task =>
+						task.id === taskId ? updatedTask : task
+					)
+				);
+
+				// Update the taskToView if it's the same task
+				if (taskToView?.id === taskId) {
+					taskToView = updatedTask;
+				}
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to add comment');
-			}
-
-			// Update the task in the store with the new comment
-			const responseData = await response.json();
-			const updatedTask = responseData.task;
-			tasksStore.update(tasks => 
-				tasks.map(task => 
-					task.id === taskId ? updatedTask : task
-				)
-			);
-
-			// Update the taskToView if it's the same task
-			if (taskToView?.id === taskId) {
-				taskToView = updatedTask;
-			}
-
 		} catch (error) {
 			console.error('Error adding comment:', error);
 			throw error; // Re-throw to let ViewTaskDialog handle the error
@@ -334,41 +343,44 @@ let isSubmittingTaskAdd = $state(false);
 		}
 
 		try {
-			// Get Firebase ID token for authentication
-			const idToken = await user.getIdToken();
-			
-			const response = await fetch('/api/edit-comment', {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					taskId,
-					commentId,
-					newContent
-				})
+			await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await user.getIdToken();
+
+				const response = await fetch('/api/edit-comment', {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						taskId,
+						commentId,
+						newContent
+					})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to edit comment');
+				}
+
+				// Update the task in the store with the edited comment
+				const responseData = await response.json();
+				const updatedTask = responseData.task;
+				tasksStore.update(tasks =>
+					tasks.map(task =>
+						task.id === taskId ? updatedTask : task
+					)
+				);
+
+				// Update taskToView if it's the same task
+				if (taskToView?.id === taskId) {
+					taskToView = updatedTask;
+				}
+
+				toast.success('Comment updated successfully');
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to edit comment');
-			}
-
-			// Update the task in the store with the edited comment
-			const responseData = await response.json();
-			const updatedTask = responseData.task;
-			tasksStore.update(tasks => 
-				tasks.map(task => 
-					task.id === taskId ? updatedTask : task
-				)
-			);
-
-			// Update taskToView if it's the same task
-			if (taskToView?.id === taskId) {
-				taskToView = updatedTask;
-			}
-			toast.success('Comment updated successfully');
 		} catch (error) {
 			console.error('Error editing comment:', error);
 			toast.error('Failed to edit comment');
@@ -384,40 +396,43 @@ let isSubmittingTaskAdd = $state(false);
 		}
 
 		try {
-			// Get Firebase ID token for authentication
-			const idToken = await user.getIdToken();
-			
-			const response = await fetch('/api/delete-comment', {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-				projectId: project.id,
-				taskId,
-				commentId,
-				currentUserUid: user.uid
-			})
+			await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await user.getIdToken();
+
+				const response = await fetch('/api/delete-comment', {
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+					projectId: project.id,
+					taskId,
+					commentId,
+					currentUserUid: user.uid
+				})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to delete comment');
+				}
+
+				// Update the task in the store with the comment removed
+				const responseData = await response.json();
+				const updatedTask = responseData.task;
+				tasksStore.update(tasks =>
+					tasks.map(task =>
+						task.id === taskId ? updatedTask : task
+					)
+				);
+
+				// Update taskToView if it's the same task
+				if (taskToView?.id === taskId) {
+					taskToView = updatedTask;
+				}
 			});
 
-			if (!response.ok) {
-				throw new Error('Failed to delete comment');
-			}
-
-			// Update the task in the store with the comment removed
-			const responseData = await response.json();
-			const updatedTask = responseData.task;
-			tasksStore.update(tasks => 
-				tasks.map(task => 
-					task.id === taskId ? updatedTask : task
-				)
-			);
-
-			// Update taskToView if it's the same task
-			if (taskToView?.id === taskId) {
-				taskToView = updatedTask;
-			}
 			toast.success('Comment deleted successfully');
 		} catch (error) {
 			console.error('Error deleting comment:', error);
@@ -452,31 +467,33 @@ let isSubmittingTaskAdd = $state(false);
 		isSubmittingTaskEdit = true;
 		try {
 			// Optimistically update the UI first
-			tasksStore.update(tasks => 
-				tasks.map(task => 
+			tasksStore.update(tasks =>
+				tasks.map(task =>
 					task.id === taskId ? { ...task, ...updatedFields } : task
 				)
 			);
 
-			// Get Firebase ID token for authentication
-			const idToken = await user.getIdToken();
-			
-			const response = await fetch('/api/update-task', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${idToken}`
-				},
-				body: JSON.stringify({
-					projectId: project.id,
-					taskId,
-					updatedFields
-				})
-			});
+			await withLoading(async () => {
+				// Get Firebase ID token for authentication
+				const idToken = await user.getIdToken();
 
-			if (!response.ok) {
-				throw new Error('Failed to update task');
-			}
+				const response = await fetch('/api/update-task', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${idToken}`
+					},
+					body: JSON.stringify({
+						projectId: project.id,
+						taskId,
+						updatedFields
+					})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to update task');
+				}
+			});
 
 			toast.success('Task updated successfully');
 		} catch (error) {

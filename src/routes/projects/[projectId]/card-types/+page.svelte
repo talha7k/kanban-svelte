@@ -13,9 +13,10 @@
   import { Loader2, ArrowLeft, Plus, Edit2, Trash2, GripVertical, Settings } from '@lucide/svelte';
   import type { Project, CardType, CardTypeField, FieldType } from '$lib/types/types';
   import { addCardTypeToProject, updateCardTypeInProject, deleteCardTypeFromProject, reorderCardTypesInProject } from '$lib/api/firebaseCardType';
-  import { createProjectPermissions } from '$lib/client/permissions';
-  import { useProject } from '$queries/useProjectManagement';
-  import { useQueryClient } from '@tanstack/svelte-query';
+	import { createProjectPermissions } from '$lib/client/permissions';
+	import { useProject } from '$queries/useProjectManagement';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { withLoading } from '$lib/utils/loading';
 
   // Server-loaded data
   interface PageData {
@@ -138,30 +139,32 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/card-types`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify(newCardType)
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/card-types`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify(newCardType)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create card type');
+        }
+
+        const result = await response.json();
+
+        // Update local state
+        cardTypes = [...cardTypes, result.cardType];
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Card type created successfully');
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create card type');
-      }
-
-      const result = await response.json();
-
-      // Update local state
-      cardTypes = [...cardTypes, result.cardType];
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Card type created successfully');
     } catch (error) {
       console.error('Error creating card type:', error);
       toast.error('Error creating card type', {
@@ -181,26 +184,28 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/card-types/${cardTypeId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/card-types/${cardTypeId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete card type');
         }
+
+        // Update local state
+        cardTypes = cardTypes.filter(ct => ct.id !== cardTypeId);
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Card type deleted successfully');
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete card type');
-      }
-
-      // Update local state
-      cardTypes = cardTypes.filter(ct => ct.id !== cardTypeId);
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Card type deleted successfully');
     } catch (error) {
       console.error('Error deleting card type:', error);
       toast.error('Error deleting card type', {
@@ -245,25 +250,27 @@
 
     // Send reorder request to server
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/card-types/reorder`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          cardTypeIds: reorderedCardTypes.map(ct => ct.id)
-        })
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/card-types/reorder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            cardTypeIds: reorderedCardTypes.map(ct => ct.id)
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to reorder card types');
+        }
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to reorder card types');
-      }
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 
     } catch (error) {
       console.error('Error reordering card types:', error);
@@ -325,41 +332,43 @@
 
     isSubmitting = true;
     try {
-      const idToken = await $currentUser.getIdToken();
-      const response = await fetch(`/api/projects/${project.id}/card-types/${editingCardType.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          name: editName.trim(),
-          description: editDescription.trim() || undefined,
-          color: editColor,
-          fields: editFields,
-        })
+      await withLoading(async () => {
+        const idToken = await $currentUser.getIdToken();
+        const response = await fetch(`/api/projects/${project.id}/card-types/${editingCardType.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            name: editName.trim(),
+            description: editDescription.trim() || undefined,
+            color: editColor,
+            fields: editFields,
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update card type');
+        }
+
+        const result = await response.json();
+
+        // Update local state
+        cardTypes = cardTypes.map(ct => ct.id === editingCardType!.id ? result.cardType : ct);
+
+        // Invalidate project query to refresh data
+        await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+        toast.success('Card type updated successfully');
+        isEditDialogOpen = false;
+        editingCardType = null;
+        editName = '';
+        editDescription = '';
+        editColor = '#3b82f6';
+        editFields = [];
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update card type');
-      }
-
-      const result = await response.json();
-
-      // Update local state
-      cardTypes = cardTypes.map(ct => ct.id === editingCardType!.id ? result.cardType : ct);
-
-      // Invalidate project query to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
-
-      toast.success('Card type updated successfully');
-      isEditDialogOpen = false;
-      editingCardType = null;
-      editName = '';
-      editDescription = '';
-      editColor = '#3b82f6';
-      editFields = [];
     } catch (error) {
       console.error('Error updating card type:', error);
       toast.error('Error updating card type', {
@@ -563,7 +572,7 @@
               id="edit-description"
               bind:value={editDescription}
               placeholder="Optional description"
-              rows="3"
+              rows={3}
             />
           </div>
           <div>
@@ -585,7 +594,7 @@
               <p class="text-sm text-muted-foreground">No custom fields defined.</p>
             {:else}
               <div class="space-y-2">
-                {#each editFields.sort((a, b) => a.order - b.order) as field (field.id)}
+                {#each [...editFields].sort((a, b) => a.order - b.order) as field (field.id)}
                   <div class="flex items-center justify-between p-2 border rounded">
                     <div>
                       <span class="font-medium">{field.name}</span>
@@ -658,7 +667,7 @@
                 id="field-options"
                 bind:value={newFieldOptions}
                 placeholder="Option 1\nOption 2\nOption 3"
-                rows="3"
+                rows={3}
               />
             </div>
           {/if}
