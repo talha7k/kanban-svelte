@@ -1,7 +1,11 @@
 import { json, error } from '@sveltejs/kit';
-import { addCardTypeToProject } from '$lib/api/firebaseCardType';
-import { getProjectById } from '$lib/api/firebaseProject';
+import { getProjectByIdServer } from '$lib/server/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
+import { getTeam } from '$lib/server/firebaseTeam';
+import { guardTaskManagement } from '$lib/auth/permissions';
+import { db } from '$lib/server/firebase';
+import { v4 as uuidv4 } from 'uuid';
+import type { CardType } from '$lib/types/types';
 
 export async function POST({ request, params }) {
   try {
@@ -21,7 +25,7 @@ export async function POST({ request, params }) {
     }
 
     // Verify project exists and user has access
-    const project = await getProjectById(projectId);
+    const project = await getProjectByIdServer(projectId);
     if (!project) {
       throw error(404, 'Project not found');
     }
@@ -30,8 +34,38 @@ export async function POST({ request, params }) {
       throw error(403, 'Access denied');
     }
 
+    // Load team data for permissions
+    let team = undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId);
+    }
+
+    // Check task management permissions
+    try {
+      guardTaskManagement(currentUserUid, project, team);
+    } catch (error) {
+      throw error(403, `Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
+    }
+
     // Create the card type
-    const cardType = await addCardTypeToProject(projectId, cardTypeData, currentUserUid);
+    const firestore = db();
+    const projectRef = firestore.collection('projects').doc(projectId);
+
+    const newCardTypeId = uuidv4();
+    const newCardType: CardType = {
+      ...cardTypeData,
+      id: newCardTypeId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const currentCardTypes = project.cardTypes || [];
+    await projectRef.update({
+      cardTypes: [...currentCardTypes, newCardType],
+      updatedAt: new Date().toISOString(),
+    });
+
+    const cardType = newCardType;
 
     return json({ success: true, cardType });
   } catch (err) {

@@ -34,10 +34,11 @@
 	// Use server data initially, then switch to query data after hydration
 	let project: Project | null = $derived(data.project || $projectQuery.data || null);
 
-	// Permission checks
-	const permissions = $derived(project ? createProjectPermissions(project, data.team) : null);
-	const canEditProject = $derived($permissions?.canEditProject() ?? false);
-	const canManageTasks = $derived($permissions?.canManageTasks() ?? false);
+  // Permission checks
+  const permissions = $derived(project ? createProjectPermissions(project, data.team) : null);
+  const canEditProject = $derived($permissions?.canEditProject() ?? false);
+  const canManageTasks = $derived($permissions?.canManageTasks() ?? false);
+  const canViewProject = $derived($permissions?.canViewProject() ?? false);
 	let users: UserProfile[] = $state([]);
 	let projectCreator: UserProfile | null = $state(null);
 	let isLoadingUsers = $state(true);
@@ -343,7 +344,7 @@
 								Project
 							</Button>
 						{/if}
-						{#if canManageTasks && project}
+						{#if canViewProject && project}
 							<Button
 								variant="outline"
 								onclick={() => goto(`/projects/${project!.id}/card-types`)}
@@ -360,6 +361,8 @@
 							>
 								<Columns class="h-5 w-5" /> Manage Columns
 							</Button>
+						{/if}
+						{#if canManageTasks && project}
 							<Button
 								variant="default"
 								onclick={() => (isGenerateTasksDialogOpen = true)}

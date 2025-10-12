@@ -149,17 +149,31 @@ export class ClientPermissionChecker {
   }
 
   /**
-   * Check if user can manage team settings
-   */
-  canManageTeam(): boolean {
-    if (!this.userId || !this.team) return false;
-    
-    const userRole = getUserTeamRole(this.userId, this.team);
-    if (!userRole) return false;
-    
-    const permissions = getTeamPermissions(userRole);
-    return permissions.canManageTeam;
-  }
+    * Check if user can view the current project
+    */
+   canViewProject(): boolean {
+     if (!this.userId || !this.project) return false;
+
+     const userTeamRole = this.team ? getUserTeamRole(this.userId, this.team) : undefined;
+     const userProjectRole = getUserProjectRole(this.userId, this.project);
+     const isProjectOwner = this.project.ownerId === this.userId;
+
+     const permissions = getProjectPermissions(userProjectRole, userTeamRole, isProjectOwner);
+     return permissions.canViewProject;
+   }
+
+  /**
+    * Check if user can manage team settings
+    */
+   canManageTeam(): boolean {
+     if (!this.userId || !this.team) return false;
+
+     const userRole = getUserTeamRole(this.userId, this.team);
+     if (!userRole) return false;
+
+     const permissions = getTeamPermissions(userRole);
+     return permissions.canManageTeam;
+   }
 
   /**
    * Check if user can invite team members

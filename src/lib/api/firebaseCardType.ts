@@ -9,7 +9,8 @@ import { getTeam } from '$lib/api/firebaseTeam';
 export const addCardTypeToProject = async (
   projectId: string,
   cardTypeData: Omit<CardType, 'id' | 'createdAt' | 'updatedAt'>,
-  currentUserUid?: string
+  currentUserUid?: string,
+  team?: Team
 ): Promise<CardType> => {
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
@@ -33,13 +34,13 @@ export const addCardTypeToProject = async (
     const project = projectDoc.data() as Project;
 
     // Check task management permissions (card types are part of task management)
-    let team: Team | undefined;
-    if (project.teamId) {
-      team = await getTeam(project.teamId) || undefined;
+    let teamData: Team | undefined = team;
+    if (!teamData && project.teamId) {
+      teamData = await getTeam(project.teamId) || undefined;
     }
 
     try {
-      guardTaskManagement(userUid as UserId, project, team);
+      guardTaskManagement(userUid as UserId, project, teamData);
     } catch (error) {
       throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
     }
@@ -52,8 +53,9 @@ export const addCardTypeToProject = async (
       updatedAt: new Date().toISOString(),
     };
 
+    const currentCardTypes = project.cardTypes || [];
     await updateDoc(projectRef, {
-      cardTypes: arrayUnion(newCardType),
+      cardTypes: [...currentCardTypes, newCardType],
       updatedAt: new Date().toISOString(),
     });
 
