@@ -214,6 +214,10 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
     const taskToMoveIndex = project.tasks.findIndex(t => t.id === taskId);
     if (taskToMoveIndex === -1) throw new Error('Task not found');
 
+    // Validate that the new column exists
+    const columnExists = project.columns?.some(col => col.id === newColumnId);
+    if (!columnExists) throw new Error('Target column not found');
+
     const taskToMove = project.tasks[taskToMoveIndex];
 
     // Remove task from its current position
@@ -233,6 +237,18 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
 
     // Insert the moved task into its new position
     updatedTasks.push(taskToMove);
+
+    // Normalize orders in affected columns to ensure sequential integers starting from 0
+    const affectedColumns = [taskToMove.columnId, newColumnId];
+    affectedColumns.forEach(columnId => {
+      const columnTasks = updatedTasks
+        .filter(t => t.columnId === columnId)
+        .sort((a, b) => a.order - b.order);
+
+      columnTasks.forEach((task, index) => {
+        task.order = index;
+      });
+    });
 
     await projectRef.update({
       tasks: updatedTasks,

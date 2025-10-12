@@ -98,23 +98,25 @@ let isSubmittingTaskAdd = $state(false);
 									const newOrder = changes.order ?? task.order;
 
 									// Use the server-side API for proper positioning
-										const userId = get(currentUser)?.uid;
-										if (!userId) {
+										const user = get(currentUser);
+										if (!user) {
 											throw new Error('User not authenticated');
 										}
+
+										const idToken = await user.getIdToken();
 
 										movePromises.push(
 											fetch('/api/move-task', {
 												method: 'POST',
 												headers: {
 													'Content-Type': 'application/json',
+													'Authorization': `Bearer ${idToken}`
 												},
 												body: JSON.stringify({
 													projectId: project.id,
 													taskId,
 													newColumnId,
-													newOrder,
-													currentUserUid: userId
+													newOrder
 												})
 											})
 											.then(response => {

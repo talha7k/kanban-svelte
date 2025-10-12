@@ -11,6 +11,7 @@
 		Popover,
 		PopoverContent,
 		PopoverTrigger,
+		PopoverClose,
 	} from '$lib/components/ui/popover';
 	import {
 		Edit2,
@@ -154,7 +155,7 @@
 	// Custom fields state
 	let fieldValues: Record<string, any> = $state({});
 	let isSubmittingFieldUpdate = $state(false);
-	let openPopovers = $state<Record<string, boolean>>({});
+	let openPopovers = $state(new Map<string, boolean>());
 
 	let selectedCardType = $derived(cardTypes.find((ct) => ct.id === task.cardTypeId) || null);
 
@@ -162,6 +163,14 @@
 	$effect(() => {
 		if (task) {
 			fieldValues = { ...(task.fieldValues || {}) };
+			// Initialize popover states
+			if (selectedCardType && selectedCardType.fields) {
+				for (const field of selectedCardType.fields) {
+					if (!openPopovers.has(field.id)) {
+						openPopovers.set(field.id, false);
+					}
+				}
+			}
 		}
 	});
 
@@ -232,7 +241,7 @@
 				}
 			}
 			await onUpdateTask(task.id, { fieldValues: fullFieldValues });
-			openPopovers[fieldId] = false;
+			openPopovers.set(fieldId, false);
 		} catch (error) {
 			console.error('Failed to update custom fields:', error);
 		} finally {
@@ -286,7 +295,7 @@
 								{/if}
 							</Badge>
 						{:else}
-							<Popover bind:open={openPopovers[field.id]}>
+							<Popover open={openPopovers.get(field.id) ?? false} onOpenChange={(v) => openPopovers.set(field.id, v)}>
 								<PopoverTrigger>
 									<Badge variant="secondary" class="{getFieldTypeColor(field.type)} cursor-pointer hover:opacity-80 text-xs flex items-center gap-1">
 										<svelte:component this={getFieldTypeIcon(field.type)} class="h-3 w-3" />
@@ -369,21 +378,23 @@
 												size="sm"
 												onclick={() => {
 													fieldValues = { ...(task.fieldValues || {}) };
-													openPopovers[field.id] = false;
+													openPopovers.set(field.id, false);
 												}}
 											>
 												Reset
 											</Button>
-											<Button
-												size="sm"
-												onclick={() => handleSaveFieldValues(field.id)}
-												disabled={isSubmittingFieldUpdate}
-											>
-												{#if isSubmittingFieldUpdate}
-													<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-												{/if}
-												Save
-											</Button>
+											<PopoverClose>
+												<Button
+													size="sm"
+													onclick={() => handleSaveFieldValues(field.id)}
+													disabled={isSubmittingFieldUpdate}
+												>
+													{#if isSubmittingFieldUpdate}
+														<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+													{/if}
+													Save
+												</Button>
+											</PopoverClose>
 										</div>
 									</div>
 								</PopoverContent>
