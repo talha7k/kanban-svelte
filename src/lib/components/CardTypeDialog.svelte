@@ -152,6 +152,7 @@
         order: fields.length + generatedData.fields.indexOf(field),
         config: {
           ...field.config,
+          required: false, // AI-generated fields should not be required by default
           // Ensure dropdown fields have options array
           ...(field.type === 'dropdown' && {
             options: field.config?.options || getDefaultDropdownOptions(field.name)

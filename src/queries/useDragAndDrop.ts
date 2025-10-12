@@ -212,7 +212,9 @@ export function setupKanbanMonitor(
       }
 
       // Only proceed if the position has actually changed
-      if (newColumnId === draggedTask.columnId && newOrder === draggedTask.order) {
+      // Use epsilon comparison for floating-point order values
+      const orderHasChanged = Math.abs(newOrder - draggedTask.order) > Number.EPSILON;
+      if (newColumnId === draggedTask.columnId && !orderHasChanged) {
         return;
       }
 
