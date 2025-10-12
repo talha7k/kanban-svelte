@@ -13,6 +13,7 @@
   import { Loader2, ArrowLeft, Plus, Edit2, Trash2, GripVertical, Settings } from '@lucide/svelte';
   import type { Project, CardType, CardTypeField, FieldType } from '$lib/types/types';
   import { addCardTypeToProject, updateCardTypeInProject, deleteCardTypeFromProject, reorderCardTypesInProject } from '$lib/api/firebaseCardType';
+  import CardTypeDialog from '$lib/components/CardTypeDialog.svelte';
 	import { createProjectPermissions } from '$lib/client/permissions';
 	import { useProject } from '$queries/useProjectManagement';
 	import { useQueryClient } from '@tanstack/svelte-query';
@@ -45,20 +46,10 @@
   let draggedCardType: CardType | null = $state(null);
   let dragOverIndex: number | null = $state(null);
 
-  // Edit dialog states
+  // Dialog states
+  let isAddDialogOpen = $state(false);
   let isEditDialogOpen = $state(false);
   let editingCardType: CardType | null = $state(null);
-  let editName = $state('');
-  let editDescription = $state('');
-  let editColor = $state('#3b82f6');
-  let editFields = $state<CardTypeField[]>([]);
-
-  // Add field dialog
-  let isAddFieldDialogOpen = $state(false);
-  let newFieldName = $state('');
-  let newFieldType: FieldType = $state('text_input');
-  let newFieldRequired = $state(false);
-  let newFieldOptions = $state('');
 
   // Sync card types with project data
   $effect(() => {
@@ -83,57 +74,20 @@
     }
   });
 
-  function getFieldTypeLabel(type: FieldType): string {
-    switch (type) {
-      case 'fixed': return 'Fixed Value';
-      case 'dropdown': return 'Dropdown';
-      case 'text_input': return 'Text Input';
-      case 'number_input': return 'Number Input';
-      case 'date_input': return 'Date Input';
-      case 'textarea': return 'Textarea';
-      case 'checkbox': return 'Checkbox';
-      default: return 'Unknown';
-    }
+
+
+  function handleAddCardType() {
+    isAddDialogOpen = true;
   }
 
-  function getFieldTypeColor(type: FieldType): string {
-    switch (type) {
-      case 'fixed': return 'bg-gray-100 text-gray-800';
-      case 'dropdown': return 'bg-blue-100 text-blue-800';
-      case 'text_input': return 'bg-green-100 text-green-800';
-      case 'number_input': return 'bg-purple-100 text-purple-800';
-      case 'date_input': return 'bg-orange-100 text-orange-800';
-      case 'textarea': return 'bg-yellow-100 text-yellow-800';
-      case 'checkbox': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  }
-
-  async function handleAddCardType() {
+  async function handleAddSubmit(data: { name: string; description: string; color: string; fields: CardTypeField[] }) {
     if (!project || !$currentUser) return;
 
-    const defaultFields: CardTypeField[] = [
-      {
-        id: crypto.randomUUID(),
-        name: 'Title',
-        type: 'text_input',
-        config: { required: true, placeholder: 'Task title' },
-        order: 0
-      },
-      {
-        id: crypto.randomUUID(),
-        name: 'Description',
-        type: 'textarea',
-        config: { required: false, placeholder: 'Task description' },
-        order: 1
-      }
-    ];
-
     const newCardType: Omit<CardType, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: 'New Card Type',
-      description: '',
-      color: '#3b82f6',
-      fields: defaultFields,
+      name: data.name,
+      description: data.description || undefined,
+      color: data.color,
+      fields: data.fields,
       order: cardTypes.length,
     };
 
@@ -164,6 +118,7 @@
         await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
 
         toast.success('Card type created successfully');
+        isAddDialogOpen = false;
       });
     } catch (error) {
       console.error('Error creating card type:', error);
@@ -287,24 +242,30 @@
 
   function handleEditCardType(cardType: CardType) {
     editingCardType = cardType;
-    editName = cardType.name;
-    editDescription = cardType.description || '';
-    editColor = cardType.color || '#3b82f6';
-    editFields = [...(cardType.fields || [])];
     isEditDialogOpen = true;
   }
 
-  function handleAddField() {
+
+    };
+
+    editFields = [...editFields, newField];
+    newFieldName = '';
+    newFieldType = 'text_input';
+    newFieldRequired = false;
+    newFieldOptions = '';
+    isAddFieldDialogOpen = false;
+  }
+
+  function handleAddFieldForAdd() {
     if (!newFieldName.trim()) return;
 
     const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : [];
-    const maxOrder = editFields.length > 0 ? Math.max(...editFields.map(f => f.order)) : -1;
 
     const newField: CardTypeField = {
       id: crypto.randomUUID(),
       name: newFieldName.trim(),
       type: newFieldType,
-      order: maxOrder + 1,
+      order: addFields.length,
       config: {
         required: newFieldRequired,
         // Add default config based on type
@@ -313,6 +274,19 @@
         ...(newFieldType === 'dropdown' && { options }),
         ...(newFieldType === 'textarea' && { placeholder: '' }),
       }
+    };
+
+    addFields = [...addFields, newField];
+    newFieldName = '';
+    newFieldType = 'text_input';
+    newFieldRequired = false;
+    newFieldOptions = '';
+    isAddFieldDialogOpen = false;
+  }
+
+  function handleRemoveFieldForAdd(fieldId: string) {
+    addFields = addFields.filter(f => f.id !== fieldId);
+  }
     };
 
     editFields = [...editFields, newField];
@@ -327,31 +301,51 @@
     editFields = editFields.filter(f => f.id !== fieldId);
   }
 
-  async function handleEditSubmit() {
-    if (!project || !$currentUser || !editingCardType || !editName.trim()) return;
+  async function handleEditSubmit(data: { name: string; description: string; color: string; fields: CardTypeField[] }) {
+    if (!project || !$currentUser || !editingCardType) return;
 
     isSubmitting = true;
     try {
-      await withLoading(async () => {
-        const idToken = await $currentUser.getIdToken();
-        const response = await fetch(`/api/projects/${project.id}/card-types/${editingCardType.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            name: editName.trim(),
-            description: editDescription.trim() || undefined,
-            color: editColor,
-            fields: editFields,
-          })
-        });
+      const idToken = await $currentUser.getIdToken();
+      const response = await fetch(`/api/projects/${project.id}/card-types/${editingCardType.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description || undefined,
+          color: data.color,
+          fields: data.fields,
+        })
+      });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to update card type');
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update card type');
+      }
+
+      const result = await response.json();
+
+      // Update local state
+      cardTypes = cardTypes.map(ct => ct.id === editingCardType!.id ? result.cardType : ct);
+
+      // Invalidate project query to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
+
+      toast.success('Card type updated successfully');
+      isEditDialogOpen = false;
+      editingCardType = null;
+    } catch (error) {
+      console.error('Error updating card type:', error);
+      toast.error('Error updating card type', {
+        description: error instanceof Error ? error.message : 'Could not update card type.'
+      });
+    } finally {
+      isSubmitting = false;
+    }
+  }
 
         const result = await response.json();
 
@@ -547,149 +541,24 @@
       </div>
     </div>
 
-    <!-- Edit Card Type Dialog -->
-    <Dialog bind:open={isEditDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Card Type</DialogTitle>
-          <DialogDescription>
-            Update the card type properties.
-          </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4">
-          <div>
-            <Label for="edit-name">Name</Label>
-            <Input
-              id="edit-name"
-              bind:value={editName}
-              placeholder="Card type name"
-              required
-            />
-          </div>
-          <div>
-            <Label for="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              bind:value={editDescription}
-              placeholder="Optional description"
-              rows={3}
-            />
-          </div>
-          <div>
-            <Label for="edit-color">Color</Label>
-            <Input
-              id="edit-color"
-              type="color"
-              bind:value={editColor}
-            />
-          </div>
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <Label>Fields</Label>
-              <Button type="button" variant="outline" size="sm" onclick={() => isAddFieldDialogOpen = true}>
-                Add Field
-              </Button>
-            </div>
-            {#if editFields.length === 0}
-              <p class="text-sm text-muted-foreground">No custom fields defined.</p>
-            {:else}
-              <div class="space-y-2">
-                {#each [...editFields].sort((a, b) => a.order - b.order) as field (field.id)}
-                  <div class="flex items-center justify-between p-2 border rounded">
-                    <div>
-                      <span class="font-medium">{field.name}</span>
-                      <Badge variant="secondary" class="ml-2">{getFieldTypeLabel(field.type)}</Badge>
-                      {#if field.config.required}
-                        <span class="text-red-500 ml-1">*</span>
-                      {/if}
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" onclick={() => handleRemoveField(field.id)}>
-                      <Trash2 class="h-4 w-4" />
-                    </Button>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onclick={() => { isEditDialogOpen = false; editingCardType = null; editName = ''; editDescription = ''; editColor = '#3b82f6'; editFields = []; }}>
-            Cancel
-          </Button>
-          <Button onclick={handleEditSubmit} disabled={isSubmitting || !editName.trim()}>
-            {#if isSubmitting}
-              <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-            {/if}
-            Update Card Type
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CardTypeDialog
+      open={isAddDialogOpen}
+      mode="add"
+      isSubmitting={isSubmitting}
+      onSave={handleAddSubmit}
+      onCancel={() => { isAddDialogOpen = false; }}
+    />
 
-    <!-- Add Field Dialog -->
-    <Dialog bind:open={isAddFieldDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add Field</DialogTitle>
-          <DialogDescription>
-            Add a custom field to this card type.
-          </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4">
-          <div>
-            <Label for="field-name">Field Name</Label>
-            <Input
-              id="field-name"
-              bind:value={newFieldName}
-              placeholder="e.g., Priority, Category"
-              required
-            />
-          </div>
-          <div>
-            <Label for="field-type">Field Type</Label>
-            <select
-              id="field-type"
-              bind:value={newFieldType}
-              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="text_input">Text Input</option>
-              <option value="number_input">Number Input</option>
-              <option value="textarea">Textarea</option>
-              <option value="date_input">Date Input</option>
-              <option value="checkbox">Checkbox</option>
-              <option value="dropdown">Dropdown</option>
-            </select>
-          </div>
-          {#if newFieldType === 'dropdown'}
-            <div>
-              <Label for="field-options">Options (one per line)</Label>
-              <Textarea
-                id="field-options"
-                bind:value={newFieldOptions}
-                placeholder="Option 1\nOption 2\nOption 3"
-                rows={3}
-              />
-            </div>
-          {/if}
-          <div class="flex items-center space-x-2">
-            <input
-              id="field-required"
-              type="checkbox"
-              bind:checked={newFieldRequired}
-              class="h-4 w-4 rounded border border-input"
-            />
-            <Label for="field-required">Required</Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldRequired = false; newFieldOptions = ''; }}>
-            Cancel
-          </Button>
-          <Button onclick={handleAddField} disabled={!newFieldName.trim()}>
-            Add Field
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CardTypeDialog
+      open={isEditDialogOpen}
+      mode="edit"
+      cardType={editingCardType}
+      isSubmitting={isSubmitting}
+      onSave={handleEditSubmit}
+      onCancel={() => { isEditDialogOpen = false; editingCardType = null; }}
+    />
+
+
+
   </div>
 {/if}

@@ -17,6 +17,7 @@
 	import { Loader2, ChevronRight } from '@lucide/svelte';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
+	import { toast } from 'svelte-sonner';
 
 	const taskFormSchema = z.object({
 		title: z.string().min(1, 'Title is required').max(100, 'Title must be 100 characters or less.'),
@@ -38,6 +39,11 @@
 
 	let selectedCardType: CardType | null = null;
 	let showTypeSelection = true;
+
+	// Auto-fill title and description from card type
+	$: if (selectedCardType) {
+		formData = { ...formData, title: selectedCardType.name || '', description: selectedCardType.description || '' };
+	}
 
 	let formData: TaskFormData = {
 		title: '',
@@ -64,8 +70,24 @@
 		formErrors = {};
 		try {
 			taskFormSchema.parse(formData);
-			return true;
+
+			// Validate custom fields if card type is selected
+			if (selectedCardType && selectedCardType.fields) {
+				const hasAssignees = formData.assigneeUids && formData.assigneeUids.length > 0;
+				for (const field of selectedCardType.fields) {
+					if (field.name !== 'Title' && field.name !== 'Description' && field.config?.required && hasAssignees) {
+						const fieldValue = formData.fieldValues[field.id];
+						if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
+							formErrors[`field-${field.id}`] = `${field.name} is required when task has assignees`;
+						}
+					}
+				}
+			}
+
+			// Check if there are any errors
+			return Object.keys(formErrors).length === 0;
 		} catch (error) {
+			console.error('Form validation error:', error);
 			if (error instanceof z.ZodError) {
 				error.errors.forEach((err) => {
 					if (err.path.length > 0) {
@@ -78,17 +100,33 @@
 	}
 
 	async function onSubmit(event: Event) {
+		console.log('onSubmit called', { columnId, selectedCardType, formData });
 		event.preventDefault();
-		if (!columnId || !selectedCardType) return;
+		if (!columnId) {
+			console.log('No columnId');
+			toast.error('No column selected for task creation');
+			return;
+		}
+		if (!selectedCardType) {
+			console.log('No selectedCardType');
+			toast.error('Please select a card type first');
+			return;
+		}
 
-		if (!validateForm()) return;
+		console.log('Calling validateForm');
+		if (!validateForm()) {
+			console.log('Validation failed', formErrors);
+			return;
+		}
 
+		console.log('Validation passed, calling onAddTask');
 		try {
 			await onAddTask(formData, columnId, selectedCardType.id);
 			resetForm();
 			onOpenChange(false);
 		} catch (error) {
 			console.error('Error submitting task from dialog:', error);
+			toast.error('Failed to create task');
 		}
 	}
 
@@ -164,7 +202,7 @@
 							<p>No card types available. Please create card types first.</p>
 						</div>
 					{:else}
-						<div class="grid gap-3">
+						<div class="grid grid-cols-2 gap-3">
 							{#each cardTypes as cardType (cardType.id)}
 								<Card
 									class="cursor-pointer hover:bg-accent/50 transition-colors"
@@ -223,7 +261,7 @@
 						<Button type="button" variant="outline" onclick={handleDialogClose} disabled={isSubmitting}>
 							Cancel
 						</Button>
-						<Button type="submit" disabled={isSubmitting}>
+						<Button type="submit" onclick={() => console.log('Button clicked')} disabled={isSubmitting}>
 							{#if isSubmitting}
 								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 							{/if}

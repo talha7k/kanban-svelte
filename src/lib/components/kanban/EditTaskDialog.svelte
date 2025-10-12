@@ -10,7 +10,7 @@
 		DialogHeader,
 		DialogTitle,
 	} from '$lib/components/ui/dialog';
-	import type { Task, UserProfile, AIPrioritySuggestion } from '$lib/types/types';
+	import type { Task, UserProfile, AIPrioritySuggestion, CardType } from '$lib/types/types';
 	import TaskFormFields from './TaskFormFields.svelte';
 	import type { TaskFormData } from '$lib/types/types';
 	import AITaskDetailGenerator from './AITaskDetailGenerator.svelte';
@@ -31,6 +31,7 @@
 	export let onEditTask: (taskId: string, taskData: TaskFormData) => Promise<void> | void;
 	export let taskToEdit: Task | null;
 	export let assignableUsers: UserProfile[];
+	export let cardTypes: CardType[] = [];
 	export let canManageTask: boolean = false;
 
 	export let isSubmitting: boolean = false;
@@ -40,6 +41,8 @@
 	export let confirmDeleteTask: () => Promise<void>;
 	export let cancelDeleteTask: () => void;
 	export let onDeleteTask: (taskId: string) => void;
+
+	$: selectedCardType = cardTypes.find(ct => ct.id === taskToEdit?.cardTypeId) || null;
 
 	let formData: TaskFormData = {
 		title: '',
@@ -160,9 +163,10 @@
 				</DialogDescription>
 			</DialogHeader>
 			<form on:submit={onSubmit}>
-				<TaskFormFields 
-					bind:formData 
-					{assignableUsers} 
+				<TaskFormFields
+					bind:formData
+					{assignableUsers}
+					{selectedCardType}
 					{formErrors}
 					{updateFormData}
 					isEditing={true}

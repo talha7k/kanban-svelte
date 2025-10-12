@@ -1,0 +1,247 @@
+<script lang="ts">
+  import { Button } from '$lib/components/ui/button';
+  import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
+  import { Textarea } from '$lib/components/ui/textarea';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Loader2, Trash2 } from '@lucide/svelte';
+  import type { CardType, CardTypeField, FieldType } from '$lib/types/types';
+
+  interface Props {
+    open: boolean;
+    mode: 'add' | 'edit';
+    cardType?: CardType | null;
+    isSubmitting?: boolean;
+    onSave: (data: { name: string; description: string; color: string; fields: CardTypeField[] }) => void;
+    onCancel: () => void;
+  }
+
+  let { open, mode, cardType, isSubmitting = false, onSave, onCancel }: Props = $props();
+
+  let name = $state('');
+  let description = $state('');
+  let color = $state('#3b82f6');
+  let fields = $state<CardTypeField[]>([]);
+
+  // Add field dialog states
+  let isAddFieldDialogOpen = $state(false);
+  let newFieldName = $state('');
+  let newFieldType: FieldType = $state('text_input');
+  let newFieldRequired = $state(false);
+  let newFieldOptions = $state('');
+
+  $effect(() => {
+    if (open) {
+      if (mode === 'edit' && cardType) {
+        name = cardType.name;
+        description = cardType.description || '';
+        color = cardType.color || '#3b82f6';
+        fields = [...(cardType.fields || [])];
+      } else {
+        name = '';
+        description = '';
+        color = '#3b82f6';
+        fields = [];
+      }
+    }
+  });
+
+  function getFieldTypeLabel(type: FieldType): string {
+    switch (type) {
+      case 'fixed': return 'Fixed Value';
+      case 'dropdown': return 'Dropdown';
+      case 'text_input': return 'Text Input';
+      case 'number_input': return 'Number Input';
+      case 'date_input': return 'Date Input';
+      case 'textarea': return 'Textarea';
+      case 'checkbox': return 'Checkbox';
+      default: return 'Unknown';
+    }
+  }
+
+  function handleAddField() {
+    if (!newFieldName.trim()) return;
+
+    const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : [];
+
+    const newField: CardTypeField = {
+      id: crypto.randomUUID(),
+      name: newFieldName.trim(),
+      type: newFieldType,
+      order: fields.length,
+      config: {
+        required: newFieldRequired,
+        // Add default config based on type
+        ...(newFieldType === 'text_input' && { placeholder: '' }),
+        ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
+        ...(newFieldType === 'dropdown' && { options }),
+        ...(newFieldType === 'textarea' && { placeholder: '' }),
+      }
+    };
+
+    fields = [...fields, newField];
+    newFieldName = '';
+    newFieldType = 'text_input';
+    newFieldRequired = false;
+    newFieldOptions = '';
+    isAddFieldDialogOpen = false;
+  }
+
+  function handleRemoveField(fieldId: string) {
+    fields = fields.filter(f => f.id !== fieldId);
+  }
+
+  function handleSave() {
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), description: description.trim(), color, fields });
+  }
+
+  function handleCancel() {
+    onCancel();
+  }
+</script>
+
+<Dialog bind:open>
+  <DialogContent class="max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>{mode === 'add' ? 'Add Card Type' : 'Edit Card Type'}</DialogTitle>
+      <DialogDescription>
+        {mode === 'add' ? 'Create a new card type with custom fields.' : 'Update the card type properties.'}
+      </DialogDescription>
+    </DialogHeader>
+    <div class="grid grid-cols-2 gap-4 py-4">
+      <div>
+        <Label for="name">Name</Label>
+        <Input
+          id="name"
+          bind:value={name}
+          placeholder="Card type name"
+          required
+        />
+      </div>
+      <div>
+        <Label for="color">Color</Label>
+        <Input
+          id="color"
+          type="color"
+          bind:value={color}
+        />
+      </div>
+      <div class="col-span-2">
+        <Label for="description">Description</Label>
+        <Textarea
+          id="description"
+          bind:value={description}
+          placeholder="Optional description"
+          rows="3"
+        />
+      </div>
+      <div class="col-span-2">
+        <div class="flex justify-between items-center mb-2">
+          <Label>Fields</Label>
+          <Button type="button" variant="outline" size="sm" onclick={() => isAddFieldDialogOpen = true}>
+            Add Field
+          </Button>
+        </div>
+        {#if fields.length === 0}
+          <p class="text-sm text-muted-foreground">No custom fields defined.</p>
+        {:else}
+          <div class="space-y-2">
+            {#each fields as field (field.id)}
+              <div class="flex items-center justify-between p-2 border rounded">
+                <div>
+                  <span class="font-medium">{field.name}</span>
+                  <Badge variant="secondary" class="ml-2">{getFieldTypeLabel(field.type)}</Badge>
+                  {#if field.config.required}
+                    <span class="text-red-500 ml-1">*</span>
+                  {/if}
+                </div>
+                <Button type="button" variant="ghost" size="sm" onclick={() => handleRemoveField(field.id)}>
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onclick={handleCancel}>
+        Cancel
+      </Button>
+      <Button onclick={handleSave} disabled={isSubmitting || !name.trim()}>
+        {#if isSubmitting}
+          <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+        {/if}
+        {mode === 'add' ? 'Create Card Type' : 'Update Card Type'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<!-- Add Field Dialog -->
+<Dialog bind:open={isAddFieldDialogOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Add Field</DialogTitle>
+      <DialogDescription>
+        Add a custom field to this card type.
+      </DialogDescription>
+    </DialogHeader>
+    <div class="space-y-4">
+      <div>
+        <Label for="field-name">Field Name</Label>
+        <Input
+          id="field-name"
+          bind:value={newFieldName}
+          placeholder="e.g., Priority, Category"
+          required
+        />
+      </div>
+      <div>
+        <Label for="field-type">Field Type</Label>
+        <select
+          id="field-type"
+          bind:value={newFieldType}
+          class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="text_input">Text Input</option>
+          <option value="number_input">Number Input</option>
+          <option value="textarea">Textarea</option>
+          <option value="date_input">Date Input</option>
+          <option value="checkbox">Checkbox</option>
+          <option value="dropdown">Dropdown</option>
+        </select>
+      </div>
+      {#if newFieldType === 'dropdown'}
+        <div>
+          <Label for="field-options">Options (one per line)</Label>
+          <Textarea
+            id="field-options"
+            bind:value={newFieldOptions}
+            placeholder="Option 1\nOption 2\nOption 3"
+            rows="3"
+          />
+        </div>
+      {/if}
+      <div class="flex items-center space-x-2">
+        <input
+          id="field-required"
+          type="checkbox"
+          bind:checked={newFieldRequired}
+          class="h-4 w-4 rounded border border-input"
+        />
+        <Label for="field-required">Required</Label>
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onclick={() => { isAddFieldDialogOpen = false; newFieldName = ''; newFieldType = 'text_input'; newFieldRequired = false; newFieldOptions = ''; }}>
+        Cancel
+      </Button>
+      <Button onclick={handleAddField} disabled={!newFieldName.trim()}>
+        Add Field
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
