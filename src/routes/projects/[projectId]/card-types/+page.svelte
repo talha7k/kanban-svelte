@@ -485,7 +485,7 @@
                 ondrop={(e) => handleDrop(e, index)}
               >
                 {#if dragOverIndex === index && draggedCardType}
-                  <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-10 whitespace-nowrap">
+                  <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium z-50 whitespace-nowrap">
                     Drop "{draggedCardType.name}" here (position {index + 1})
                   </div>
                 {/if}
