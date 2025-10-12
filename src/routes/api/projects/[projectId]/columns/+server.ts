@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { addColumnToProject } from '$lib/api/firebaseColumn';
-import { getProjectById } from '$lib/api/firebaseProject';
+import { addColumnToProject } from '$lib/server/api/firebaseColumn';
+import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
 
 export async function POST({ request, params }) {

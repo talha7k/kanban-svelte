@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { updateColumnInProject, deleteColumnFromProject } from '$lib/api/firebaseColumn';
-import { getProjectById } from '$lib/api/firebaseProject';
+import { updateColumnInProject, deleteColumnFromProject } from '$lib/server/api/firebaseColumn';
+import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
 
 export async function PUT({ request, params }) {
@@ -31,7 +31,7 @@ export async function PUT({ request, params }) {
     }
 
     // Update the column
-    const updatedColumn = await updateColumnInProject(projectId, columnId, columnUpdateData);
+    const updatedColumn = await updateColumnInProject(projectId, columnId, columnUpdateData, currentUserUid);
 
     return json({ success: true, column: updatedColumn });
   } catch (err) {
@@ -61,7 +61,7 @@ export async function DELETE({ request, params }) {
     }
 
     // Delete the column
-    await deleteColumnFromProject(projectId, columnId, targetColumnId);
+    await deleteColumnFromProject(projectId, columnId, currentUserUid, targetColumnId);
 
     return json({ success: true });
   } catch (err) {

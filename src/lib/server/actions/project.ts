@@ -1,7 +1,7 @@
 "use server";
 
 import { generateProjectTasks } from '$lib/server/ai/flows/generate-project-tasks';
-import { addTaskToProjectServer, getProjectByIdServer } from '$lib/server/firebaseProject';
+import { addTaskToProject, getProjectById } from '$lib/server/api/firebaseProject';
 import type { NewTaskData, Task } from '$lib/types/types';
 import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDetailsOutput } from '$lib/server/ai/flows/generate-task-details';
 

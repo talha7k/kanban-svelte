@@ -1,9 +1,9 @@
-import { db } from '$lib/firebase';
-import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where, arrayUnion, arrayRemove, deleteDoc, documentId } from 'firebase/firestore';
-import { auth } from '$lib/firebase';
+import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { auth as adminAuth, db as adminDb } from '$lib/server/firebase';
 import type { Team, UserId, UserProfile } from '../types/types';
 
 export async function createTeam(teamName: string, creatorId: UserId, teamDescription: string): Promise<Team> {
+  const db = adminDb();
   if (!db) throw new Error('Database not initialized');
   try {
     const newTeamData = {
@@ -15,7 +15,7 @@ export async function createTeam(teamName: string, creatorId: UserId, teamDescri
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const docRef = await addDoc(collection(db, 'teams'), newTeamData);
+    const docRef = await db.collection('teams').add(newTeamData);
     return { id: docRef.id, ...newTeamData } as Team;
   } catch (error) {
     console.error('Error creating team:', error);
@@ -24,11 +24,12 @@ export async function createTeam(teamName: string, creatorId: UserId, teamDescri
 }
 
 export async function getTeamsForUser(userId: UserId): Promise<Team[]> {
+  const db = adminDb();
   if (!db) return [];
   try {
-    const teamsCollectionRef = collection(db, 'teams');
-    const q = query(teamsCollectionRef, where('memberIds', 'array-contains', userId));
-    const querySnapshot = await getDocs(q);
+    const teamsCollectionRef = db.collection('teams');
+    const q = teamsCollectionRef.where('memberIds', 'array-contains', userId);
+    const querySnapshot = await q.get();
     const teams: Team[] = [];
     querySnapshot.forEach((doc) => {
       teams.push({ id: doc.id, ...doc.data() } as Team);
@@ -40,24 +41,47 @@ export async function getTeamsForUser(userId: UserId): Promise<Team[]> {
   }
 }
 
+export const getTeam = async (teamId: string): Promise<Team | null> => {
+  const db = adminDb();
+  if (!db) return null;
+  try {
+    const teamRef = db.doc(`teams/${teamId}`);
+    const teamSnap = await teamRef.get();
 
+    if (teamSnap.exists) {
+      const teamData = { id: teamSnap.id, ...teamSnap.data() } as Team;
+      if (teamData.memberIds && teamData.memberIds.length > 0) {
+        const members = await getTeamMembers(teamId);
+        teamData.members = members;
+      }
+      return teamData;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting team:', error);
+    return null;
+  }
+};
 
 export const updateTeam = async (teamId: string, data: Partial<Team>) => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
-  const teamRef = doc(db, 'teams', teamId);
-  await updateDoc(teamRef, data);
+  const teamRef = db.collection('teams').doc(teamId);
+  await teamRef.update(data);
 };
 
 export const addMemberToTeam = async (teamId: string, userId: UserId) => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
   try {
-    const teamRef = doc(db, 'teams', teamId);
-    await updateDoc(teamRef, {
-      memberIds: arrayUnion(userId)
+    const teamRef = db.collection('teams').doc(teamId);
+    await teamRef.update({
+      memberIds: FieldValue.arrayUnion(userId)
     });
   } catch (error) {
     console.error('Error adding member to team:', error);
@@ -66,13 +90,14 @@ export const addMemberToTeam = async (teamId: string, userId: UserId) => {
 }
 
 export const removeMemberFromTeam = async (teamId: string, userId: UserId) => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
   try {
-    const teamRef = doc(db, 'teams', teamId);
-    await updateDoc(teamRef, {
-      memberIds: arrayRemove(userId)
+    const teamRef = db.collection('teams').doc(teamId);
+    await teamRef.update({
+      memberIds: FieldValue.arrayRemove(userId)
     });
   } catch (error) {
     console.error('Error removing member from team:', error);
@@ -80,33 +105,30 @@ export const removeMemberFromTeam = async (teamId: string, userId: UserId) => {
   }
 }
 
-export const deleteTeam = async (teamId: string): Promise<void> => {
+export const deleteTeam = async (teamId: string, currentUserUid: string): Promise<void> => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
-  if (!auth) {
-    throw new Error("Firebase auth not initialized");
-  }
   
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
+  if (!currentUserUid) {
     throw new Error('User must be authenticated to delete teams.');
   }
 
-  const teamRef = doc(db, 'teams', teamId);
-  const teamSnap = await getDoc(teamRef);
+  const teamRef = db.collection('teams').doc(teamId);
+  const teamSnap = await teamRef.get();
 
-  if (!teamSnap.exists()) {
+  if (!teamSnap.exists) {
     throw new Error('Team not found.');
   }
 
   const teamData = teamSnap.data() as Team;
-  if (teamData.ownerId !== currentUser.uid) {
+  if (teamData.ownerId !== currentUserUid) {
     throw new Error('Only the team owner can delete the team.');
   }
 
   try {
-    await deleteDoc(teamRef);
+    await teamRef.delete();
   } catch (error) {
     console.error(`Error deleting team ${teamId}:`, error);
     throw error;
@@ -115,16 +137,17 @@ export const deleteTeam = async (teamId: string): Promise<void> => {
 
 export const getTeamMembers = async (teamId: string): Promise<UserProfile[]> => {
   try {
+    const db = adminDb();
     if (!db) {
       console.warn('Firestore not initialized');
       return [];
     }
     
     // Get team data directly without calling getTeam to avoid circular dependency
-    const teamRef = doc(db, 'teams', teamId);
-    const teamSnap = await getDoc(teamRef);
+    const teamRef = db.collection('teams').doc(teamId);
+    const teamSnap = await teamRef.get();
     
-    if (!teamSnap.exists()) {
+    if (!teamSnap.exists) {
       return [];
     }
     
@@ -141,12 +164,9 @@ export const getTeamMembers = async (teamId: string): Promise<UserProfile[]> => 
     
     for (let i = 0; i < memberIds.length; i += batchSize) {
       const batch = memberIds.slice(i, i + batchSize);
-      const usersQuery = query(
-        collection(db!, 'users'),
-        where(documentId(), 'in', batch)
-      );
+      const usersQuery = db.collection('users').where(FieldPath.documentId(), 'in', batch);
       
-      const querySnapshot = await getDocs(usersQuery);
+      const querySnapshot = await usersQuery.get();
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
         members.push({ id: doc.id, ...userData } as UserProfile);

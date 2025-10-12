@@ -1,9 +1,8 @@
 import { json, error } from '@sveltejs/kit';
-import { getProjectByIdServer } from '$lib/server/firebaseProject';
+import { getProjectById, updateProjectDetails } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
-import { getTeam } from '$lib/server/firebaseTeam';
+import { getTeam } from '$lib/server/api/firebaseTeam';
 import { guardTaskManagement } from '$lib/auth/permissions';
-import { db } from '$lib/server/firebase';
 import { v4 as uuidv4 } from 'uuid';
 import type { CardType } from '$lib/types/types';
 
@@ -25,7 +24,7 @@ export async function POST({ request, params }) {
     }
 
     // Verify project exists and user has access
-    const project = await getProjectByIdServer(projectId);
+    const project = await getProjectById(projectId);
     if (!project) {
       throw error(404, 'Project not found');
     }
@@ -48,9 +47,6 @@ export async function POST({ request, params }) {
     }
 
     // Create the card type
-    const firestore = db();
-    const projectRef = firestore.collection('projects').doc(projectId);
-
     const newCardTypeId = uuidv4();
     const newCardType: CardType = {
       ...cardTypeData,
@@ -60,10 +56,7 @@ export async function POST({ request, params }) {
     };
 
     const currentCardTypes = project.cardTypes || [];
-    await projectRef.update({
-      cardTypes: [...currentCardTypes, newCardType],
-      updatedAt: new Date().toISOString(),
-    });
+    await updateProjectDetails(projectId, { cardTypes: [...currentCardTypes, newCardType] }, currentUserUid);
 
     const cardType = newCardType;
 

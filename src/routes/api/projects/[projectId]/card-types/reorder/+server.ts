@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { reorderCardTypesInProject } from '$lib/api/firebaseCardType';
-import { getProjectById } from '$lib/api/firebaseProject';
+import { reorderCardTypesInProject } from '$lib/server/api/firebaseCardType';
+import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
 
 export async function POST({ request, params }) {
@@ -27,7 +27,7 @@ export async function POST({ request, params }) {
     }
 
     // Reorder the card types
-    await reorderCardTypesInProject(projectId, cardTypeIds);
+    await reorderCardTypesInProject(projectId, cardTypeIds, currentUserUid);
 
     return json({ success: true });
   } catch (err) {

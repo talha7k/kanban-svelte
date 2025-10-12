@@ -116,13 +116,15 @@
         id: crypto.randomUUID(),
         name: 'Title',
         type: 'text_input',
-        config: { required: true, placeholder: 'Task title' }
+        config: { required: true, placeholder: 'Task title' },
+        order: 0
       },
       {
         id: crypto.randomUUID(),
         name: 'Description',
         type: 'textarea',
-        config: { required: false, placeholder: 'Task description' }
+        config: { required: false, placeholder: 'Task description' },
+        order: 1
       }
     ];
 
@@ -289,11 +291,13 @@
     if (!newFieldName.trim()) return;
 
     const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : [];
+    const maxOrder = editFields.length > 0 ? Math.max(...editFields.map(f => f.order)) : -1;
 
     const newField: CardTypeField = {
       id: crypto.randomUUID(),
       name: newFieldName.trim(),
       type: newFieldType,
+      order: maxOrder + 1,
       config: {
         required: newFieldRequired,
         // Add default config based on type
@@ -581,7 +585,7 @@
               <p class="text-sm text-muted-foreground">No custom fields defined.</p>
             {:else}
               <div class="space-y-2">
-                {#each editFields as field (field.id)}
+                {#each editFields.sort((a, b) => a.order - b.order) as field (field.id)}
                   <div class="flex items-center justify-between p-2 border rounded">
                     <div>
                       <span class="font-medium">{field.name}</span>
