@@ -192,13 +192,29 @@ export function useProjectManagement(currentUserId?: string) {
   };
 }
 
+// Cache for project queries to prevent re-creation
+const projectQueries = new Map<string, any>();
+
 // Query hooks for fetching project data
-export function useProject(projectId: string | undefined) {
-  return createQuery({
-    queryKey: ['project', projectId],
-    queryFn: () => projectId ? getProjectById(projectId) : Promise.resolve(null),
-    enabled: !!projectId
-  });
+export function useProject(projectId: string | undefined, initialData?: Project) {
+  if (!projectId) {
+    return createQuery({
+      queryKey: ['project'],
+      queryFn: () => Promise.resolve(null),
+      initialData: null
+    });
+  }
+
+  const key = `project-${projectId}`;
+  if (!projectQueries.has(key)) {
+    projectQueries.set(key, createQuery({
+      queryKey: ['project', projectId],
+      queryFn: () => getProjectById(projectId),
+      enabled: !!projectId,
+      initialData
+    }));
+  }
+  return projectQueries.get(key);
 }
 
 // Note: getUserProjects function doesn't exist in the API

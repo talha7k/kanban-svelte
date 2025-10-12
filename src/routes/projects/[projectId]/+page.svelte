@@ -14,8 +14,8 @@
 	import DeleteProjectAlertDialog from '$lib/components/dashboard/DeleteProjectAlertDialog.svelte';
 	import GenerateTasksDialog from '$lib/components/project/GenerateTasksDialog.svelte';
 	import AddTaskDialog from '$lib/components/kanban/AddTaskDialog.svelte';
-	import { useProject } from '$queries/useProjectManagement';
-	import { useQueryClient } from '@tanstack/svelte-query';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { getProjectById } from '$lib/api/firebaseProject';
 	import { createProjectPermissions } from '$lib/client/permissions';
 	import { withLoading } from '$lib/utils/loading';
 	import { pageHeader } from '$lib/stores/pageHeader';
@@ -28,11 +28,20 @@
 	
 	let { data }: { data: PageData } = $props();
 
+	// Capture initial project data to prevent infinite loop
+	const initialProjectData = data.project;
+
 	// Get projectId from page params
 	const queryClient = useQueryClient();
+	const projectId = $derived($page.params.projectId);
 
 	// Use TanStack Query for project data
-	const projectQuery = useProject($page.params.projectId, data.project);
+	const projectQuery = createQuery({
+		queryKey: ['project', projectId],
+		queryFn: () => projectId ? getProjectById(projectId) : Promise.resolve(null),
+		enabled: !!projectId,
+		initialData: initialProjectData
+	});
 	
 	// Use query data for project
 	let project: Project | null = $derived($projectQuery.data || null);
@@ -122,10 +131,11 @@
 		isSubmittingProjectEdit = true;
 		try {
 			const updatedProject = await updateProjectDetails(project.id, data);
-			project = updatedProject;
 			toast.success('Project Updated', {
 				description: `"${updatedProject.name}" has been successfully updated.`
 			});
+			// Invalidate to refetch and update the UI automatically
+			await queryClient.invalidateQueries({ queryKey: ['project', updatedProject.id] });
 			isEditProjectDialogOpen = false;
 		} catch (error) {
 			console.error('Error updating project:', error);
@@ -225,9 +235,6 @@
 				const result = await response.json();
 
 				if (result.success) {
-					if (result.updatedProject) {
-						project = result.updatedProject;
-					}
 					// Invalidate the project query to refresh the KanbanBoard
 					if (project) {
 						await queryClient.invalidateQueries({ queryKey: ['project', project.id] });
