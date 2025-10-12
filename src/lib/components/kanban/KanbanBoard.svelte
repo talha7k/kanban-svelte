@@ -779,33 +779,36 @@
                                                      updatedFields,
                                                  )}
                                          />
-                                         <!-- Top half drop zone: insert before this task -->
-                                         {#if $dragState.movingTaskId !== task.id}
-                                             <div
-                                                 class="absolute top-0 left-0 w-full h-1/2"
-                                                 use:droppableTask={{
-                                                     taskId: task.id,
-                                                     columnId: column.id,
-                                                 }}
-                                             ></div>
-                                         {/if}
-                                         <!-- Bottom half drop zone: insert after this task -->
-                                         {#if $dragState.movingTaskId !== task.id}
-                                             {#if nextTask}
-                                                 <div
-                                                     class="absolute bottom-0 left-0 w-full h-1/2"
-                                                     use:droppableTask={{
-                                                         taskId: nextTask.id,
-                                                         columnId: column.id,
-                                                     }}
-                                                 ></div>
-                                             {:else}
-                                                 <div
-                                                     class="absolute bottom-0 left-0 w-full h-1/2"
-                                                     use:droppableColumn={{ columnId: column.id }}
-                                                 ></div>
-                                             {/if}
-                                         {/if}
+                                          <!-- Top half drop zone: insert before this task -->
+                                          {#if $dragState.movingTaskId !== task.id}
+                                              <div
+                                                  class:pointer-events-none={!$dragState.isDragging}
+                                                  class="absolute top-0 left-0 w-full h-1/2"
+                                                  use:droppableTask={{
+                                                      taskId: task.id,
+                                                      columnId: column.id,
+                                                  }}
+                                              ></div>
+                                          {/if}
+                                          <!-- Bottom half drop zone: insert after this task -->
+                                          {#if $dragState.movingTaskId !== task.id}
+                                              {#if nextTask}
+                                                  <div
+                                                      class:pointer-events-none={!$dragState.isDragging}
+                                                      class="absolute bottom-0 left-0 w-full h-1/2"
+                                                      use:droppableTask={{
+                                                          taskId: nextTask.id,
+                                                          columnId: column.id,
+                                                      }}
+                                                  ></div>
+                                              {:else}
+                                                  <div
+                                                      class:pointer-events-none={!$dragState.isDragging}
+                                                      class="absolute bottom-0 left-0 w-full h-1/2"
+                                                      use:droppableColumn={{ columnId: column.id }}
+                                                  ></div>
+                                              {/if}
+                                          {/if}
                                      </div>
                                 {/each}
 

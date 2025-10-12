@@ -304,14 +304,13 @@
 </script>
 
 <Card
-    class="gap-0 py-2 hover:bg-gradient-to-r hover:from-pink-100 hover:to-purple-100 mb-3 shadow-md hover:shadow-lg transition-shadow duration-200 select-none touch-none {isSubmitting
+    class="gap-0 py-2 hover:bg-gradient-to-r hover:from-pink-100 hover:to-purple-100 mb-3 shadow-md hover:shadow-lg transition-shadow duration-200 select-none {isSubmitting
         ? 'opacity-70 cursor-not-allowed'
         : canMoveTask
           ? 'cursor-grab active:cursor-grabbing bg-gradient-to-r from-purple-100 to-white'
           : 'cursor-default'}"
     aria-label="Task: '{task.title}', Priority: '{task.priority}'"
 >
-    <div class="drag-handle">
     <CardHeader class="py-2 px-4 mb-0 pb-0">
         {#if assignees.length > 0}
             <div class="flex items-center gap-1 mb-2">
@@ -576,7 +575,6 @@
             </div>
         </CardContent>
     {/if}
-    </div>
     <CardFooter class="py-1 px-4 flex flex-col items-start">
         <div class="flex justify-end w-full items-center">
             <div
