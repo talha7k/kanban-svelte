@@ -9,7 +9,7 @@ export type UserProjectRole = "manager" | "member";
 export type UserTeamRole = "owner" | "manager" | "member";
 
 // Card Type Field Types
-export type FieldType = "fixed" | "dropdown" | "text_input" | "number_input" | "date_input" | "textarea" | "checkbox" | "priority";
+export type FieldType = "fixed" | "dropdown" | "text_input" | "number_input" | "date_input" | "textarea" | "checkbox";
 
 export interface FieldConfig {
   // Common config

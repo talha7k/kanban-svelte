@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Project, UserProfile, Task, Team } from "$lib/types/types";
+    import type { Project, UserProfile, Task, Team, Comment } from "$lib/types/types";
     import { Button } from "$lib/components/ui/button";
     import {
         Dialog,
@@ -254,8 +254,15 @@
                 const result = await response.json();
                 const newTask = result.task;
 
-                // Invalidate project query to refresh tasks
-                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+                // Update local tasks store immediately for better UX
+                tasksStore.update((tasks) =>
+                    [...tasks, newTask].filter(
+                        (task) => task && typeof task === "object" && task.id,
+                    ),
+                );
+
+                // Invalidate project query to ensure server consistency
+                queryClient.invalidateQueries({ queryKey: ["project", project.id] });
 
                 toast.success("Task added successfully");
             });
@@ -292,6 +299,17 @@
 
         isDeletingTask = true;
         try {
+            // Optimistically remove task from local store
+            tasksStore.update((tasks) =>
+                tasks.filter((task) => task.id !== taskToDelete!.id),
+            );
+
+            // Close dialogs if the deleted task was being viewed
+            if (taskToView?.id === taskToDelete!.id) {
+                isViewDialogOpen = false;
+                taskToView = null;
+            }
+
             await withLoading(async () => {
                 // Get Firebase ID token for authentication
                 const idToken = await user.getIdToken();
@@ -313,14 +331,8 @@
                     throw new Error("Failed to delete task");
                 }
 
-                // Invalidate project query to refresh tasks
+                // Invalidate project query to ensure server consistency
                 await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
-
-                // Close dialogs if the deleted task was being viewed
-                if (taskToView?.id === taskToDelete!.id) {
-                    isViewDialogOpen = false;
-                    taskToView = null;
-                }
 
                 toast.success("Task deleted successfully");
                 isDeleteDialogOpen = false;
@@ -329,6 +341,8 @@
         } catch (error) {
             console.error("Error deleting task:", error);
             toast.error("Failed to delete task");
+            // Revert optimistic update on error
+            await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
         } finally {
             isDeletingTask = false;
         }
@@ -353,6 +367,35 @@
 
         isSubmittingComment = true;
         try {
+            // Optimistically add comment to local store
+            const userProfile = users.find((u) => u.id === user.uid);
+            const newComment: Comment = {
+                id: `temp-${Date.now()}`, // Temporary ID
+                userId: user.uid,
+                userName: userProfile?.name || user.displayName || "Unknown User",
+                avatarUrl: userProfile?.avatarUrl || user.photoURL || undefined,
+                content: commentText,
+                createdAt: new Date().toISOString(),
+            };
+            tasksStore.update((tasks) =>
+                tasks.map((task) =>
+                    task.id === taskId
+                        ? {
+                              ...task,
+                              comments: [...(task.comments || []), newComment],
+                          }
+                        : task,
+                ),
+            );
+
+            // Update taskToView if it's the same task
+            if (taskToView?.id === taskId) {
+                taskToView = {
+                    ...taskToView,
+                    comments: [...(taskToView.comments || []), newComment],
+                };
+            }
+
             await withLoading(async () => {
                 // Get Firebase ID token for authentication
                 const idToken = await user.getIdToken();
@@ -381,16 +424,22 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                // Invalidate project query to refresh tasks
-                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+                // Update local store with server response
+                tasksStore.update((tasks) =>
+                    tasks.map((task) =>
+                        task.id === taskId ? updatedTask : task,
+                    ),
+                );
 
-                // Update the taskToView if it's the same task
+                // Update taskToView if it's the same task
                 if (taskToView?.id === taskId) {
                     taskToView = updatedTask;
                 }
             });
         } catch (error) {
             console.error("Error adding comment:", error);
+            // Revert optimistic update on error
+            await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
             throw error; // Re-throw to let ViewTaskDialog handle the error
         } finally {
             isSubmittingComment = false;
@@ -409,6 +458,34 @@
         }
 
         try {
+            // Optimistically update comment in local store
+            tasksStore.update((tasks) =>
+                tasks.map((task) =>
+                    task.id === taskId
+                        ? {
+                              ...task,
+                              comments: (task.comments || []).map((comment) =>
+                                  comment.id === commentId
+                                      ? { ...comment, text: newContent }
+                                      : comment,
+                              ),
+                          }
+                        : task,
+                ),
+            );
+
+            // Update taskToView if it's the same task
+            if (taskToView?.id === taskId) {
+                taskToView = {
+                    ...taskToView,
+                    comments: (taskToView.comments || []).map((comment) =>
+                        comment.id === commentId
+                            ? { ...comment, text: newContent }
+                            : comment,
+                    ),
+                };
+            }
+
             await withLoading(async () => {
                 // Get Firebase ID token for authentication
                 const idToken = await user.getIdToken();
@@ -439,8 +516,12 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                // Invalidate project query to refresh tasks
-                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+                // Update local store with server response
+                tasksStore.update((tasks) =>
+                    tasks.map((task) =>
+                        task.id === taskId ? updatedTask : task,
+                    ),
+                );
 
                 // Update taskToView if it's the same task
                 if (taskToView?.id === taskId) {
@@ -452,6 +533,8 @@
         } catch (error) {
             console.error("Error editing comment:", error);
             toast.error("Failed to edit comment");
+            // Revert optimistic update on error
+            await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
             throw error;
         }
     }
@@ -464,6 +547,30 @@
         }
 
         try {
+            // Optimistically remove comment from local store
+            tasksStore.update((tasks) =>
+                tasks.map((task) =>
+                    task.id === taskId
+                        ? {
+                              ...task,
+                              comments: (task.comments || []).filter(
+                                  (comment) => comment.id !== commentId,
+                              ),
+                          }
+                        : task,
+                ),
+            );
+
+            // Update taskToView if it's the same task
+            if (taskToView?.id === taskId) {
+                taskToView = {
+                    ...taskToView,
+                    comments: (taskToView.comments || []).filter(
+                        (comment) => comment.id !== commentId,
+                    ),
+                };
+            }
+
             await withLoading(async () => {
                 // Get Firebase ID token for authentication
                 const idToken = await user.getIdToken();
@@ -494,8 +601,12 @@
                     throw new Error("Invalid task data received from API");
                 }
 
-                // Invalidate project query to refresh tasks
-                await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
+                // Update local store with server response
+                tasksStore.update((tasks) =>
+                    tasks.map((task) =>
+                        task.id === taskId ? updatedTask : task,
+                    ),
+                );
 
                 // Update taskToView if it's the same task
                 if (taskToView?.id === taskId) {
@@ -507,6 +618,8 @@
         } catch (error) {
             console.error("Error deleting comment:", error);
             toast.error("Failed to delete comment");
+            // Revert optimistic update on error
+            await queryClient.invalidateQueries({ queryKey: ["project", project.id] });
             throw error;
         }
     }

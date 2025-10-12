@@ -185,28 +185,27 @@
         cardTypes.find((ct) => ct.id === task.cardTypeId) || null,
     );
 
-    let hasPriorityField = $derived(
-        selectedCardType?.fields?.some((field: any) => field.type === 'priority') || false
-    );
+    let priorityField = $derived(() => {
+        if (!selectedCardType?.fields) return null;
+        return selectedCardType.fields.find((field: any) => {
+            const fieldName = field.name.toLowerCase();
+            return fieldName.includes('priority') || fieldName.includes('severity');
+        }) || null;
+    });
 
     let customPriorityValue = $derived(() => {
-        if (!hasPriorityField || !selectedCardType) return null;
-        const priorityField = selectedCardType.fields.find((field: any) => field.type === 'priority');
-        if (!priorityField) return null;
-        return task.fieldValues?.[priorityField.id] || null;
+        const field = priorityField();
+        if (!field) return null;
+        return task.fieldValues?.[field.id] || null;
     });
 
     let effectivePriority = $derived(() => {
-        if (hasPriorityField) {
+        const field = priorityField();
+        if (field) {
             const value = customPriorityValue();
             if (!value) return "NONE";
-            switch (value.toLowerCase()) {
-                case "low": return "LOW";
-                case "medium": return "MEDIUM";
-                case "high": return "HIGH";
-                case "critical": return "HIGH"; // Map critical to HIGH
-                default: return "NONE";
-            }
+            // Value should already be in the correct enum format (LOW, MEDIUM, HIGH, NONE)
+            return value as Task["priority"];
         }
         return task.priority;
     });
@@ -242,8 +241,6 @@
                 return "Textarea";
             case "checkbox":
                 return "Checkbox";
-            case "priority":
-                return "Priority";
             default:
                 return "Unknown";
         }
@@ -265,8 +262,6 @@
                 return "bg-yellow-100 text-yellow-800 border-yellow-200";
             case "checkbox":
                 return "bg-indigo-100 text-indigo-800 border-indigo-200";
-            case "priority":
-                return "bg-red-100 text-red-800 border-red-200";
             default:
                 return "bg-gray-100 text-gray-800 border-gray-200";
         }
@@ -288,8 +283,6 @@
                 return AlignLeft;
             case "checkbox":
                 return CheckSquare;
-            case "priority":
-                return Flag;
             default:
                 return Type;
         }
@@ -297,19 +290,22 @@
 
     function getFieldDisplayValue(field: any, task: Task): string {
         const value = task.fieldValues?.[field.id];
+        const fieldName = field.name.toLowerCase();
+        const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
+
         if (field.type === "fixed") {
             return field.config?.value || "N/A";
         } else if (field.type === "checkbox") {
             return value ? "Yes" : "No";
         } else if (field.type === "date_input" && value) {
             return format(parseISO(value), "MMM d, yyyy");
-        } else if (field.type === "priority") {
-            // Map priority values to display names
-            switch (value?.toLowerCase()) {
-                case "low": return "Low";
-                case "medium": return "Medium";
-                case "high": return "High";
-                case "critical": return "Critical";
+        } else if (isPriorityField) {
+            // Map priority enum values to display names
+            switch (value) {
+                case "LOW": return "Low";
+                case "MEDIUM": return "Medium";
+                case "HIGH": return "High";
+                case "NONE": return "None";
                 default: return value || "Not set";
             }
         } else {
@@ -426,7 +422,7 @@
         <CardContent class="px-4 py-1">
             <div class="flex flex-wrap gap-1">
                  {#each selectedCardType.fields as field (field.id)}
-                     {#if field.name !== "title" && field.name !== "description" && field.type !== "priority"}
+                     {#if field.name !== "title" && field.name !== "description" && field.id !== priorityField()?.id}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge

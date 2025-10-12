@@ -62,7 +62,6 @@
       case 'date_input': return 'Date Input';
       case 'textarea': return 'Textarea';
       case 'checkbox': return 'Checkbox';
-      case 'priority': return 'Priority';
       default: return 'Unknown';
     }
   }
@@ -76,7 +75,6 @@
       case 'date_input': return Calendar;
       case 'textarea': return AlignLeft;
       case 'checkbox': return CheckSquare;
-      case 'priority': return AlertTriangle;
       default: return Type;
     }
   }
@@ -84,19 +82,22 @@
   function handleAddField() {
     if (!newFieldName.trim()) return;
 
+    const fieldName = newFieldName.trim().toLowerCase();
+    const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
+
     const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) :
-                     newFieldType === 'priority' ? ['Low', 'Medium', 'High', 'Critical'] : [];
+                     isPriorityField ? ['LOW', 'MEDIUM', 'HIGH', 'NONE'] : [];
 
     const newField: CardTypeField = {
       id: crypto.randomUUID(),
       name: newFieldName.trim(),
-      type: newFieldType,
+      type: isPriorityField ? 'dropdown' : newFieldType,
       order: fields.length,
       config: {
         // Add default config based on type
         ...(newFieldType === 'text_input' && { placeholder: '' }),
         ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
-        ...((newFieldType === 'dropdown' || newFieldType === 'priority') && { options }),
+        ...((newFieldType === 'dropdown' || isPriorityField) && { options }),
         ...(newFieldType === 'textarea' && { placeholder: '' }),
       }
     };
@@ -124,7 +125,7 @@
   function getDefaultDropdownOptions(fieldName: string): string[] {
     const name = fieldName.toLowerCase();
     if (name.includes('priority') || name.includes('severity')) {
-      return ['Low', 'Medium', 'High', 'Critical'];
+      return ['LOW', 'MEDIUM', 'HIGH', 'NONE'];
     }
     if (name.includes('status')) {
       return ['Open', 'In Progress', 'Closed'];
@@ -151,42 +152,55 @@
       color = generatedData.color;
 
       // Process generated fields
-      let processedFields = generatedData.fields.map(field => ({
-        ...field,
-        id: crypto.randomUUID(),
-        order: generatedData.fields.indexOf(field),
-        config: {
-          ...field.config,
-          required: false, // AI-generated fields should not be required by default
-          // Ensure dropdown fields have options array
-          ...(field.type === 'dropdown' && {
-            options: field.config?.options || getDefaultDropdownOptions(field.name)
-          }),
-          // Ensure other field types have proper defaults
-          ...(field.type === 'text_input' && {
-            placeholder: field.config?.placeholder || ''
-          }),
-          ...(field.type === 'number_input' && {
-            min: field.config?.min,
-            max: field.config?.max
-          }),
-          ...(field.type === 'textarea' && {
-            placeholder: field.config?.placeholder || ''
-          }),
-        }
-      }));
+      let processedFields = generatedData.fields.map(field => {
+        const fieldName = field.name.toLowerCase();
+        const isPriorityField = fieldName.includes('priority') || fieldName.includes('severity');
+
+        return {
+          ...field,
+          id: crypto.randomUUID(),
+          order: generatedData.fields.indexOf(field),
+          type: isPriorityField ? 'dropdown' : field.type,
+          config: {
+            ...field.config,
+            required: false, // AI-generated fields should not be required by default
+            // Ensure dropdown fields have options array
+            ...(field.type === 'dropdown' && {
+              options: field.config?.options || getDefaultDropdownOptions(field.name)
+            }),
+            // Ensure priority fields are dropdowns with correct options
+            ...(isPriorityField && {
+              options: ['LOW', 'MEDIUM', 'HIGH', 'NONE']
+            }),
+            // Ensure other field types have proper defaults
+            ...(field.type === 'text_input' && {
+              placeholder: field.config?.placeholder || ''
+            }),
+            ...(field.type === 'number_input' && {
+              min: field.config?.min,
+              max: field.config?.max
+            }),
+            ...(field.type === 'textarea' && {
+              placeholder: field.config?.placeholder || ''
+            }),
+          }
+        };
+      });
 
       // Always ensure a priority field is included
-      const hasPriorityField = processedFields.some(field => field.type === 'priority');
+      const hasPriorityField = processedFields.some(field => {
+        const fieldName = field.name.toLowerCase();
+        return fieldName.includes('priority') || fieldName.includes('severity');
+      });
       if (!hasPriorityField) {
         const priorityField = {
           id: crypto.randomUUID(),
           name: 'Priority',
-          type: 'priority' as const,
+          type: 'dropdown' as const,
           order: processedFields.length,
           config: {
             required: false,
-            options: ['Low', 'Medium', 'High', 'Critical']
+            options: ['LOW', 'MEDIUM', 'HIGH', 'NONE']
           }
         };
         processedFields.push(priorityField);
@@ -353,7 +367,6 @@
            <option value="date_input">Date Input</option>
            <option value="checkbox">Checkbox</option>
            <option value="dropdown">Dropdown</option>
-           <option value="priority">Priority</option>
          </select>
       </div>
       {#if newFieldType === 'dropdown'}
