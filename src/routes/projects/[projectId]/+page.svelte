@@ -42,7 +42,7 @@
   const canViewProject = $derived($permissions?.canViewProject() ?? false);
 	let users: UserProfile[] = $state([]);
 	let projectCreator: UserProfile | null = $state(null);
-	let isLoadingUsers = $state(true);
+	let isLoadingUsers = $state(false); // Load users in background without blocking UI
 	let isEditProjectDialogOpen = $state(false);
 	let isSubmittingProjectEdit = $state(false);
 	let isGenerateTasksDialogOpen = $state(false);
@@ -51,26 +51,21 @@
 	let isGeneratingTasks = $state(false);
 	let isAddingTasks = $state(false);
 
-	// Fetch users when project loads
+	// Fetch users in background when project loads
 	async function fetchUsers() {
 		if (!$page.params.projectId || $authLoading || !$currentUser) return;
-		
-		isLoadingUsers = true;
+
 		try {
 			const fetchedUsers = await getProjectRelevantUsers($page.params.projectId);
 			users = fetchedUsers;
-			
+
 			if (project?.ownerId) {
 				const creatorProfile = await getUserProfile(project.ownerId);
 				projectCreator = creatorProfile;
 			}
 		} catch (err) {
 			console.error('Error fetching users:', err);
-			toast.error('Error Loading Users', {
-				description: err instanceof Error ? err.message : 'Could not load project users.'
-			});
-		} finally {
-			isLoadingUsers = false;
+			// Don't show error toast for background loading - users will just not appear
 		}
 	}
 
@@ -280,9 +275,9 @@
 		)
 	);
 
-	let isLoading = $derived($authLoading || (!data.project && $projectQuery.isLoading) || isLoadingUsers);
+	let isLoading = $derived(false); // No additional loading states - everything loads in background
 	let error = $derived(
-		(!data.project && $projectQuery.error?.message) || 
+		(!data.project && $projectQuery.error?.message) ||
 			(!$authLoading && !hasAccess && project ? 'You do not have access to this project.' : null)
 	);
 </script>
@@ -292,11 +287,6 @@
 	<div class="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
 		<Loader2 class="h-12 w-12 animate-spin mb-4 text-primary" />
 		<p class="text-lg">Loading...</p>
-	</div>
-{:else if isLoading}
-	<div class="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
-		<Loader2 class="h-12 w-12 animate-spin mb-4 text-primary" />
-		<p class="text-lg">Loading project data...</p>
 	</div>
 {:else if error && !project}
 	<div class="flex flex-col items-center justify-center h-full text-destructive p-8">

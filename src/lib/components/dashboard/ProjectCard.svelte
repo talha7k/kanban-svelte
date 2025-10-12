@@ -53,13 +53,10 @@
 	$: canManageMembers = $permissions.canManageProjectMembers();
 	$: isOwner = $permissions.isProjectOwner();
 
-	let isPending = false;
 	let isLoadingMembers = false;
 
 	function handleNavigateToProject() {
-		isPending = true;
 		goto(`/projects/${project.id}`);
-		// Note: isPending will be reset when component unmounts or navigation completes
 	}
 
 	function handleManageMembers(e: MouseEvent) {
@@ -84,13 +81,8 @@
 >
 	<CardHeader
 		onclick={handleNavigateToProject}
-		class="pb-3 cursor-pointer relative"
+		class="pb-3 cursor-pointer"
 	>
-		{#if isPending}
-			<div class="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-t-lg">
-				<Loader2 class="h-6 w-6 animate-spin text-primary" />
-			</div>
-		{/if}
 		<div class="flex justify-between items-start">
 			<CardTitle class="text-lg">{project.name}</CardTitle>
 			<div class="flex items-center space-x-2">

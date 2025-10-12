@@ -21,7 +21,7 @@
 	function handleSelect(e: MouseEvent, teamId: string) {
 		e.stopPropagation();
 		if (isNavigating) return;
-		
+
 		isNavigating = true;
 		onSelect?.(teamId);
 	}
@@ -29,7 +29,7 @@
 	function handleManage(e: MouseEvent) {
 		e.stopPropagation();
 		if (isNavigating) return;
-		
+
 		isNavigating = true;
 		goto(`/teams/edit/${team.id}`);
 	}
