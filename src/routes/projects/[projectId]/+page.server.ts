@@ -1,9 +1,9 @@
 import { error } from '@sveltejs/kit';
 import type { ServerLoad } from '@sveltejs/kit';
-import { getProjectByIdServer } from '$lib/server/firebaseProject';
+import { getProjectById } from '$lib/server/api/firebaseProject';
 import { optionalAuth } from '$lib/server/auth';
 import { guardProjectAccess } from '$lib/auth/permissions';
-import { getTeam } from '$lib/server/firebaseTeam';
+import { getTeam } from '$lib/server/api/firebaseTeam';
 import type { Project, Team } from '$lib/types/types';
 
 export const load: ServerLoad = async ({ params, request }) => {
@@ -21,7 +21,7 @@ export const load: ServerLoad = async ({ params, request }) => {
 		const userId = await optionalAuth(request);
 		
 		console.log('Attempting to fetch project:', projectId);
-		const project = await getProjectByIdServer(projectId);
+		const project = await getProjectById(projectId);
 		
 		if (!project) {
 			console.error('Project not found:', projectId);

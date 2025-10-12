@@ -1,73 +1,30 @@
 import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/firebase';
+import { deleteTaskFromProject } from '$lib/server/api/firebaseTask';
+import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-export async function DELETE({ request }: { request: Request }) {
+export const DELETE: RequestHandler = async ({ request }) => {
   try {
-    const { projectId, taskId, currentUserUid } = await request.json();
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
 
-    if (!projectId || !taskId || !currentUserUid) {
+    const { projectId, taskId } = await request.json();
+
+    if (!projectId || !taskId) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId, currentUserUid' },
+        { error: 'Missing required parameters: projectId, taskId' },
         { status: 400 }
       );
     }
 
-    if (!db) {
-      return json(
-        { error: 'Firebase Firestore not initialized' },
-        { status: 500 }
-      );
-    }
+    await deleteTaskFromProject(projectId, taskId, userId);
 
-    const firestore = db();
-    const projectRef = firestore.collection('projects').doc(projectId);
-    const projectDoc = await projectRef.get();
-    
-    if (!projectDoc.exists) {
-      return json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
-    }
-
-    const project = projectDoc.data();
-    
-    // Check if the current user is the project owner (only project managers can delete tasks)
-    if (project?.ownerId !== currentUserUid) {
-      return json(
-        { error: 'Only the project owner can delete tasks' },
-        { status: 403 }
-      );
-    }
-
-    const tasks = project?.tasks || [];
-    const taskIndex = tasks.findIndex((t: any) => t.id === taskId);
-    
-    if (taskIndex === -1) {
-      return json(
-        { error: 'Task not found' },
-        { status: 404 }
-      );
-    }
-
-    // Remove the task from the tasks array
-    const updatedTasks = tasks.filter((t: any) => t.id !== taskId);
-
-    // Update the project with the new tasks array
-    await projectRef.update({
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString(),
-    });
-
-    return json(
-      { message: 'Task deleted successfully' },
-      { status: 200 }
-    );
+    return json({ success: true, message: 'Task deleted successfully' });
   } catch (error) {
-    console.error('Error deleting task:', error);
+    console.error('Error in delete-task API:', error);
     return json(
-      { error: 'Internal server error' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to delete task' },
       { status: 500 }
     );
   }
-}
+};

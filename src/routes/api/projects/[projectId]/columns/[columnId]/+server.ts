@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import { updateColumnInProject, deleteColumnFromProject } from '$lib/server/api/firebaseColumn';
-import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-export async function PUT({ request, params }) {
+export const PUT: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId, columnId } = params;
     const columnUpdateData = await request.json();
@@ -20,16 +20,6 @@ export async function PUT({ request, params }) {
       throw error(400, 'Column order must be a number');
     }
 
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
-    }
-
     // Update the column
     const updatedColumn = await updateColumnInProject(projectId, columnId, columnUpdateData, currentUserUid);
 
@@ -39,9 +29,9 @@ export async function PUT({ request, params }) {
     const message = err instanceof Error ? err.message : 'Failed to update column';
     throw error(500, message);
   }
-}
+};
 
-export async function DELETE({ request, params }) {
+export const DELETE: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId, columnId } = params;
     const url = new URL(request.url);
@@ -49,16 +39,6 @@ export async function DELETE({ request, params }) {
 
     // Authenticate user
     const currentUserUid = await requireAuth({ request } as any);
-
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
-    }
 
     // Delete the column
     await deleteColumnFromProject(projectId, columnId, currentUserUid, targetColumnId);
@@ -69,4 +49,4 @@ export async function DELETE({ request, params }) {
     const message = err instanceof Error ? err.message : 'Failed to delete column';
     throw error(500, message);
   }
-}
+};

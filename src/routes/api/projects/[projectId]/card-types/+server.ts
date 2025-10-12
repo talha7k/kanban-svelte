@@ -1,12 +1,9 @@
 import { json, error } from '@sveltejs/kit';
-import { getProjectById, updateProjectDetails } from '$lib/server/api/firebaseProject';
+import { addCardTypeToProject } from '$lib/server/api/firebaseCardType';
 import { requireAuth } from '$lib/server/auth';
-import { getTeam } from '$lib/server/api/firebaseTeam';
-import { guardTaskManagement } from '$lib/auth/permissions';
-import { v4 as uuidv4 } from 'uuid';
-import type { CardType } from '$lib/types/types';
+import type { RequestHandler } from './$types';
 
-export async function POST({ request, params }) {
+export const POST: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId } = params;
     const cardTypeData = await request.json();
@@ -23,42 +20,7 @@ export async function POST({ request, params }) {
       cardTypeData.fields = [];
     }
 
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
-    }
-
-    // Load team data for permissions
-    let team = undefined;
-    if (project.teamId) {
-      team = await getTeam(project.teamId);
-    }
-
-    // Check task management permissions
-    try {
-      guardTaskManagement(currentUserUid, project, team);
-    } catch (error) {
-      throw error(403, `Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
-    }
-
-    // Create the card type
-    const newCardTypeId = uuidv4();
-    const newCardType: CardType = {
-      ...cardTypeData,
-      id: newCardTypeId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const currentCardTypes = project.cardTypes || [];
-    await updateProjectDetails(projectId, { cardTypes: [...currentCardTypes, newCardType] }, currentUserUid);
-
-    const cardType = newCardType;
+    const cardType = await addCardTypeToProject(projectId, cardTypeData, currentUserUid);
 
     return json({ success: true, cardType });
   } catch (err) {
@@ -66,4 +28,4 @@ export async function POST({ request, params }) {
     const message = err instanceof Error ? err.message : 'Failed to create card type';
     throw error(500, message);
   }
-}
+};

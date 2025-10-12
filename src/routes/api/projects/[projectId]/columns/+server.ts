@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import { addColumnToProject } from '$lib/server/api/firebaseColumn';
-import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-export async function POST({ request, params }) {
+export const POST: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId } = params;
     const columnData = await request.json();
@@ -20,16 +20,6 @@ export async function POST({ request, params }) {
       throw error(400, 'Column order is required and must be a number');
     }
 
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
-    }
-
     // Create the column
     const column = await addColumnToProject(projectId, columnData, currentUserUid);
 
@@ -39,4 +29,4 @@ export async function POST({ request, params }) {
     const message = err instanceof Error ? err.message : 'Failed to create column';
     throw error(500, message);
   }
-}
+};

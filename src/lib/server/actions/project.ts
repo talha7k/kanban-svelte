@@ -7,12 +7,13 @@ import { generateTaskDetails, type GenerateTaskDetailsInput, type GenerateTaskDe
 
 export async function generateTasksAction(projectId: string, brief: string, currentUserUid: string, taskCount: number = 3) {
   try {
-    const generatedTasks = await generateProjectTasks(brief, taskCount);
-    const project = await getProjectByIdServer(projectId);
+    const project = await getProjectById(projectId);
 
     if (!project) {
       throw new Error("Project not found");
     }
+
+    const generatedTasks = await generateProjectTasks(brief, taskCount);
 
     // Return the generated tasks without adding them to the project
     return generatedTasks.map(taskData => ({
@@ -26,7 +27,7 @@ export async function generateTasksAction(projectId: string, brief: string, curr
       assigneeUids: [],
       dueDate: null,
       tags: [],
-      
+
     }));
   } catch (error) {
     console.error('Error in generateTasksAction:', error);
@@ -36,7 +37,7 @@ export async function generateTasksAction(projectId: string, brief: string, curr
 
 export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>[], currentUserUid: string) {
   try {
-    const project = await getProjectByIdServer(projectId);
+    const project = await getProjectById(projectId);
 
     if (!project) {
       return { success: false, error: "Project not found" };
@@ -45,7 +46,7 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
     let addedTasksCount = 0;
     for (const taskData of tasks) {
       try {
-        await addTaskToProjectServer(projectId, {
+        await addTaskToProject(projectId, {
           title: taskData.title,
           description: taskData.description,
           priority: taskData.priority,
@@ -66,7 +67,7 @@ export async function addApprovedTasksAction(projectId: string, tasks: Omit<Task
     }
 
     // Fetch updated project
-    const updatedProject = await getProjectByIdServer(projectId);
+    const updatedProject = await getProjectById(projectId);
 
     return { 
       success: true, 

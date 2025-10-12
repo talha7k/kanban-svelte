@@ -10,7 +10,7 @@ import type {
   Team,
 } from "$lib/types/types";
 import { v4 as uuidv4 } from "uuid";
-import { guardProjectCreation } from "$lib/auth/permissions";
+import { guardProjectCreation, guardTaskManagement } from "$lib/auth/permissions";
 import { getTeam } from "$lib/server/api/firebaseTeam";
 
 

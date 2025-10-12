@@ -75,10 +75,14 @@ export const addTaskToProject = async (projectId: string, taskData: NewTaskData,
   }
 };
 
-export const updateTaskInProject = async (projectId: string, taskId: string, taskUpdateData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>): Promise<Task> => {
+export const updateTaskInProject = async (projectId: string, taskId: string, taskUpdateData: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>, currentUserUid: string): Promise<Task> => {
   const firestore = db();
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
+  }
+
+  if (!currentUserUid) {
+    throw new Error("User must be authenticated to update tasks.");
   }
 
   const projectRef = firestore.collection('projects').doc(projectId);
@@ -86,22 +90,52 @@ export const updateTaskInProject = async (projectId: string, taskId: string, tas
     const projectDoc = await projectRef.get();
     if (!projectDoc.exists) throw new Error('Project not found');
 
-    const projectData = projectDoc.data() as ProjectDocument;
-    const currentTasks = projectData.tasks || [];
-    
+    const project = projectDoc.data() as Project;
+    const currentTasks = project.tasks || [];
+
     const taskIndex = currentTasks.findIndex(task => task.id === taskId);
     if (taskIndex === -1) throw new Error('Task not found');
 
+    // Check task management permissions
+    let team: Team | undefined;
+    if (project.teamId) {
+      team = await getTeam(project.teamId) || undefined;
+    }
+
+    try {
+      guardTaskManagement(currentUserUid as UserId, project, team);
+    } catch (error) {
+      throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage tasks in this project'}`);
+    }
+
+    const existingTask = currentTasks[taskIndex];
+
+    // Create updated task object
     const updatedTask = {
-      ...currentTasks[taskIndex],
-      ...taskUpdateData
+      ...existingTask,
+      ...taskUpdateData,
+      updatedAt: new Date().toISOString(),
     };
+
+    // Handle array fields to ensure they are empty arrays if undefined
+    if (taskUpdateData.assigneeUids !== undefined) {
+      updatedTask.assigneeUids = taskUpdateData.assigneeUids || [];
+    }
+    if (taskUpdateData.tags !== undefined) {
+      updatedTask.tags = taskUpdateData.tags || [];
+    }
+
+    // Ensure optional string fields are handled properly
+    if (taskUpdateData.description === '') updatedTask.description = null;
+    if (taskUpdateData.dueDate === '') updatedTask.dueDate = null;
+    if (taskUpdateData.reporterId === '') updatedTask.reporterId = null;
 
     const updatedTasks = [...currentTasks];
     updatedTasks[taskIndex] = updatedTask;
-    
+
     await projectRef.update({
-      tasks: updatedTasks
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
     });
 
     return updatedTask;
@@ -111,10 +145,14 @@ export const updateTaskInProject = async (projectId: string, taskId: string, tas
   }
 };
 
-export const deleteTaskFromProject = async (projectId: string, taskId: string): Promise<void> => {
+export const deleteTaskFromProject = async (projectId: string, taskId: string, currentUserUid: string): Promise<void> => {
   const firestore = db();
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
+  }
+
+  if (!currentUserUid) {
+    throw new Error("User must be authenticated to delete tasks.");
   }
 
   const projectRef = firestore.collection('projects').doc(projectId);
@@ -123,12 +161,19 @@ export const deleteTaskFromProject = async (projectId: string, taskId: string): 
     if (!projectDoc.exists) throw new Error('Project not found');
 
     const projectData = projectDoc.data() as ProjectDocument;
+
+    // Check if the current user is the project owner (only project managers can delete tasks)
+    if (projectData.ownerId !== currentUserUid) {
+      throw new Error('Only the project owner can delete tasks');
+    }
+
     const currentTasks = projectData.tasks || [];
-    
+
     const updatedTasks = currentTasks.filter(task => task.id !== taskId);
-    
+
     await projectRef.update({
-      tasks: updatedTasks
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error deleting task from project:', error);
@@ -149,7 +194,7 @@ export const moveTaskInProject = async (projectId: string, taskId: string, newCo
   const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as Project;
     
@@ -210,7 +255,7 @@ export const addCommentToTask = async (projectId: string, taskId: TaskId, commen
   const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as ProjectDocument;
     const taskIndex = project.tasks.findIndex(t => t.id === taskId);
@@ -248,7 +293,7 @@ export const updateCommentInTask = async (projectId: string, taskId: TaskId, com
   if (!firestore) {
     throw new Error("Firebase Firestore not initialized");
   }
-  
+
   if (!currentUserUid) {
     throw new Error("User must be authenticated to update comments.");
   }
@@ -256,7 +301,7 @@ export const updateCommentInTask = async (projectId: string, taskId: TaskId, com
   const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as ProjectDocument;
     const taskIndex = project.tasks.findIndex(t => t.id === taskId);
@@ -271,6 +316,15 @@ export const updateCommentInTask = async (projectId: string, taskId: TaskId, com
     const existingComment = (task.comments || [])[commentIndex];
     if (existingComment.userId !== currentUserUid) {
       throw new Error("Only the comment author can update their comment.");
+    }
+
+    // Check if comment is within 5-minute edit window
+    const commentTime = new Date(existingComment.createdAt);
+    const now = new Date();
+    const minutesSinceCreation = Math.floor((now.getTime() - commentTime.getTime()) / (1000 * 60));
+
+    if (minutesSinceCreation > 5) {
+      throw new Error('Comments can only be edited within 5 minutes of posting');
     }
 
     const updatedComment = {
@@ -313,7 +367,7 @@ export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, c
   const projectRef = firestore.collection('projects').doc(projectId);
   try {
     const projectDoc = await projectRef.get();
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as ProjectDocument;
     const taskIndex = project.tasks.findIndex(t => t.id === taskId);
@@ -328,6 +382,15 @@ export const deleteCommentFromTask = async (projectId: string, taskId: TaskId, c
     const existingComment = (task.comments || [])[commentIndex];
     if (existingComment.userId !== currentUserUid) {
       throw new Error("Only the comment author can delete their comment.");
+    }
+
+    // Check if comment is within 5-minute delete window
+    const commentTime = new Date(existingComment.createdAt);
+    const now = new Date();
+    const minutesSinceCreation = Math.floor((now.getTime() - commentTime.getTime()) / (1000 * 60));
+
+    if (minutesSinceCreation > 5) {
+      throw new Error('Comments can only be deleted within 5 minutes of posting');
     }
 
     const updatedTasks = [...project.tasks];

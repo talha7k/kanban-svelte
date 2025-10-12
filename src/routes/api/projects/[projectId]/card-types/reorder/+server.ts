@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import { reorderCardTypesInProject } from '$lib/server/api/firebaseCardType';
-import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-export async function POST({ request, params }) {
+export const POST: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId } = params;
     const { cardTypeIds } = await request.json();
@@ -14,16 +14,6 @@ export async function POST({ request, params }) {
     // Validate input
     if (!Array.isArray(cardTypeIds)) {
       throw error(400, 'cardTypeIds must be an array');
-    }
-
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
     }
 
     // Reorder the card types

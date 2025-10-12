@@ -3,33 +3,28 @@ import { auth as adminAuth, db as adminDb } from '$lib/server/firebase';
 import type { CardType, CardTypeId, UserId, Project, Team } from '$lib/types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { guardTaskManagement } from '$lib/auth/permissions';
-import { getTeam } from '$lib/api/firebaseTeam';
+import { getTeam } from '$lib/server/api/firebaseTeam';
 
 // Card Type Functions
 export const addCardTypeToProject = async (
   projectId: string,
   cardTypeData: Omit<CardType, 'id' | 'createdAt' | 'updatedAt'>,
-  currentUserUid?: string,
+  currentUserUid: string,
   team?: Team
 ): Promise<CardType> => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
 
-  // For server actions, currentUserUid is passed as parameter
-  // For client-side calls, use auth.currentUser
-  if (!auth) {
-    throw new Error("Firebase auth not initialized");
-  }
-  const userUid = currentUserUid || auth.currentUser?.uid;
-  if (!userUid) {
+  if (!currentUserUid) {
     throw new Error("User must be authenticated to add card types.");
   }
 
-  const projectRef = doc(db, 'projects', projectId);
+  const projectRef = db.collection('projects').doc(projectId);
   try {
-    const projectDoc = await getDoc(projectRef);
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    const projectDoc = await projectRef.get();
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as Project;
 
@@ -40,7 +35,7 @@ export const addCardTypeToProject = async (
     }
 
     try {
-      guardTaskManagement(userUid as UserId, project, teamData);
+      guardTaskManagement(currentUserUid as UserId, project, team);
     } catch (error) {
       throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
     }
@@ -54,7 +49,7 @@ export const addCardTypeToProject = async (
     };
 
     const currentCardTypes = project.cardTypes || [];
-    await updateDoc(projectRef, {
+    await projectRef.update({
       cardTypes: [...currentCardTypes, newCardType],
       updatedAt: new Date().toISOString(),
     });
@@ -69,24 +64,22 @@ export const addCardTypeToProject = async (
 export const updateCardTypeInProject = async (
   projectId: string,
   cardTypeId: string,
-  cardTypeUpdateData: Partial<Omit<CardType, 'id' | 'createdAt'>>
+  cardTypeUpdateData: Partial<Omit<CardType, 'id' | 'createdAt'>>,
+  currentUserUid: string
 ): Promise<CardType> => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
-  if (!auth) {
-    throw new Error("Firebase auth not initialized");
-  }
 
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
+  if (!currentUserUid) {
     throw new Error("User must be authenticated to update card types.");
   }
 
-  const projectRef = doc(db, 'projects', projectId);
+  const projectRef = db.collection('projects').doc(projectId);
   try {
-    const projectDoc = await getDoc(projectRef);
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    const projectDoc = await projectRef.get();
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as Project;
 
@@ -97,7 +90,7 @@ export const updateCardTypeInProject = async (
     }
 
     try {
-      guardTaskManagement(currentUser.uid as UserId, project, team);
+      guardTaskManagement(currentUserUid as UserId, project, team);
     } catch (error) {
       throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
     }
@@ -116,7 +109,7 @@ export const updateCardTypeInProject = async (
     const updatedCardTypes = [...(project.cardTypes || [])];
     updatedCardTypes[cardTypeIndex] = updatedCardType;
 
-    await updateDoc(projectRef, {
+    await projectRef.update({
       cardTypes: updatedCardTypes,
       updatedAt: new Date().toISOString(),
     });
@@ -130,24 +123,22 @@ export const updateCardTypeInProject = async (
 
 export const deleteCardTypeFromProject = async (
   projectId: string,
-  cardTypeId: string
+  cardTypeId: string,
+  currentUserUid: string
 ): Promise<void> => {
+  const db = adminDb();
   if (!db) {
     throw new Error("Firebase Firestore not initialized");
   }
-  if (!auth) {
-    throw new Error("Firebase auth not initialized");
-  }
 
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
+  if (!currentUserUid) {
     throw new Error("User must be authenticated to delete card types.");
   }
 
-  const projectRef = doc(db, 'projects', projectId);
+  const projectRef = db.collection('projects').doc(projectId);
   try {
-    const projectDoc = await getDoc(projectRef);
-    if (!projectDoc.exists()) throw new Error('Project not found');
+    const projectDoc = await projectRef.get();
+    if (!projectDoc.exists) throw new Error('Project not found');
 
     const project = projectDoc.data() as Project;
 
@@ -158,7 +149,7 @@ export const deleteCardTypeFromProject = async (
     }
 
     try {
-      guardTaskManagement(currentUser.uid as UserId, project, team);
+      guardTaskManagement(currentUserUid as UserId, project, team);
     } catch (error) {
       throw new Error(`Permission denied: ${error instanceof Error ? error.message : 'Cannot manage card types in this project'}`);
     }
@@ -171,7 +162,7 @@ export const deleteCardTypeFromProject = async (
 
     const updatedCardTypes = (project.cardTypes || []).filter(ct => ct.id !== cardTypeId);
 
-    await updateDoc(projectRef, {
+    await projectRef.update({
       cardTypes: updatedCardTypes,
       updatedAt: new Date().toISOString(),
     });

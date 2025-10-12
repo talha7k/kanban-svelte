@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import { reorderColumnsInProject } from '$lib/server/api/firebaseColumn';
-import { getProjectById } from '$lib/server/api/firebaseProject';
 import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-export async function POST({ request, params }) {
+export const POST: RequestHandler = async ({ request, params }) => {
   try {
     const { projectId } = params;
     const { columnIds } = await request.json();
@@ -16,16 +16,6 @@ export async function POST({ request, params }) {
       throw error(400, 'columnIds must be an array');
     }
 
-    // Verify project exists and user has access
-    const project = await getProjectById(projectId);
-    if (!project) {
-      throw error(404, 'Project not found');
-    }
-
-    if (!project.memberIds?.includes(currentUserUid) && project.ownerId !== currentUserUid) {
-      throw error(403, 'Access denied');
-    }
-
     // Reorder the columns
     await reorderColumnsInProject(projectId, columnIds, currentUserUid);
 
@@ -35,4 +25,4 @@ export async function POST({ request, params }) {
     const message = err instanceof Error ? err.message : 'Failed to reorder columns';
     throw error(500, message);
   }
-}
+};

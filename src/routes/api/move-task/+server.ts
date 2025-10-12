@@ -1,28 +1,30 @@
 import { json } from '@sveltejs/kit';
-import { moveTaskInProjectServer } from '$lib/server/firebaseProject';
+import { moveTaskInProject } from '$lib/server/api/firebaseProject';
+import { requireAuth } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
-console.log('move-task +server.ts loaded');
-
-export async function POST({ request }: { request: Request }) {
+export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { projectId, taskId, newColumnId, newOrder, currentUserUid } = await request.json();
-    console.log(`[API/move-task] Received request for projectId: ${projectId}, taskId: ${taskId}, newColumnId: ${newColumnId}, newOrder: ${newOrder}, currentUserUid: ${currentUserUid}`);
+    // Authenticate user from request headers
+    const userId = await requireAuth({ request } as any);
 
-    if (!projectId || !taskId || newColumnId === undefined || newOrder === undefined || !currentUserUid) {
+    const { projectId, taskId, newColumnId, newOrder } = await request.json();
+
+    if (!projectId || !taskId || newColumnId === undefined || newOrder === undefined) {
       return json(
-        { error: 'Missing required parameters: projectId, taskId, newColumnId, newOrder, currentUserUid' },
+        { error: 'Missing required parameters: projectId, taskId, newColumnId, newOrder' },
         { status: 400 }
       );
     }
 
-    await moveTaskInProjectServer(projectId, taskId, newColumnId, newOrder, currentUserUid);
+    await moveTaskInProject(projectId, taskId, newColumnId, newOrder, userId);
 
     return json({ success: true });
   } catch (error) {
     console.error('Error in move-task API:', error);
     return json(
-      { error: error instanceof Error ? error.message : 'Failed to move task' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to move task' },
       { status: 500 }
     );
   }
-}
+};

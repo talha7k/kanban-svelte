@@ -1,6 +1,6 @@
 import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { auth as adminAuth, db as adminDb } from '$lib/server/firebase';
-import type { Team, UserId, UserProfile } from '../types/types';
+import type { Team, UserId, UserProfile } from '$lib/types/types';
 
 export async function createTeam(teamName: string, creatorId: UserId, teamDescription: string): Promise<Team> {
   const db = adminDb();
