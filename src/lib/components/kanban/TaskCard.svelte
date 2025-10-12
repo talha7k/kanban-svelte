@@ -43,6 +43,7 @@
         CheckSquare,
         Lock,
         ChevronsUpDown,
+        Users,
     } from "@lucide/svelte";
     import {
         format,
@@ -310,23 +311,27 @@
           : 'cursor-default'}"
     aria-label="Task: '{task.title}', Priority: '{task.priority}'"
 >
+    <div class="drag-handle">
     <CardHeader class="py-2 px-4 mb-0 pb-0">
         {#if assignees.length > 0}
-            <div class="flex flex-wrap gap-1 mb-2">
-                {#each assignees.slice(0, 3) as assignee (assignee.id)}
-                    <Badge variant="secondary" class="text-xs">
-                        {(() => {
-                            const parts = assignee.name.trim().split(/\s+/);
-                            if (parts.length === 1) return parts[0];
-                            return parts[0] + ' ' + parts[parts.length - 1][0] + '.';
-                        })()}
-                    </Badge>
-                {/each}
-                {#if assignees.length > 3}
-                    <Badge variant="secondary" class="text-xs">
-                        +{assignees.length - 3}
-                    </Badge>
-                {/if}
+            <div class="flex items-center gap-1 mb-2">
+                <Users class="h-4 w-4" />
+                <div class="flex flex-wrap gap-1">
+                    {#each assignees.slice(0, 3) as assignee (assignee.id)}
+                        <Badge variant="secondary" class="text-xs">
+                            {(() => {
+                                const parts = assignee.name.trim().split(/\s+/);
+                                if (parts.length === 1) return parts[0];
+                                return parts[0] + ' ' + parts[parts.length - 1][0] + '.';
+                            })()}
+                        </Badge>
+                    {/each}
+                    {#if assignees.length > 3}
+                        <Badge variant="secondary" class="text-xs">
+                            +{assignees.length - 3}
+                        </Badge>
+                    {/if}
+                </div>
             </div>
         {/if}
         <div class="flex justify-between items-start">
@@ -337,19 +342,22 @@
             </CardTitle>
             <div class="flex items-center gap-1">
                 {#if task.comments && task.comments.length > 0}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        class="h-6 px-2 text-blue-400 hover:text-blue-600 pointer-events-auto"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            onViewDetails(task);
-                        }}
-                        title="View task details"
-                    >
-                        <MessageSquare class="h-4 w-4 mr-0.5" />
-                        {task.comments.length}
-                    </Button>
+                    <div class="pointer-events-auto">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            class="h-6 px-2 text-blue-400 hover:text-blue-600"
+                            onmousedown={(e) => e.stopPropagation()}
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                onViewDetails(task);
+                            }}
+                            title="View task details"
+                        >
+                            <MessageSquare class="h-4 w-4 mr-0.5" />
+                            {task.comments.length}
+                        </Button>
+                    </div>
                 {/if}
                 {#if task.priority !== "NONE"}
                     {@const Icon = getPriorityIcon(task.priority)}
@@ -568,6 +576,7 @@
             </div>
         </CardContent>
     {/if}
+    </div>
     <CardFooter class="py-1 px-4 flex flex-col items-start">
         <div class="flex justify-end w-full items-center">
             <div
@@ -592,7 +601,7 @@
                 <Button
                     variant="ghost"
                     size="icon"
-                    class="h-7 w-7"
+                    class="h-7 w-7 pointer-events-auto"
                     onclick={(e) => {
                         e.stopPropagation();
                         onMoveToPreviousColumn(task);
@@ -612,7 +621,7 @@
                 <Button
                     variant="ghost"
                     size="icon"
-                    class="h-7 w-7"
+                    class="h-7 w-7 pointer-events-auto"
                     onclick={(e) => {
                         e.stopPropagation();
                         onMoveToNextColumn(task);
@@ -631,7 +640,7 @@
             <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7"
+                class="h-7 w-7 pointer-events-auto"
                 onclick={(e) => {
                     e.stopPropagation();
                     onViewDetails(task);
@@ -650,7 +659,7 @@
                 <Button
                     variant="ghost"
                     size="icon"
-                    class="h-7 w-7"
+                    class="h-7 w-7 pointer-events-auto"
                     onclick={(e) => {
                         e.stopPropagation();
                         onEdit(task);
