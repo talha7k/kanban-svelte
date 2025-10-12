@@ -93,7 +93,7 @@
 				</p>
 			</div>
 
-			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+			<div class="grid md:grid-cols-3 lg:grid-cols-4 gap-8">
 				<!-- Feature 1: Team Creation & Management -->
 				<div class="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-200">
 					<Card class="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 shadow-md bg-gradient-to-br from-card to-card/50">
@@ -216,6 +216,47 @@
 								Team owners, managers, and members each have specific capabilities
 								tailored to their responsibilities.
 							</CardDescription>
+						</CardContent>
+					</Card>
+				</div>
+
+				<!-- Feature 7: Unlimited Columns & Drag-and-Drop -->
+				<div class="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-1400">
+					<Card class="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 shadow-md bg-gradient-to-br from-card to-card/50">
+						<CardHeader>
+							<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+								<Zap class="w-6 h-6 text-primary" />
+							</div>
+							<CardTitle class="text-xl font-semibold mb-3">
+								Unlimited Columns & Drag-and-Drop
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p class="text-gray-600 dark:text-gray-300">
+								Create unlimited columns and drag-and-drop tasks to manage your project workflow visually.
+								Adapt your board to any methodology or process.
+							</p>
+						</CardContent>
+					</Card>
+				</div>
+
+				<!-- Feature 8: Custom Task Types -->
+				<div class="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000 delay-1600">
+					<Card class="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 shadow-md bg-gradient-to-br from-card to-card/50">
+						<CardHeader>
+							<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+								<Sparkles class="w-6 h-6 text-primary" />
+							</div>
+							<CardTitle class="text-xl font-semibold mb-3">
+								Custom Task Types
+							</CardTitle>
+							<CardDescription>Define your own workflows</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<p class="text-gray-600 dark:text-gray-300">
+								Create custom card types with any input fields you need. Define patterns for task completion
+								and ensure consistent, structured work across your team.
+							</p>
 						</CardContent>
 					</Card>
 				</div>
