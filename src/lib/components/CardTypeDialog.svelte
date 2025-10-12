@@ -6,7 +6,7 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
-  import { Loader2, Trash2, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown, Sparkles } from '@lucide/svelte';
+  import { Loader2, Trash2, Type, Hash, Calendar, AlignLeft, CheckSquare, Lock, ChevronsUpDown, Sparkles, AlertTriangle } from '@lucide/svelte';
   import type { CardType, CardTypeField, FieldType } from '$lib/types/types';
 
   interface Props {
@@ -62,6 +62,7 @@
       case 'date_input': return 'Date Input';
       case 'textarea': return 'Textarea';
       case 'checkbox': return 'Checkbox';
+      case 'priority': return 'Priority';
       default: return 'Unknown';
     }
   }
@@ -75,6 +76,7 @@
       case 'date_input': return Calendar;
       case 'textarea': return AlignLeft;
       case 'checkbox': return CheckSquare;
+      case 'priority': return AlertTriangle;
       default: return Type;
     }
   }
@@ -82,7 +84,8 @@
   function handleAddField() {
     if (!newFieldName.trim()) return;
 
-    const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : [];
+    const options = newFieldType === 'dropdown' ? newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) :
+                     newFieldType === 'priority' ? ['Low', 'Medium', 'High', 'Critical'] : [];
 
     const newField: CardTypeField = {
       id: crypto.randomUUID(),
@@ -93,7 +96,7 @@
         // Add default config based on type
         ...(newFieldType === 'text_input' && { placeholder: '' }),
         ...(newFieldType === 'number_input' && { min: undefined, max: undefined }),
-        ...(newFieldType === 'dropdown' && { options }),
+        ...((newFieldType === 'dropdown' || newFieldType === 'priority') && { options }),
         ...(newFieldType === 'textarea' && { placeholder: '' }),
       }
     };
@@ -146,10 +149,12 @@
       name = generatedData.name;
       description = generatedData.description || '';
       color = generatedData.color;
-      fields = generatedData.fields.map(field => ({
+
+      // Process generated fields
+      let processedFields = generatedData.fields.map(field => ({
         ...field,
         id: crypto.randomUUID(),
-        order: fields.length + generatedData.fields.indexOf(field),
+        order: generatedData.fields.indexOf(field),
         config: {
           ...field.config,
           required: false, // AI-generated fields should not be required by default
@@ -170,6 +175,24 @@
           }),
         }
       }));
+
+      // Always ensure a priority field is included
+      const hasPriorityField = processedFields.some(field => field.type === 'priority');
+      if (!hasPriorityField) {
+        const priorityField = {
+          id: crypto.randomUUID(),
+          name: 'Priority',
+          type: 'priority' as const,
+          order: processedFields.length,
+          config: {
+            required: false,
+            options: ['Low', 'Medium', 'High', 'Critical']
+          }
+        };
+        processedFields.push(priorityField);
+      }
+
+      fields = processedFields;
 
       isAIGenerateDialogOpen = false;
       aiBrief = '';
@@ -319,18 +342,19 @@
       </div>
       <div>
         <Label for="field-type">Field Type</Label>
-        <select
-          id="field-type"
-          bind:value={newFieldType}
-          class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <option value="text_input">Text Input</option>
-          <option value="number_input">Number Input</option>
-          <option value="textarea">Textarea</option>
-          <option value="date_input">Date Input</option>
-          <option value="checkbox">Checkbox</option>
-          <option value="dropdown">Dropdown</option>
-        </select>
+         <select
+           id="field-type"
+           bind:value={newFieldType}
+           class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+         >
+           <option value="text_input">Text Input</option>
+           <option value="number_input">Number Input</option>
+           <option value="textarea">Textarea</option>
+           <option value="date_input">Date Input</option>
+           <option value="checkbox">Checkbox</option>
+           <option value="dropdown">Dropdown</option>
+           <option value="priority">Priority</option>
+         </select>
       </div>
       {#if newFieldType === 'dropdown'}
         <div>

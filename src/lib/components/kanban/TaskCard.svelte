@@ -44,6 +44,7 @@
         Lock,
         ChevronsUpDown,
         Users,
+        Flag,
     } from "@lucide/svelte";
     import {
         format,
@@ -184,6 +185,32 @@
         cardTypes.find((ct) => ct.id === task.cardTypeId) || null,
     );
 
+    let hasPriorityField = $derived(
+        selectedCardType?.fields?.some((field: any) => field.type === 'priority') || false
+    );
+
+    let customPriorityValue = $derived(() => {
+        if (!hasPriorityField || !selectedCardType) return null;
+        const priorityField = selectedCardType.fields.find((field: any) => field.type === 'priority');
+        if (!priorityField) return null;
+        return task.fieldValues?.[priorityField.id] || null;
+    });
+
+    let effectivePriority = $derived(() => {
+        if (hasPriorityField) {
+            const value = customPriorityValue();
+            if (!value) return "NONE";
+            switch (value.toLowerCase()) {
+                case "low": return "LOW";
+                case "medium": return "MEDIUM";
+                case "high": return "HIGH";
+                case "critical": return "HIGH"; // Map critical to HIGH
+                default: return "NONE";
+            }
+        }
+        return task.priority;
+    });
+
     // Update field values when task changes
     $effect(() => {
         if (task) {
@@ -215,6 +242,8 @@
                 return "Textarea";
             case "checkbox":
                 return "Checkbox";
+            case "priority":
+                return "Priority";
             default:
                 return "Unknown";
         }
@@ -236,6 +265,8 @@
                 return "bg-yellow-100 text-yellow-800 border-yellow-200";
             case "checkbox":
                 return "bg-indigo-100 text-indigo-800 border-indigo-200";
+            case "priority":
+                return "bg-red-100 text-red-800 border-red-200";
             default:
                 return "bg-gray-100 text-gray-800 border-gray-200";
         }
@@ -257,6 +288,8 @@
                 return AlignLeft;
             case "checkbox":
                 return CheckSquare;
+            case "priority":
+                return Flag;
             default:
                 return Type;
         }
@@ -270,6 +303,15 @@
             return value ? "Yes" : "No";
         } else if (field.type === "date_input" && value) {
             return format(parseISO(value), "MMM d, yyyy");
+        } else if (field.type === "priority") {
+            // Map priority values to display names
+            switch (value?.toLowerCase()) {
+                case "low": return "Low";
+                case "medium": return "Medium";
+                case "high": return "High";
+                case "critical": return "Critical";
+                default: return value || "Not set";
+            }
         } else {
             return value || "Not set";
         }
@@ -309,7 +351,7 @@
         : canMoveTask
           ? 'cursor-grab active:cursor-grabbing bg-gradient-to-r from-purple-100 to-white'
           : 'cursor-default'}"
-    aria-label="Task: '{task.title}', Priority: '{task.priority}'"
+    aria-label="Task: '{task.title}', Priority: '{effectivePriority()}'"
 >
     <CardHeader class="py-2 px-4 mb-0 pb-0">
         {#if assignees.length > 0}
@@ -358,14 +400,14 @@
                         </Button>
                     </div>
                 {/if}
-                {#if task.priority !== "NONE"}
-                    {@const Icon = getPriorityIcon(task.priority)}
+                {#if effectivePriority() !== "NONE"}
+                    {@const Icon = getPriorityIcon(effectivePriority())}
                     <Badge
-                        variant={getPriorityBadgeVariant(task.priority)}
-                        class={task.priority === "MEDIUM"
+                        variant={getPriorityBadgeVariant(effectivePriority())}
+                        class={effectivePriority() === "MEDIUM"
                             ? "bg-accent text-accent-foreground"
                             : ""}
-                        title={getPriorityTooltip(task.priority)}
+                        title={getPriorityTooltip(effectivePriority())}
                     >
                         <Icon class="h-3 w-3" />
                     </Badge>
@@ -383,8 +425,8 @@
     {#if selectedCardType && selectedCardType.fields && selectedCardType.fields.length > 0}
         <CardContent class="px-4 py-1">
             <div class="flex flex-wrap gap-1">
-                {#each selectedCardType.fields as field (field.id)}
-                    {#if field.name !== "title" && field.name !== "description"}
+                 {#each selectedCardType.fields as field (field.id)}
+                     {#if field.name !== "title" && field.name !== "description" && field.type !== "priority"}
                         {#if field.type === "fixed"}
                             {@const Icon = getFieldTypeIcon(field.type)}
                             <Badge
@@ -433,26 +475,26 @@
                                         <Label for="field-{field.id}"
                                             >{field.name}</Label
                                         >
-                                        {#if field.type === "dropdown"}
-                                            <select
-                                                id="field-{field.id}"
-                                                bind:value={
-                                                    fieldValues[field.id]
-                                                }
-                                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                required={field.config
-                                                    ?.required &&
-                                                    task?.assigneeUids?.length}
-                                            >
-                                                <option value=""
-                                                    >Select {field.name.toLowerCase()}</option
-                                                >
-                                                {#each field.config?.options || [] as option}
-                                                    <option value={option}
-                                                        >{option}</option
-                                                    >
-                                                {/each}
-                                            </select>
+                                         {#if field.type === "dropdown" || field.type === "priority"}
+                                             <select
+                                                 id="field-{field.id}"
+                                                 bind:value={
+                                                     fieldValues[field.id]
+                                                 }
+                                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                 required={field.config
+                                                     ?.required &&
+                                                     task?.assigneeUids?.length}
+                                             >
+                                                 <option value=""
+                                                     >Select {field.name.toLowerCase()}</option
+                                                 >
+                                                 {#each field.config?.options || [] as option}
+                                                     <option value={option}
+                                                         >{option}</option
+                                                     >
+                                                 {/each}
+                                             </select>
                                         {:else if field.type === "text_input"}
                                             <Input
                                                 id="field-{field.id}"
